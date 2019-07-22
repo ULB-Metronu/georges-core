@@ -31,7 +31,7 @@ class Kinematics:
     """
 
     """
-    def __init__(self, q: Union[float, _Q], particle: _ParticuleType = _Proton, kinetic: bool = False):
+    def __init__(self, q: Union[float, _Q], particle: _ParticuleType = _Proton, kinetic: Optional[bool] = None):
         """
 
         Args:
@@ -46,10 +46,15 @@ class Kinematics:
         if _Q(q).dimensionality == _ureg.cm.dimensionality:
             self._type = 'range'
         elif _Q(q).dimensionality == _ureg.eV.dimensionality:
-            if kinetic:
+            if kinetic is True:
                 self._type = 'ekin'
-            else:
+            elif kinetic is False:
                 self._type = 'etot'
+            else:
+                if _Q(q) < particle.M * _ureg.c ** 2:
+                    self._type = 'ekin'
+                else:
+                    self._type = 'etot'
         elif _Q(q).dimensionality == _ureg.eV_c.dimensionality:
             self._type = 'momentum'
         elif _Q(q).dimensionality == (_ureg.tesla * _ureg.m).dimensionality:
@@ -197,7 +202,7 @@ class Kinematics:
         """
         _ = self.to('brho')
         if magnitude:
-            return _.to('tesla meter').magnitude
+            return _.m_as('tesla meter')
         else:
             return _
 
