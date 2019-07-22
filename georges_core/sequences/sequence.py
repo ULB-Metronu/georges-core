@@ -511,3 +511,7 @@ class TwissSequence(Sequence):
         return self._data
 
     df = property(to_df)
+
+
+class TransportSequence(Sequence):
+        pass
