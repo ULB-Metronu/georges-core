@@ -25,7 +25,7 @@ with open('LICENSE') as f:
 setup(
     name='georges_core',
     version=get_version_from_init(),
-    description='Georges\' accelerator physics library - Core module',
+    description='Georges\' accelerator physics library - Core modules',
     long_description=readme,
     author='Cédric Hernaslteens',
     author_email='cedric.hernalsteens@ulb.be',

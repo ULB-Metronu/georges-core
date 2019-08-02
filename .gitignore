@@ -2,5 +2,5 @@
 *.pyc
 .DS_Store
 __pycache__/
-georges_core.egg-info
+georges_core.egg-info/
 .ipynb_checkpoints
