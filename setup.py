@@ -33,8 +33,9 @@ setup(
     license=lic,
     packages=find_packages(exclude=('tests', 'docs', 'examples')),
     install_requires=[
+        'numpy',
         'pandas',
-        'pint', 'numpy'
+        'pint',
     ],
     package_data={'georges_core': []},
 )
