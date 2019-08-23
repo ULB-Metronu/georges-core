@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
 from dataclasses import dataclass
 import pandas as _pd
+from .. import particles as _particles
 from ..particles import Proton as _Proton
 from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
@@ -463,7 +464,7 @@ class TwissSequence(Sequence):
         twiss_headers = load_madx_twiss_headers(filename, path)
         twiss_table = load_madx_twiss_table(filename, path, columns).loc[from_element:to_element]
         particle_name = twiss_headers['PARTICLE'].capitalize()
-        p = getattr(particules, particle_name if particle_name != 'Default' else 'Proton')
+        p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
         k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
         super().__init__(name=twiss_headers['NAME'],
                          data=twiss_table,
@@ -514,4 +515,4 @@ class TwissSequence(Sequence):
 
 
 class TransportSequence(Sequence):
-        pass
+    pass
