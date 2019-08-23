@@ -678,7 +678,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_x(_radian(angle))
+        return self._rotate_x(angle.m_as('radian'))
 
     def _rotate_y(self, angle: float) -> Frame:
         """
@@ -706,7 +706,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_y(_radian(angle))
+        return self._rotate_y(angle.m_as('radian'))
 
     def _rotate_z(self, angle: float) -> Frame:
         """
@@ -734,7 +734,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_z(_radian(angle))
+        return self._rotate_z(angle.m_as('radian'))
 
     def rotate_axis(self, axis: str, angle: float) -> Frame:
         """
@@ -847,7 +847,7 @@ class Frame:
         Returns:
 
         """
-        return self._translate_x(_m(offset))
+        return self._translate_x(offset.m_as('m'))
 
     def _translate_y(self, offset: float) -> Frame:
         """
@@ -876,7 +876,7 @@ class Frame:
         Returns:
 
         """
-        return self._translate_y(_m(offset))
+        return self._translate_y(offset.m_as('m'))
 
     def _translate_z(self, offset: float) -> Frame:
         """
@@ -905,7 +905,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
-        return self._translate_z(_m(offset))
+        return self._translate_z(offset.m_as('m'))
 
     def _translate_axis(self, axis: str, offset: float) -> Frame:
         """
