@@ -456,7 +456,7 @@ class Frame:
 
     z = property(get_z)
 
-    def get_rotation_matrix(self, ref: Optional[Frame]=None) -> _np.ndarray:
+    def get_rotation_matrix(self, ref: Optional[Frame] = None) -> _np.ndarray:
         """
         Provides the rotation matrix representation of the quaternion with respect to another reference frame.
 
@@ -471,6 +471,28 @@ class Frame:
             the rotation matrix representation of the quaternion
         """
         return _quaternion.as_rotation_matrix(self.get_quaternion(ref))
+
+    def get_euler_angles(self, ref: Optional[Frame] = None) -> _np.ndarray:
+        """
+
+        Args:
+            ref:
+
+        Returns:
+
+        """
+        return _quaternion.as_euler_angles(self.get_quaternion(ref))
+
+    def get_rotation_vector(self, ref: Optional[Frame] = None) -> _np.ndarray:
+        """
+
+        Args:
+            ref:
+
+        Returns:
+
+        """
+        return _quaternion.as_rotation_vector(self.get_quaternion(ref))
 
     def _get_angles(self, ref: Optional[Frame] = None) -> _np.ndarray:
         """
@@ -650,7 +672,7 @@ class Frame:
         Returns:
             the rotated frame (in place), allows method chaining
         """
-        return self._rotate(_np.array(list(map(lambda _: _radian(_), angles))))
+        return self._rotate(_np.array(list(map(lambda _: _.m_as('radian'), angles))))
 
     def _rotate_x(self, angle: float) -> Frame:
         """
@@ -937,7 +959,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
-        return self._translate_axis(axis, _m(offset))
+        return self._translate_axis(axis, offset.m_as('m'))
 
     def reset(self) -> Frame:
         """Reset the frame.
@@ -957,4 +979,5 @@ class Frame:
         """
         self._q: _np.quaternion = _np.quaternion(1, 0, 0, 0)
         self._o: _np.ndarray = _np.zeros(3)
+        self._cache: Mapping = dict()
         return self
