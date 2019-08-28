@@ -31,12 +31,18 @@ class SequenceException(Exception):
         self.message = m
 
 
+class SequenceMetadataType(type):
+    """TODO"""
+    pass
+
+
 @dataclass
-class SequenceMetadata:
+class SequenceMetadata(metaclass=SequenceMetadataType):
     """TODO"""
     data: _pd.Series = None
     kinematics: _Kinematics = None
     particle: _ParticuleType = _Proton
+    n_particles: int = 1
 
     def __getitem__(self, item):
         return self.data[item]
@@ -46,24 +52,29 @@ class SequenceMetadata:
         if self.data is None:
             return
         try:
-            self.particle = self.particle or getattr(particules, str(self.data['PARTICLE'].capitalize()))
+            self.particle = self.particle or getattr(_particles, str(self.data['PARTICLE'].capitalize()))
         except KeyError:
             self.particle = _Proton
 
         # Try to infer the kinematics from the metadata
         try:
-            self.kinematics = self.kinematics or _Kinematics(float(self.data['PC']) * _ureg.GeV_c,
+            self.kinematics = self.kinematics or _Kinematics(self.data['PC'] * _ureg.GeV_c,
                                                              particle=self.particle)
         except KeyError:
             pass
         try:
-            self.kinematics = self.kinematics or _Kinematics(float(self.data['ENERGY']) * _ureg.GeV,
+            self.kinematics = self.kinematics or _Kinematics(self.data['ENERGY'] * _ureg.GeV,
                                                              particle=self.particle)
         except KeyError:
             pass
         try:
-            self.kinematics = self.kinematics or _Kinematics(float(self.data['GAMMA']),
+            self.kinematics = self.kinematics or _Kinematics(self.data['GAMMA'],
                                                              particle=self.particle)
+        except KeyError:
+            pass
+
+        try:
+            self.n_particles = self.n_particles or int(self.data['NPART'])
         except KeyError:
             pass
 
@@ -348,12 +359,12 @@ class PlacementSequence(Sequence):
                           at_exit=at_exit)
 
     def place_before_first(self,
-                         element_or_sequence: Union[_Element, Sequence],
-                         at: Optional[_ureg.Quantity] = None,
-                         at_entry: Optional[_ureg.Quantity] = None,
-                         at_center: Optional[_ureg.Quantity] = None,
-                         at_exit: Optional[_ureg.Quantity] = None,
-                         ) -> PlacementSequence:
+                           element_or_sequence: Union[_Element, Sequence],
+                           at: Optional[_ureg.Quantity] = None,
+                           at_entry: Optional[_ureg.Quantity] = None,
+                           at_center: Optional[_ureg.Quantity] = None,
+                           at_exit: Optional[_ureg.Quantity] = None,
+                           ) -> PlacementSequence:
         """
 
         Args:
@@ -477,13 +488,13 @@ class TwissSequence(Sequence):
         """TODO"""
         try:
             return _BetaBlock(
-                beta11=self.df.iloc[0]['BETA11'],
+                beta11=self.df.iloc[0]['BETA11'] * _ureg.m,
                 alpha11=self.df.iloc[0]['ALPHA11'],
-                beta22=self.df.iloc[0]['BETA22'],
+                beta22=self.df.iloc[0]['BETA22'] * _ureg.m,
                 alpha22=self.df.iloc[0]['ALPHA22'],
-                disp1=self.df.iloc[0]['DISP1'],
+                disp1=self.df.iloc[0]['DISP1'] * _ureg.m,
                 disp2=self.df.iloc[0]['DISP2'],
-                disp3=self.df.iloc[0]['DISP3'],
+                disp3=self.df.iloc[0]['DISP3'] * _ureg.m,
                 disp4=self.df.iloc[0]['DISP4'],
                 emit1=self.metadata['EX'],
                 emit2=self.metadata['EY'],
@@ -492,13 +503,13 @@ class TwissSequence(Sequence):
         except KeyError:
             try:
                 return _BetaBlock(
-                    beta11=self.df.iloc[0]['BETX'],
+                    beta11=self.df.iloc[0]['BETX'] * _ureg.m,
                     alpha11=self.df.iloc[0]['ALFX'],
-                    beta22=self.df.iloc[0]['BETY'],
+                    beta22=self.df.iloc[0]['BETY'] * _ureg.m,
                     alpha22=self.df.iloc[0]['ALFY'],
-                    disp1=self.df.iloc[0]['DX'],
+                    disp1=self.df.iloc[0]['DX'] * _ureg.m,
                     disp2=self.df.iloc[0]['DPX'],
-                    disp3=self.df.iloc[0]['DY'],
+                    disp3=self.df.iloc[0]['DY'] * _ureg.m,
                     disp4=self.df.iloc[0]['DPY'],
                     emit1=self.metadata['EX'],
                     emit2=self.metadata['EY'],
