@@ -122,14 +122,23 @@ def load_madx_twiss_headers(filename: str = 'twiss.outx', path: str = '.') -> _p
     Returns:
 
     """
-    return _pd.read_csv(os.path.join(path, filename),
-                        sep=r'\s+',
-                        usecols=['KEY', 'VALUE'],
-                        squeeze=True,
-                        index_col=0,
-                        names=['@', 'KEY', '_', 'VALUE'],
-                        converters={'PC': float},
-                        )[0:46]
+    _ = _pd.read_csv(os.path.join(path, filename),
+                     sep=r'\s+',
+                     usecols=['KEY', 'VALUE'],
+                     squeeze=True,
+                     index_col=0,
+                     names=['@', 'KEY', '_', 'VALUE'],
+                     )[0:46]
+    for c in ('MASS', 'CHARGE', 'ENERGY', 'PC', 'GAMMA', 'KBUNCH', 'BCURRENT', 'SIGE', 'SIGT', 'NPART', 'EX', 'EY',
+              'ET', 'BV_FLAG', 'LENGTH', 'ALFA', 'ORBIT5', 'GAMMATR', 'Q1', 'Q2', 'DXMAX', 'DYMAX', 'XCOMAX', 'YCOMAX',
+              'BETXMAX', 'BETYMAX', 'XCORMS', 'YCORMS', 'DXRMS', 'DYRMS', 'DELTAP', 'SYNCH_1', 'SYNCH_2', 'SYNCH_3',
+              'SYNCH_4', 'SYNCH_5',
+              ):
+        try:
+            _[c] = _pd.to_numeric(_[c])
+        except KeyError:
+            pass
+    return _
 
 
 def load_madx_twiss_table(filename: str = 'twiss.outx',
