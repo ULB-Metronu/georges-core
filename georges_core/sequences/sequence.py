@@ -11,7 +11,7 @@ from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..outputs import load_madx_twiss_headers, load_madx_twiss_table
+from ..outputs import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
 from .. import ureg as _ureg
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -141,7 +141,10 @@ class Sequence(metaclass=SequenceType):
 
     def to_df(self) -> _pd.DataFrame:
         """TODO"""
-        return _pd.DataFrame(self._data)
+        if self._data is None:
+            return _pd.DataFrame()
+        else:
+            return _pd.DataFrame(self._data)
 
     df = property(to_df)
 
@@ -226,6 +229,8 @@ class PlacementSequence(Sequence):
 
     def to_df(self) -> _pd.DataFrame:
         """TODO"""
+        if len(self._data) == 0:
+            return _pd.DataFrame()
         df = _pd.DataFrame([{**e[0].data, **{
             'AT_ENTRY': e[1],
             'AT_CENTER': e[2],
@@ -526,4 +531,49 @@ class TwissSequence(Sequence):
 
 
 class TransportSequence(Sequence):
-    pass
+    """
+    TODO
+    """
+
+    def __init__(self,
+                 filename: str,
+                 path: str = '.',
+                 ):
+        """
+
+        Args:
+            filename: the name of the physics
+            path:
+        """
+        transport_input = load_transport_input_file(filename, path)
+
+        data = []
+        kin = None
+        for i, line in enumerate(transport_input):
+            if len(line.strip()) == 0:
+                continue
+            d = line.split()
+            if d[0].startswith('-'):
+                continue
+            if i == 0:
+                kin = _Kinematics(float(d[7]) * _ureg.MeV)
+            data.append(transport_element_factory(d))
+
+        if kin is None:
+            raise SequenceException("Invalid kinematics - Beam not found in input")
+
+        super().__init__(name='TRANSPORT',
+                         data=data,
+                         metadata=SequenceMetadata(kinematics=kin),
+                         )
+
+    def to_df(self):
+        dicts = list(map(dict, self._data))
+        counters = {}
+        for d in dicts:
+            if d['NAME'] is None:
+                counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
+                d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
+        return _pd.DataFrame(dicts).set_index('NAME')
+
+    df = property(to_df)
