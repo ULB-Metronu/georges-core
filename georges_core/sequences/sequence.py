@@ -11,7 +11,7 @@ from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..outputs import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
+from ..io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
 from .. import ureg as _ureg
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -21,6 +21,7 @@ __all__ = ['SequenceException',
            'Sequence',
            'PlacementSequence',
            'TwissSequence',
+           'TransportSequence',
            ]
 
 
@@ -549,22 +550,21 @@ class TransportSequence(Sequence):
 
         data = []
         kin = None
-        for i, line in enumerate(transport_input):
+        sequence_metadata = SequenceMetadata()
+        for line in transport_input:
             if len(line.strip()) == 0:
                 continue
             d = line.split()
             if d[0].startswith('-'):
                 continue
-            if i == 0:
-                kin = _Kinematics(float(d[7]) * _ureg.MeV)
-            data.append(transport_element_factory(d))
+            data.append(transport_element_factory(d, sequence_metadata)[0])
 
-        if kin is None:
+        if sequence_metadata.kinematics is None:
             raise SequenceException("Invalid kinematics - Beam not found in input")
 
         super().__init__(name='TRANSPORT',
-                         data=data,
-                         metadata=SequenceMetadata(kinematics=kin),
+                         data=[d for d in data if d is not None],
+                         metadata=sequence_metadata,
                          )
 
     def to_df(self):
