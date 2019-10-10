@@ -33,9 +33,12 @@ setup(
     license=lic,
     packages=find_packages(exclude=('tests', 'docs', 'examples')),
     install_requires=[
+        'matplotlib',
+        'numba',
         'numpy',
         'pandas',
         'pint',
+        'plotly',
     ],
     package_data={'georges_core': []},
 )
