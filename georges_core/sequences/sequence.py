@@ -21,6 +21,7 @@ __all__ = ['SequenceException',
            'Sequence',
            'PlacementSequence',
            'TwissSequence',
+           'SurveySequence',
            'TransportSequence',
            ]
 
@@ -117,7 +118,7 @@ class Sequence(metaclass=SequenceType):
 
     @property
     def name(self) -> str:
-        """Provides the name of the physics."""
+        """Provides the name of the sequence."""
         return self._name
 
     @property
@@ -169,6 +170,7 @@ class Sequence(metaclass=SequenceType):
                         to_element: str = None, ) -> Sequence:
         """
         TODO
+
         Args:
             filename: name of the Twiss table file
             path: path to the Twiss table file
@@ -188,9 +190,32 @@ class Sequence(metaclass=SequenceType):
                              to_element=to_element,
                              )
 
+    @staticmethod
+    def from_transport(filename: str = 'transport.txt',
+                       path: str = '.',
+                       ):
+        """
+        TODO
 
-class SurveySequence(Sequence):
-    pass
+        Args:
+            filename:
+            path:
+
+        Returns:
+
+        """
+        return TransportSequence(filename=filename,
+                                 path=path)
+
+    @staticmethod
+    def from_survey():
+        """
+        TODO
+
+        Returns:
+
+        """
+        return SurveySequence()
 
 
 class PlacementSequence(Sequence):
@@ -549,7 +574,50 @@ class TransportSequence(Sequence):
         transport_input = load_transport_input_file(filename, path)
 
         data = []
-        kin = None
+        sequence_metadata = SequenceMetadata()
+        for line in transport_input:
+            if len(line.strip()) == 0:
+                continue
+            d = line.rsplit(';', 1)[0].split()
+            if d[0].startswith('-'):
+                continue
+            try:
+                float(d[0])
+            except ValueError:
+                continue
+            data.append(transport_element_factory(d, sequence_metadata)[0])
+
+        super().__init__(name='TRANSPORT',
+                         data=[d for d in data if d is not None],
+                         metadata=sequence_metadata,
+                         )
+
+    def to_df(self):
+        dicts = list(map(dict, self._data))
+        counters = {}
+        for d in dicts:
+            if d['NAME'] is None:
+                counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
+                d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
+        return _pd.DataFrame(dicts).set_index('NAME')
+
+    df = property(to_df)
+
+
+class SurveySequence(PlacementSequence):
+    def __init__(self,
+                 filename: str,
+                 path: str = '.',
+                 ):
+        """
+
+        Args:
+            filename: the name of the physics
+            path:
+        """
+        transport_input = load_transport_input_file(filename, path)
+
+        data = []
         sequence_metadata = SequenceMetadata()
         for line in transport_input:
             if len(line.strip()) == 0:

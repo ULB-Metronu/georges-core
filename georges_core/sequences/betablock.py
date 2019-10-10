@@ -2,6 +2,7 @@
 from __future__ import annotations
 from typing import Optional
 from dataclasses import dataclass
+from .. import ureg as _ureg
 
 
 class BetaBlockType(type):
@@ -12,15 +13,15 @@ class BetaBlockType(type):
 @dataclass
 class BetaBlock(metaclass=BetaBlockType):
     """TODO"""
-    beta11: float = 1.0
+    beta11: float = 1.0 * _ureg.m
     alpha11: float = 0.0
     gamma11: Optional[float] = None
-    beta22: float = 1.0
+    beta22: float = 1.0 * _ureg.m
     alpha22: float = 0.0
     gamma22: Optional[float] = None
-    disp1: float = 0.0
+    disp1: float = 0.0 * _ureg.m
     disp2: float = 0.0
-    disp3: float = 0.0
+    disp3: float = 0.0 * _ureg.m
     disp4: float = 0.0
     emit1: float = 1E-9
     emit2: float = 1E-9

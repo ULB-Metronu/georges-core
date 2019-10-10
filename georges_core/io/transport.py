@@ -17,6 +17,8 @@ def _process_beam_correlations_code(code, sequence_metadata):
 
 
 TRANSPORT_TYPE_CODES: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, Any], Any]]] = {
+    0: (lambda _: None,
+        lambda _, __: None),
     1: (lambda _: None,
         _process_beam_code),
     2: (lambda _: None,
@@ -35,6 +37,10 @@ TRANSPORT_TYPE_CODES: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, Any],
          lambda _, __: None),
     12: (lambda _: None,
          _process_beam_correlations_code),
+    15: (lambda _: None,
+         lambda _, __: None),
+    16: (lambda _: None,
+         lambda _, __: None),
     100: (lambda _: None,
           lambda _, __: None),
 }
@@ -46,6 +52,6 @@ def load_transport_input_file(filename: str, path: str = '.'):
 
 
 def transport_element_factory(d, sequence_metadata):
-    d[0] = float(d[0]) if '.' in d[0] else int(d[0])
+    d[0] = int(float(d[0]))
     _ = TRANSPORT_TYPE_CODES[d[0]]
     return _[0](d), _[1](d, sequence_metadata)

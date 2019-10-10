@@ -5,3 +5,4 @@ from .kinematics import Kinematics, ZgoubiKinematicsException
 from .frame import Frame, FrameException
 from .patchable import Patchable
 from .vis import Artist, GnuplotArtist, PlotlyArtist
+from .geometry import *
