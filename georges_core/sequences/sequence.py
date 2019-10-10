@@ -560,16 +560,19 @@ class TransportSequence(Sequence):
     """
     TODO
     """
+    from ..io.transport import TransportInputFlavor, TransportInputOriginalFlavor
 
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 flavor: TransportInputFlavor = TransportInputOriginalFlavor,
                  ):
         """
 
         Args:
             filename: the name of the physics
             path:
+            flavor:
         """
         transport_input = load_transport_input_file(filename, path)
 
@@ -585,7 +588,7 @@ class TransportSequence(Sequence):
                 float(d[0])
             except ValueError:
                 continue
-            data.append(transport_element_factory(d, sequence_metadata)[0])
+            data.append(transport_element_factory(d, sequence_metadata, flavor)[0])
 
         super().__init__(name='TRANSPORT',
                          data=[d for d in data if d is not None],
