@@ -141,12 +141,27 @@ class Sequence(metaclass=SequenceType):
         """TODO"""
         return _BetaBlock()
 
-    def to_df(self) -> _pd.DataFrame:
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
-        if self._data is None:
+        if self._data is None and df is None:
             return _pd.DataFrame()
         else:
-            return _pd.DataFrame(self._data)
+            df = df if df is not None else _pd.DataFrame(self._data)
+            if strip_units:
+                def to_meter(_):
+                    return _.m_as('m')
+
+                try:
+                    df['AT_ENTRY'] = df['AT_ENTRY'].apply(to_meter)
+                    df['AT_CENTER'] = df['AT_CENTER'].apply(to_meter)
+                    df['AT_EXIT'] = df['AT_EXIT'].apply(to_meter)
+                    df['L'] = df['L'].apply(to_meter)
+                    df['ANGLE'] = df['ANGLE'].apply(lambda _: _.m_as('radian'))
+                    df['K1'] = df['K1'].apply(lambda _: _.m_as('1/m'))
+                    df['K2'] = df['K2'].apply(lambda _: _.m_as('1/m**2'))
+                except KeyError:
+                    pass
+            return df
 
     df = property(to_df)
 
@@ -244,6 +259,11 @@ class PlacementSequence(Sequence):
         super().__init__(name=name, data=data or [], metadata=metadata, element_keys=element_keys)
         self._reference_placement = reference_placement
         self._betablock: Optional[_BetaBlock] = None
+        self._expanded = False
+
+    @property
+    def expanded(self):
+        return self._expanded
 
     @property
     def betablock(self) -> _BetaBlock:
@@ -253,18 +273,27 @@ class PlacementSequence(Sequence):
     def betablock(self, betablock: _BetaBlock):
         self._betablock = betablock
 
-    def to_df(self) -> _pd.DataFrame:
-        """TODO"""
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
+        """
+
+        Args:
+            df:
+            strip_units:
+
+        Returns:
+
+        """
         if len(self._data) == 0:
             return _pd.DataFrame()
-        df = _pd.DataFrame([{**e[0].data, **{
-            'AT_ENTRY': e[1],
-            'AT_CENTER': e[2],
-            'AT_EXIT': e[3]
-        }} for e in self._data])
-        df.name = self.name
-        df.set_index('NAME', inplace=True)
-        return df
+        if df is None:
+            df = _pd.DataFrame([{**e[0].data, **{
+                'AT_ENTRY': e[1],
+                'AT_CENTER': e[2],
+                'AT_EXIT': e[3]
+            }} for e in self._data])
+            df.name = self.name
+            df.set_index('NAME', inplace=True)
+        return super().to_df(df, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -448,6 +477,7 @@ class PlacementSequence(Sequence):
             expanded.append(e)
             at = e[3]
         self._data = expanded
+        self._expanded = True
         return self
 
     def reverse(self) -> PlacementSequence:

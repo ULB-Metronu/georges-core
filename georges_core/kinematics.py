@@ -767,6 +767,20 @@ def range_to_gamma(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     ) * _ureg.MeV
 
 
+def beta_to_etot(beta: float, particle: _ParticuleType = _Proton) -> _Q:
+    """
+    Converts relativistic beta to kinetic energy.
+
+    >>> 1 + 1
+    2
+
+    :param beta: relativistic beta (dimensionless)
+    :param particle: the particle type (default: proton)
+    :return: kinetic energy
+    """
+    return beta_to_gamma(beta) * (particle.M * _ureg.c ** 2)
+
+
 def beta_to_ekin(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     """
     Converts relativistic beta to kinetic energy.
@@ -778,7 +792,7 @@ def beta_to_ekin(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     :param particle: the particle type (default: proton)
     :return: kinetic energy
     """
-    return beta_to_gamma(beta) * (particle.M * _ureg.c ** 2) - (particle.M * _ureg.c ** 2)
+    return (beta_to_gamma(beta)-1) * (particle.M * _ureg.c ** 2)
 
 
 def beta_to_momentum(beta: float, particle: _ParticuleType = _Proton) -> _Q:

@@ -90,6 +90,7 @@ Element.make_subclass('Marker')
 Element.make_subclass("Instrument")
 Element.make_subclass('Drift')
 Element.make_subclass('Quadrupole',
+                      K1=0.0 * _ureg.m**-2,
                       K1L=0.0 * _ureg.m**-1,
                       )
 Element.make_subclass('Sextupole')
