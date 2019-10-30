@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
 from dataclasses import dataclass
+import numpy as _np
 import pandas as _pd
 from .. import particles as _particles
 from ..particles import Proton as _Proton
@@ -148,19 +149,34 @@ class Sequence(metaclass=SequenceType):
         else:
             df = df if df is not None else _pd.DataFrame(self._data)
             if strip_units:
-                def to_meter(_):
-                    return _.m_as('m')
+                def safe_convert(unit: str):
+                    def do(_):
+                        if _np.isnan(_):
+                            return _
+                        else:
+                            return _.m_as(unit)
+                    return do
 
+                df['AT_ENTRY'] = df['AT_ENTRY'].apply(safe_convert('meter'))
+                df['AT_CENTER'] = df['AT_CENTER'].apply(safe_convert('meter'))
+                df['AT_EXIT'] = df['AT_EXIT'].apply(safe_convert('meter'))
                 try:
-                    df['AT_ENTRY'] = df['AT_ENTRY'].apply(to_meter)
-                    df['AT_CENTER'] = df['AT_CENTER'].apply(to_meter)
-                    df['AT_EXIT'] = df['AT_EXIT'].apply(to_meter)
-                    df['L'] = df['L'].apply(to_meter)
-                    df['ANGLE'] = df['ANGLE'].apply(lambda _: _.m_as('radian'))
-                    df['K1'] = df['K1'].apply(lambda _: _.m_as('1/m'))
-                    df['K2'] = df['K2'].apply(lambda _: _.m_as('1/m**2'))
+                    df['L'] = df['L'].apply(safe_convert('meter'))
                 except KeyError:
                     pass
+                try:
+                    df['ANGLE'] = df['ANGLE'].apply(safe_convert('radian'))
+                except KeyError:
+                    pass
+                try:
+                    df['K1'] = df['K1'].apply(safe_convert('1/m**2'))
+                except KeyError:
+                    pass
+                try:
+                    df['K2'] = df['K2'].apply(safe_convert('1/m**3'))
+                except KeyError:
+                    pass
+
             return df
 
     df = property(to_df)
