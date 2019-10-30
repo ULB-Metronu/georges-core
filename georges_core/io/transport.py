@@ -1,7 +1,7 @@
 """
 TODO
 """
-from typing import Dict, Callable, Tuple, Any
+from typing import Dict, Callable, Tuple, Any, List, AnyStr
 import os
 from .. import ureg as _ureg
 from ..sequences import Element
@@ -91,7 +91,7 @@ TRANSPORT_TYPE_CODES_ORIGINAL: Dict[int, Tuple[Callable[[Any], Any], Callable[[A
 }
 
 
-def load_transport_input_file(filename: str, path: str = '.'):
+def load_transport_input_file(filename: str, path: str = '.') -> List[AnyStr]:
     with open(os.path.join(path, filename), 'r') as f:
         return f.readlines()
 

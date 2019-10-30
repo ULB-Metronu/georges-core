@@ -646,6 +646,7 @@ class Frame:
         Returns:
             the rotated frame (in place), allows method chaining
         """
+        self._cache.pop('q', None)  # Invalidates the cache
         self._q *= q
         return self
 
@@ -796,6 +797,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
+        self._cache.pop('o', None)  # Invalidaets the cache
         return self.translate(offset)
 
     def _translate(self, offset: _np.ndarray) -> Frame:
@@ -981,3 +983,21 @@ class Frame:
         self._o: _np.ndarray = _np.zeros(3)
         self._cache: Mapping = dict()
         return self
+
+
+class FrameFrenet(Frame):
+    def __mul__(self, q: _np.quaternion) -> Frame:
+        if not _np.all(_np.isclose(_quaternion.as_rotation_vector(q)[1:], _np.array([0.0, 0.0]))):
+            raise FrameException("Frenet frames cannot be multiplied (rotated) by arbitrary quaternions.")
+        super().__mul__(q)
+
+    def _rotate(self, angles: _np.array) -> Frame:
+        """
+
+        Args:
+            angles:
+
+        Returns:
+            the rotated frame (in place), allows method chaining
+        """
+        return self * _quaternion.from_rotation_vector([angles[0], 0, 0])
