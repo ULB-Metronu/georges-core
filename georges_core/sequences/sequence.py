@@ -420,6 +420,8 @@ class PlacementSequence(Sequence):
         """
         self._data.sort(key=lambda _: _[1])
         offset = self._data[-1][3]
+        if at is None and at_entry is None and at_center is None and at_exit is None:
+            at = 0.0 * _ureg.m
         if at is not None:
             at += offset
         if at_entry is not None:

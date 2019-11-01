@@ -78,6 +78,7 @@ class Kinematics:
         Momentum: {self.momentum}
         Magnetic rigidity: {self.brho.to('tesla meter')}
         Range in water (protons only): {self.range if self._p == _Proton else _np.nan}
+        Relativistic pv: {self.pv}
         Relativistic beta: {self.beta}
         Relativistic gamma: {self.gamma}
         """
@@ -212,7 +213,18 @@ class Kinematics:
     brho_ = property(_partial(to_brho, magnitude=True))
     """Provides *brho* (magnitude only)."""
 
-    def to_beta(self) -> Union[float, _Q]:
+    def to_pv(self) -> float:
+        """
+
+        Returns:
+
+        """
+        return self.to('pv')
+
+    pv = property(to_pv)
+    """Provides *pv*."""
+
+    def to_beta(self) -> float:
         """
 
         Returns:
@@ -223,7 +235,7 @@ class Kinematics:
     beta = property(to_beta)
     """Provides *beta*."""
 
-    def to_gamma(self) -> Union[float, _Q]:
+    def to_gamma(self) -> float:
         """
 
         Returns:
