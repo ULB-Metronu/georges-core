@@ -176,6 +176,18 @@ class Sequence(metaclass=SequenceType):
                     df['K2'] = df['K2'].apply(safe_convert('1/m**3'))
                 except KeyError:
                     pass
+                try:
+                    df['E1'] = df['E1'].apply(safe_convert('radian'))
+                except KeyError:
+                    pass
+                try:
+                    df['E2'] = df['E2'].apply(safe_convert('radian'))
+                except KeyError:
+                    pass
+                try:
+                    df['TILT'] = df['TILT'].apply(safe_convert('radian'))
+                except KeyError:
+                    pass
 
             return df
 
