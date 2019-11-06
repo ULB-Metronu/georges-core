@@ -12,7 +12,7 @@ from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
+from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
 from .. import ureg as _ureg
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -620,7 +620,7 @@ class TransportSequence(Sequence):
     """
     TODO
     """
-    from ..io.transport import TransportInputFlavor, TransportInputOriginalFlavor
+    from ..codes_io.transport import TransportInputFlavor, TransportInputOriginalFlavor
 
     def __init__(self,
                  filename: str,
