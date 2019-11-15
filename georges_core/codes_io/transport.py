@@ -4,7 +4,7 @@ TODO
 from typing import Dict, Callable, Tuple, Any, List, AnyStr
 import os
 from .. import ureg as _ureg
-from ..sequences import Element
+import georges_core
 from ..kinematics import Kinematics as _Kinematics
 
 
@@ -39,15 +39,15 @@ TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, A
         _process_beam_code_iba),
     2: (lambda _: None,
         lambda _, __: None),
-    3: (lambda _: Element.Drift(L=float(_[1]) * _ureg.m),
+    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
         lambda _, __: None),
-    4: (lambda _: Element.SBend(ANGLE=float(_[1]) * _ureg.degree, L=float(_[2]) * _ureg.m, N=float(_[3])),
+    4: (lambda _: georges_core.sequences.Element.SBend(ANGLE=float(_[1]) * _ureg.degree, L=float(_[2]) * _ureg.m, N=float(_[3])),
         lambda _, __: None),
-    5: (lambda _: Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
+    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
         lambda _, __: None),
-    6: (lambda _: Element.Collimator(),
+    6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
-    7: (lambda _: Element.Steerer(),
+    7: (lambda _: georges_core.sequences.Element.Steerer(),
         lambda _, __: None),
     10: (lambda _: None,
          lambda _, __: None),
@@ -68,15 +68,15 @@ TRANSPORT_TYPE_CODES_ORIGINAL: Dict[int, Tuple[Callable[[Any], Any], Callable[[A
         _process_beam_code_original),
     2: (lambda _: None,
         lambda _, __: None),
-    3: (lambda _: Element.Drift(L=float(_[1]) * _ureg.m),
+    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
         lambda _, __: None),
-    4: (lambda _: Element.SBend(B=float(_[2]) * _ureg.tesla, L=float(_[1]) * _ureg.m, N=float(_[3])),
+    4: (lambda _: georges_core.sequences.Element.SBend(B=float(_[2]) * _ureg.tesla, L=float(_[1]) * _ureg.m, N=float(_[3])),
         lambda _, __: None),
-    5: (lambda _: Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
+    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
         lambda _, __: None),
-    6: (lambda _: Element.Collimator(),
+    6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
-    7: (lambda _: Element.Steerer(),
+    7: (lambda _: georges_core.sequences.Element.Steerer(),
         lambda _, __: None),
     10: (lambda _: None,
          lambda _, __: None),
