@@ -55,7 +55,7 @@ class PlotlyArtist(_Artist):
     def fig(self):
         """Provides the plotly figure."""
         return {
-            'data'  : self.data,
+            'data': self.data,
             'layout': self.layout,
         }
 
@@ -164,6 +164,10 @@ class PlotlyArtist(_Artist):
     def scatter3d(self, *args, **kwargs):
         """A proxy for plotly.graph_objs.Scatter3d ."""
         self._data.append(go.Scatter3d(*args, **kwargs))
+
+    def surface(self, *args, **kwargs):
+        """A proxy for plotly.graph_objs.Surface ."""
+        self._data.append(go.Surface(*args, **kwargs))
 
     def plot_cartouche(self,
                        beamline_survey: _pd.DataFrame,
