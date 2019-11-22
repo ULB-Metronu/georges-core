@@ -2,7 +2,7 @@
 TODO
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Mapping
+from typing import TYPE_CHECKING, Optional, Mapping, Any
 import numpy as _np
 import plotly.offline
 import plotly.graph_objs as go
@@ -16,11 +16,19 @@ class PlotlyArtist(_Artist):
     TODO
     """
 
-    def __init__(self, config: Optional[Mapping] = None, layout: Optional[Mapping] = None, **kwargs):
+    def __init__(self,
+                 config: Optional[Mapping] = None,
+                 layout: Optional[Mapping] = None,
+                 width: Optional[float] = None,
+                 height: Optional[float] = None,
+                 **kwargs):
         """
 
         Args:
             config:
+            layout:
+            width:
+            height:
             **kwargs:
         """
         super().__init__(**kwargs)
@@ -31,7 +39,7 @@ class PlotlyArtist(_Artist):
             'displayModeBar': False,
             'editable': False,
         }
-        self._layout = layout or {
+        self._layout: Mapping[Any, Any] = layout or {
             'xaxis': {
                 'showgrid': True,
                 'linecolor': 'black',
@@ -44,7 +52,13 @@ class PlotlyArtist(_Artist):
                 'mirror': True,
                 'exponentformat': 'power',
             },
+            'height': 600,
+            'width': 600,
         }
+        if height is not None:
+            self._layout['height'] = height
+        if width is not None:
+            self._layout['width'] = width
         self._shapes = []
         self._n_y_axis = len([ax for ax in self._layout.keys() if ax.startswith('yaxis')])
 
