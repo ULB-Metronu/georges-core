@@ -41,9 +41,17 @@ TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, A
         lambda _, __: None),
     3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
         lambda _, __: None),
-    4: (lambda _: georges_core.sequences.Element.SBend(ANGLE=float(_[1]) * _ureg.degree, L=float(_[2]) * _ureg.m, N=float(_[3])),
+    4: (lambda _: georges_core.sequences.Element.SBend(
+        ANGLE=float(_[1]) * _ureg.degree,
+        L=float(_[2]) * _ureg.m,
+        N=float(_[3])
+    ),
         lambda _, __: None),
-    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
+    5: (lambda _: georges_core.sequences.Element.Quadrupole(
+        L=float(_[1]) * _ureg.m,
+        B1=(float(_[2]) * _ureg.T),
+        R=(float(_[3]) * _ureg.mm)
+    ),
         lambda _, __: None),
     6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
