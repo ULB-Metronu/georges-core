@@ -59,7 +59,7 @@ class Element(UserDict, metaclass=ElementClass):
 
     def __getattr__(self, k: str):
         """Provides attribute-like access to the dictionary elements."""
-        return self[k]
+        return self.get(k)
 
     @classmethod
     def make_subclass(cls,
