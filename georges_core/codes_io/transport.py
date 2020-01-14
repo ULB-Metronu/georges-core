@@ -78,9 +78,15 @@ TRANSPORT_TYPE_CODES_ORIGINAL: Dict[int, Tuple[Callable[[Any], Any], Callable[[A
         lambda _, __: None),
     3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
         lambda _, __: None),
-    4: (lambda _: georges_core.sequences.Element.SBend(B=float(_[2]) * _ureg.tesla, L=float(_[1]) * _ureg.m, N=float(_[3])),
+    4: (lambda _: georges_core.sequences.Element.SBend(B=float(_[2]) * _ureg.tesla,
+                                                       L=float(_[1]) * _ureg.m,
+                                                       N=float(_[3])
+                                                       ),
         lambda _, __: None),
-    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m, B1=(float(_[2]) * _ureg.T), R=(float(_[3]) * _ureg.mm)),
+    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m,
+                                                            B1=(float(_[2]) * _ureg.T),
+                                                            R=(float(_[3]) * _ureg.mm)
+                                                            ),
         lambda _, __: None),
     6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
