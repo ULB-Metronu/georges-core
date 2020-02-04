@@ -691,6 +691,27 @@ class TransportSequence(Sequence):
                          data=[d for d in data if d is not None],
                          metadata=sequence_metadata,
                          )
+        self.make_survey()
+
+    def make_survey(self): # Make survey of the sequence
+        # TODO : ensure this is a correct way to do
+        at_entry = 0 * _ureg.meter
+        for element in self._data:
+            element['AT_ENTRY'] = at_entry
+            at_entry += element["L"]
+            element["AT_EXIT"] = at_entry
+            element["AT_CENTER"] = 0.5*(element["AT_ENTRY"]+element["AT_EXIT"])
+
+        for idx in range(len(self._data)-1):
+            element = self._data[idx]
+            previous = self._data[idx-1]
+            after = self._data[idx+1]
+
+            if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
+                if previous["CLASS"] == "Face":
+                    element["E1"] = previous["E1"]
+                if after["CLASS"] == "Face":
+                    element["E2"] = after["E1"]
 
     def to_df(self):
         dicts = list(map(dict, self._data))
@@ -699,7 +720,9 @@ class TransportSequence(Sequence):
             if d['NAME'] is None:
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return _pd.DataFrame(dicts).set_index('NAME')
+        df = _pd.DataFrame(dicts).set_index('NAME')
+        df.query("CLASS != 'Face'", inplace=True)
+        return df
 
     df = property(to_df)
 
