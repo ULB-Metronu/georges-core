@@ -706,8 +706,14 @@ class TransportSequence(Sequence):
             element = self._data[idx]
             previous = self._data[idx-1]
             after = self._data[idx+1]
+            kin = self.metadata.kinematics
 
+            if element["CLASS"] == "Quadrupole":
+                element["K1"] = ((element["B1"] / element["R"])/kin.brho).to("meter**-2")  # For manzoni
+                element["TILT"] = 0*_ureg.radians
             if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
+                element["K1"] = 0*_ureg.meter**-2  # For manzoni
+                element["B"] = ((element["ANGLE"] * kin.brho)/element["L"]).to("T")  # For manzoni
                 if previous["CLASS"] == "Face":
                     element["E1"] = previous["E1"]
                 if after["CLASS"] == "Face":
