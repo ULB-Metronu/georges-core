@@ -169,7 +169,7 @@ def compute_dispersion_prime_from_matrix(m: _pd.DataFrame, twiss: _BetaBlock, pl
     return d0 * r21 + dp0 * r22 + r25
 
 
-def compute_periodic_twiss(matrix: _pd.DataFrame, end: Union[int, str] = -1) -> _pd.Series:
+def compute_periodic_twiss(matrix: _pd.DataFrame, end: Union[int, str] = -1) -> _BetaBlock:
     """
     Compute twiss parameters from a transfer matrix which is assumed to be a periodic transfer matrix.
 
@@ -225,4 +225,4 @@ def compute_periodic_twiss(matrix: _pd.DataFrame, end: Union[int, str] = -1) -> 
     twiss['DISP3'] = twiss['DZ']
     twiss['DISP4'] = twiss['DZP']
 
-    return _pd.Series(twiss)
+    return _BetaBlock(**twiss)
