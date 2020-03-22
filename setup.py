@@ -39,6 +39,7 @@ setup(
         'pandas',
         'pint',
         'plotly',
+        'uproot',
     ],
     package_data={'georges_core': []},
 )

@@ -4,15 +4,12 @@ A Pythonic way to analyze and work with Beam Delivery SIMulation (BDSIM) ROOT ou
 Design goals:
  - No dependency on (py)ROOT(py) is needed. The module uses `uproot` instead.
  - Enables and favors exploration of the ROOT files. No prior knowledge of the content should be required
- to discover the content.
+ to explore and discover the data structure.
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Any, List, Set
-import multiprocessing
-import concurrent.futures
+from typing import TYPE_CHECKING, Optional, List, Set
 from collections import UserDict
 import logging
-import glob
 import os
 try:
     import uproot as _uproot
