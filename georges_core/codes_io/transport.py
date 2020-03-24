@@ -44,7 +44,8 @@ TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, A
     4: (lambda _: georges_core.sequences.Element.SBend(
         ANGLE=float(_[1]) * _ureg.degree,
         L=float(_[2]) * _ureg.m,
-        N=float(_[3])
+        N=float(_[3]),
+        K1=-float(_[3]) / (((float(_[2]) * _ureg.m)/(float(_[1]) * _ureg.degree))**2).to('m**2')
     ),
         lambda _, __: None),
     5: (lambda _: georges_core.sequences.Element.Quadrupole(
@@ -55,7 +56,10 @@ TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, A
         lambda _, __: None),
     6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
-    7: (lambda _: georges_core.sequences.Element.Steerer(),
+    7: (lambda _: georges_core.sequences.Element.HKicker(
+        L=0.25 * _ureg.m,
+        KICK=(float(_[2]) * _ureg.milliradian),
+        TILT=0.0 * _ureg.radian),
         lambda _, __: None),
     10: (lambda _: None,
          lambda _, __: None),
@@ -90,7 +94,7 @@ TRANSPORT_TYPE_CODES_ORIGINAL: Dict[int, Tuple[Callable[[Any], Any], Callable[[A
         lambda _, __: None),
     6: (lambda _: georges_core.sequences.Element.Collimator(),
         lambda _, __: None),
-    7: (lambda _: georges_core.sequences.Element.Steerer(),
+    7: (lambda _: georges_core.sequences.Element.Kicker(),
         lambda _, __: None),
     10: (lambda _: None,
          lambda _, __: None),

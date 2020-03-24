@@ -292,7 +292,7 @@ class PlotlyArtist(_Artist):
                         'fillcolor': '#FF0000',
                     },
                 )
-            if e['TYPE'].upper() == 'KICKER':
+            if e['TYPE'].upper() == 'HKICKER' or e['TYPE'].upper() == 'VKICKER':
                 self.shapes.append(
                     {
                         'type': 'rect',
