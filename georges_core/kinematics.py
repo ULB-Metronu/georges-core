@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from .particles import ParticuleType as _ParticuleType
 
 
-class ZgoubiKinematicsException(Exception):
+class KinematicsException(Exception):
     """Exception raised for errors in the Zgoubidoo physics module."""
 
     def __init__(self, m):
