@@ -7,7 +7,7 @@ Design goals:
  to explore and discover the data structure.
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List, Set
+from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
 from collections import UserDict
 import logging
 import os
@@ -26,6 +26,10 @@ __all__ = [
     'ReBDSimOutput',
     'ReBDSimOpticsOutput',
 ]
+
+
+class BDSimOutputException(Exception):
+    pass
 
 
 class OutputType(type):
@@ -47,50 +51,50 @@ class Output(metaclass=OutputType):
         """
         self._file = os.path.join(path, filename)
         if open_file:
-            self._directory: _uproot.rootio.ROOTDirectory = _uproot.open(self._file)
+            self._root_directory: _uproot.rootio.ROOTDirectory = _uproot.open(self._file)
 
     @classmethod
-    def from_directory(cls, directory: _uproot.rootio.ROOTDirectory) -> Output:
+    def from_root_directory(cls, directory: _uproot.rootio.ROOTDirectory) -> Output:
         """Create an `Output` object directly attached to an existing ROOT directory.
 
         Args:
             directory: an existing `uproot` `ROOTDirectory`
         """
-        o = cls(open_master=False)
+        o = cls(open_file=False)
         o._file = None
-        o._directory = directory
+        o._root_directory = directory
         return o
 
     def __getitem__(self, item: str):
         """Read an object from the ROOT file or directory by name."""
-        return self._directory[item]
+        return self._root_directory[item]
 
     @property
     def compression(self) -> _uproot.source.compressed.Compression:
         """The compression algorithm used for the root file or directory."""
-        return self._directory.compression
+        return self._root_directory.compression
 
     @property
     def directory(self) -> _uproot.rootio.ROOTDirectory:
-        """Return the master directory attached to this output."""
-        return self._directory
+        """Return the master directory attached to this parent."""
+        return self._root_directory
 
     class Directory:
-        def __init__(self, output: Output, directory: _uproot.rootio.ROOTDirectory):
+        def __init__(self, parent: Output, directory: _uproot.rootio.ROOTDirectory):
             """
             A representation of a (nested) structure of ROOT directories.
 
             Args:
-                output: the `Output` to which the directory structure is attached
+                parent: the `Output` to which the directory structure is attached
                 directory: the top-level ROOT directory
             """
             def _build(n, c):
                 if c.__name__.endswith('Directory'):
-                    return Output.Directory(output, directory=self._directory[n])
+                    return Output.Directory(parent, directory=self._directory[n])
                 else:
                     return self._directory[n]
 
-            self._output: Output = output
+            self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
             for name, cls in self._directory.iterclasses():
                 setattr(self, name.decode('utf-8').split(';')[0].replace('-', '_'), _build(name, cls))
@@ -109,18 +113,17 @@ class Output(metaclass=OutputType):
             return self._output
 
     class Tree:
-        def __init__(self, output: Output, tree: str):
+        def __init__(self, parent: Output):
             """
             A representation of a ROOT TTree structure.
 
             Args:
-                output: the `Output` to which the tree is attached
-                tree: the tree name
+                parent: the `Output` to which the parent is attached
             """
-            self._output = output
+            self._parent = parent
+            self._tree: uproot.rootio.TTree = parent[self.__class__.__name__]
             self._df: Optional[_pd.DataFrame] = None
             self._np: Optional[_np.ndarray] = None
-            self._tree: uproot.rootio.TTree = output[tree]
 
         def __getitem__(self, item):
             try:
@@ -128,8 +131,16 @@ class Output(metaclass=OutputType):
             except KeyError:
                 return self._tree[item + '.']
 
+        def __getattr__(self, b):
+            branch_class = getattr(self.__class__, b.title().replace('_', ''), None)
+            if branch_class is not None:
+                setattr(self, b, branch_class(parent=self))
+                return getattr(self, b)
+            else:
+                raise AttributeError(f"Branch {b} does not exist for {self.__class__.__name__}")
+
         def array(self, branch=None, **kwargs) -> _np.ndarray:
-            """A proxy for the `uproot` `arrat` method."""
+            """A proxy for the `uproot` `array` method."""
             return self.tree.array(branch=branch, **kwargs)
 
         def arrays(self, branches=None, **kwargs):
@@ -148,21 +159,25 @@ class Output(metaclass=OutputType):
 
         @property
         def parent(self):
-            """The parent Output to which the tree structure is attached."""
-            return self._output
+            """The parent Output to which the parent structure is attached."""
+            return self._parent
 
         @property
         def tree(self) -> _uproot.rootio.TTree:
-            """The associated uproot tree."""
+            """The associated uproot parent."""
             return self._tree
 
         @property
-        def branches(self) -> List[str]:
+        def branches_names(self) -> List[str]:
             return [b.decode('utf-8') for b in self.tree.keys()]
 
         @property
+        def branches(self) -> List[uproot.rootio.TBranchElement]:
+            return [b for b in self.tree.values()]
+
+        @property
         def numentries(self) -> int:
-            """Provides the number of entries in the tree (without reading the entire file)."""
+            """Provides the number of entries in the parent (without reading the entire file)."""
             return self.tree.numentries
 
         @property
@@ -178,60 +193,72 @@ class Output(metaclass=OutputType):
             return self._np
 
     class Branch:
-        LEAVES: Set[str] = {}
+        BRANCH_NAME: Optional[str] = None
+        DEFAULT_LEAVES: Dict[str, Tuple[bool, Optional[str]]] = {}
 
-        def __init__(self, tree: Output.Tree, branch: str):
+        def __new__(cls, *args, **kwargs):
+            def toggle(leave):
+                def do_toggle(self):
+                    self._active_leaves[leave][1] = not self._active_leaves[leave][1]
+                    return self
+                return do_toggle
+            instance = super().__new__(cls)
+            for k in cls.DEFAULT_LEAVES:
+                setattr(instance, f"toggle_{k}", toggle(k).__get__(instance))
+            return instance
+
+        def __init__(self, parent: Output.Tree):
             """
             A representation of a ROOT Branch.
 
             Args:
-                tree: the `Tree` to which the branch is attached
-                branch: the branch name
+                parent: the `Tree` to which the branch is attached
             """
-            self._tree: Output.Tree = tree
-            self._branch: str = tree[branch]
+            self._parent: Output.Tree = parent
+            b = self.BRANCH_NAME \
+                if self.BRANCH_NAME is not None \
+                else self.__class__.__name__
+            if len(b) > 0:
+                self._branch = parent[b]
+            else:
+                self._branch = parent
             self._df: Optional[_pd.DataFrame] = None
             self._np: Optional[_np.ndarray] = None
+            self._active_leaves: Dict[str, Tuple[bool, Optional[str]]] = self.DEFAULT_LEAVES
 
         def __getitem__(self, item):
             return self._branch[item]
 
         def array(self, branch=None, **kwargs) -> _np.ndarray:
             """A proxy for the `uproot` `array` method."""
-            return self.parent.array(branch=self.branch.name.decode('utf-8') + branch, **kwargs)
+            return self.parent.array(branch=self.branch_name + branch, **kwargs)
 
         def arrays(self, branches=None, **kwargs):
             """A proxy for the uproot method.
-            TODO must be fixed
-            """
-            return self.parent.arrays(branches=[self.branch.name + b for b in branches], **kwargs)
-
-        def pandas(self, branches=None, **kwargs):
-            """A proxy for the uproot method.
-            TODO must be fixed
             """
             if branches is None:
-                branches = self.leaves
-            return self.parent.tree.pandas.df(branches=branches, **kwargs)
+                branches = self._active_leaves
+            return self.parent.arrays(branches=[self.branch_name + b for b in branches], **kwargs)
+
+        def pandas(self, branches: List[str] = None, strip_prefix: bool = True, **kwargs):
+            """A proxy for the uproot method.
+            """
+            if branches is None:
+                branches = self._active_leaves
+                branches = [self.branch_name + b for b, _ in branches.items() if _[0] is True]
+            else:
+                branches = [self.branch_name + b for b in branches]
+            df = self.parent.tree.pandas.df(branches,
+                                            flatten=True,
+                                            entrystop=10,
+                                            **kwargs)
+            if strip_prefix:
+                df.columns = [c.lstrip(self.branch_name) for c in df.columns]
+            return df
 
         def to_df(self) -> _pd.DataFrame:
             if self._df is None:
-                df = _pd.DataFrame()
-                for tree in self.parent.trees:
-                    if len(self.LEAVES) == 0:
-                        df = _pd.concat([
-                            df,
-                            tree.pandas.df()
-                        ])
-                    else:
-                        df = _pd.concat([
-                            df,
-                            tree.pandas.df(
-                                branches=tuple(map(lambda _: f"{self._branch}{_}", self.LEAVES))
-                            )
-                        ])
-                df.columns = self.LEAVES
-                self._df = df
+                self._df = self.pandas()
             return self._df
 
         def to_np(self) -> _np.ndarray:
@@ -240,14 +267,28 @@ class Output(metaclass=OutputType):
         @property
         def parent(self) -> Output.Tree:
             """The parent `Tree` to which the branch is attached."""
-            return self._tree
+            return self._parent
 
         @property
         def branch(self) -> _uproot.rootio.TBranch:
             return self._branch
 
         @property
-        def leaves(self) -> List:
+        def branch_name(self) -> str:
+            if self.BRANCH_NAME == '':
+                return ''
+            name = self.branch.name.decode('utf-8')
+            if not name.endswith('.'):
+                return name + '.'
+            else:
+                return name
+
+        @property
+        def leaves(self) -> List[uproot.rootio.TBranchElement]:
+            return self._branch.values()
+
+        @property
+        def leaves_names(self) -> List[str]:
             return self._branch.keys()
 
         @property
@@ -276,104 +317,148 @@ class BDSimOutput(Output):
         ):
             setattr(self,
                     item,
-                    getattr(BDSimOutput, item.title())(output=self, tree=item.title())
+                    getattr(BDSimOutput, item.title())(parent=self)
                     )
             return getattr(self, item)
 
     class Header(Output.Tree):
-        def __getattr__(self, b):
-            if b in (
-                    'header',
-            ):
-                setattr(self,
-                        b,
-                        getattr(BDSimOutput.Header, b.title())(branch=b.title() + '.', tree=self)
-                        )
-                return getattr(self, b)
 
         class Header(Output.Branch):
-            LEAVES = {
-                'bdsimVersion',
-                'geant4Version',
-                'rootVersion',
-                'clhepVersion',
-                'timeStamp',
-                'fileType',
-                'dataVersion',
-                'doublePrecisionOutput',
-                'analysedFiles',
-                'combinedFiles',
-                'nTrajectoryFilters',
-                'trajectoryFilters',
+            DEFAULT_LEAVES = {
+                'bdsimVersion': (True, None),
+                'geant4Version': (True, None),
+                'rootVersion': (True, None),
+                'clhepVersion': (True, None),
+                'timeStamp': (True, None),
+                'fileType': (True, None),
+                'dataVersion': (True, None),
+                'doublePrecisionOutput': (True, None),
+                'analysedFiles': (True, None),
+                'combinedFiles': (True, None),
+                'nTrajectoryFilters': (True, None),
+                'trajectoryFilters': (True, None),
             }
 
     class Beam(Output.Tree):
-        def to_df(self) -> _pd.DataFrame:
-            """
 
-            Returns:
-
-            """
-            beam_df = _pd.Series()
-
-            # Names and strings
-            for branch, name in {'Beam.GMAD::BeamBase.particle': 'particleName',
-                                 }.items():
-                beam_df[name] = (self.trees[0].array(branch=[branch])[0]).decode('utf-8')
-
-            # Single value
-            for branch, name in {'Beam.GMAD::BeamBase.beamEnergy': 'E0',
-                                 'Beam.GMAD::BeamBase.beamMomentum': 'P0',
-                                 'Beam.GMAD::BeamBase.X0': 'X0',
-                                 'Beam.GMAD::BeamBase.Y0': 'Y0',
-                                 'Beam.GMAD::BeamBase.Z0': 'Z0',
-                                 'Beam.GMAD::BeamBase.S0': 'S0',
-                                 'Beam.GMAD::BeamBase.Xp0': 'Xp0',
-                                 'Beam.GMAD::BeamBase.Yp0': 'Yp0',
-                                 'Beam.GMAD::BeamBase.Zp0': 'Zp0',
-                                 'Beam.GMAD::BeamBase.T0': 'T0',
-                                 'Beam.GMAD::BeamBase.tilt': 'tilt',
-                                 'Beam.GMAD::BeamBase.sigmaT': 'sigmaT',
-                                 'Beam.GMAD::BeamBase.sigmaE': 'sigmaE',
-                                 'Beam.GMAD::BeamBase.betx': 'betx',
-                                 'Beam.GMAD::BeamBase.bety': 'bety',
-                                 'Beam.GMAD::BeamBase.alfx': 'alfx',
-                                 'Beam.GMAD::BeamBase.alfy': 'alfy',
-                                 'Beam.GMAD::BeamBase.emitx': 'emitx',
-                                 'Beam.GMAD::BeamBase.emity': 'emity',
-                                 'Beam.GMAD::BeamBase.dispx': 'dispx',
-                                 'Beam.GMAD::BeamBase.dispy': 'dispy',
-                                 'Beam.GMAD::BeamBase.sigmaX': 'sigmaX',
-                                 'Beam.GMAD::BeamBase.sigmaXp': 'sigmaXp',
-                                 'Beam.GMAD::BeamBase.sigmaY': 'sigmaY',
-                                 'Beam.GMAD::BeamBase.sigma11': 'sigma11',
-                                 'Beam.GMAD::BeamBase.sigma12': 'sigma12',
-                                 'Beam.GMAD::BeamBase.sigma13': 'sigma13',
-                                 'Beam.GMAD::BeamBase.sigma14': 'sigma14',
-                                 'Beam.GMAD::BeamBase.sigma15': 'sigma15',
-                                 'Beam.GMAD::BeamBase.sigma16': 'sigma16',
-                                 'Beam.GMAD::BeamBase.sigma22': 'sigma22',
-                                 'Beam.GMAD::BeamBase.sigma23': 'sigma23',
-                                 'Beam.GMAD::BeamBase.sigma24': 'sigma24',
-                                 'Beam.GMAD::BeamBase.sigma25': 'sigma25',
-                                 'Beam.GMAD::BeamBase.sigma26': 'sigma26',
-                                 'Beam.GMAD::BeamBase.sigma33': 'sigma33',
-                                 'Beam.GMAD::BeamBase.sigma34': 'sigma34',
-                                 'Beam.GMAD::BeamBase.sigma35': 'sigma35',
-                                 'Beam.GMAD::BeamBase.sigma36': 'sigma36',
-                                 'Beam.GMAD::BeamBase.sigma44': 'sigma44',
-                                 'Beam.GMAD::BeamBase.sigma45': 'sigma45',
-                                 'Beam.GMAD::BeamBase.sigma46': 'sigma46',
-                                 'Beam.GMAD::BeamBase.sigma55': 'sigma55',
-                                 'Beam.GMAD::BeamBase.sigma56': 'sigma56',
-                                 'Beam.GMAD::BeamBase.sigma66': 'sigma66',
-                                 }.items():
-                beam_df[name] = self._trees[0].array(branch=[branch])[0]
-
-            self._df = _pd.DataFrame(beam_df).transpose()
-            return self._df
+        class BeamBase(Output.Branch):
+            BRANCH_NAME = 'Beam.GMAD::BeamBase'
+            DEFAULT_LEAVES = {
+                'particle': (True, None),
+                'beamParticleName': (True, None),
+                'beamEnergy': (True, None),
+                'beamKineticEnergy': (True, None),
+                'beamMomentum': (True, None),
+                'distrType': (True, None),
+                'xDistrType': (True, None),
+                'yDistrType': (True, None),
+                'zDistrType': (True, None),
+                'distrFile': (True, None),
+                'distrFileFormat': (True, None),
+                'matchDistrFileLength': (True, None),
+                'nlinesIgnore': (True, None),
+                'nlinesSkip': (True, None),
+                'X0': (True, None),
+                'Y0': (True, None),
+                'Z0': (True, None),
+                'S0': (True, None),
+                'Xp0': (True, None),
+                'Yp0': (True, None),
+                'Zp0': (True, None),
+                'T0': (True, None),
+                'E0': (True, None),
+                'Ek0': (True, None),
+                'P0': (True, None),
+                'tilt': (True, None),
+                'sigmaT': (True, None),
+                'sigmaE': (True, None),
+                'sigmaEk': (True, None),
+                'sigmaP': (True, None),
+                'betx': (True, None),
+                'bety': (True, None),
+                'alfx': (True, None),
+                'alfy': (True, None),
+                'emitx': (True, None),
+                'emity': (True, None),
+                'dispx': (True, None),
+                'dispy': (True, None),
+                'dispxp': (True, None),
+                'dispyp': (True, None),
+                'emitNX': (True, None),
+                'emitNY': (True, None),
+                'sigmaX': (True, None),
+                'sigmaXp': (True, None),
+                'sigmaY': (True, None),
+                'sigmaYp': (True, None),
+                'envelopeX': (True, None),
+                'envelopeXp': (True, None),
+                'envelopeY': (True, None),
+                'envelopeYp': (True, None),
+                'envelopeT': (True, None),
+                'envelopeE': (True, None),
+                'envelopeR': (True, None),
+                'envelopeRp': (True, None),
+                'sigma11': (True, None),
+                'sigma12': (True, None),
+                'sigma13': (True, None),
+                'sigma14': (True, None),
+                'sigma15': (True, None),
+                'sigma16': (True, None),
+                'sigma22': (True, None),
+                'sigma23': (True, None),
+                'sigma24': (True, None),
+                'sigma25': (True, None),
+                'sigma26': (True, None),
+                'sigma33': (True, None),
+                'sigma34': (True, None),
+                'sigma35': (True, None),
+                'sigma36': (True, None),
+                'sigma44': (True, None),
+                'sigma45': (True, None),
+                'sigma46': (True, None),
+                'sigma55': (True, None),
+                'sigma56': (True, None),
+                'sigma66': (True, None),
+                'shellX': (True, None),
+                'shellXp': (True, None),
+                'shellY': (True, None),
+                'shellYp': (True, None),
+                'shellXWidth': (True, None),
+                'shellXpWidth': (True, None),
+                'shellYWidth': (True, None),
+                'shellYpWidth': (True, None),
+                'Rmin': (True, None),
+                'Rmax': (True, None),
+                'haloNSigmaXInner': (True, None),
+                'haloNSigmaXOuter': (True, None),
+                'haloNSigmaYInner': (True, None),
+                'haloNSigmaYOuter': (True, None),
+                'haloXCutInner': (True, None),
+                'haloYCutInner': (True, None),
+                'haloPSWeightParameter': (True, None),
+                'haloPSWeightFunction': (True, None),
+                'offsetSampleMean': (True, None),
+                'eventGeneratorMinX': (True, None),
+                'eventGeneratorMaxX': (True, None),
+                'eventGeneratorMinY': (True, None),
+                'eventGeneratorMaxY': (True, None),
+                'eventGeneratorMinZ': (True, None),
+                'eventGeneratorMaxZ': (True, None),
+                'eventGeneratorMinXp': (True, None),
+                'eventGeneratorMaxXp': (True, None),
+                'eventGeneratorMinYp': (True, None),
+                'eventGeneratorMaxYp': (True, None),
+                'eventGeneratorMinZp': (True, None),
+                'eventGeneratorMaxZp': (True, None),
+                'eventGeneratorMinT': (True, None),
+                'eventGeneratorMaxT': (True, None),
+                'eventGeneratorMinEK': (True, None),
+                'eventGeneratorMaxEK': (True, None),
+                'eventGeneratorParticles': (True, None),
+            }
 
     class Geant4Data(Output.Tree):
+        # https://github.com/scikit-hep/uproot/issues/468
         ...
 
     class Options(Output.Tree):
@@ -470,7 +555,9 @@ class BDSimOutput(Output):
                 return getattr(self, item)
 
         class Summary(Output.Branch):
-            pass
+            DEFAULT_LEAVES = {
+
+            }
 
     class Event(Output.Tree):
         def __getattr__(self, item):
@@ -489,7 +576,7 @@ class BDSimOutput(Output):
                 b = ''.join([i.capitalize() for i in item.split('_')])
                 setattr(self,
                         item,
-                        getattr(BDSimOutput.Event, b)(branch=b + '.', tree=self)
+                        getattr(BDSimOutput.Event, b)(parent=self, branch=b + '.')
                         )
                 return getattr(self, item)
 
@@ -531,7 +618,7 @@ class BDSimOutput(Output):
             pass
 
         class Primary(Output.Branch):
-            LEAVES = {
+            DEFAULT_LEAVES = {
                 'n',
                 'energy',
                 'x',
@@ -559,39 +646,40 @@ class BDSimOutput(Output):
             }
 
         class PrimaryFirstHit(Output.Branch):
-            LEAVES = {
-                'n',
-                'S',
-                'weight',
-                # 'partID',
-                # 'trackID',
-                # 'parentID',
-                'modelID',
-                'turn',
-                'x',
-                'y',
-                'z',
-                'X',
-                'Y',
-                'Z',
-                'T',
-                # 'stepLength',
-                # 'preStepKineticEnergy',
-                'storeTurn',
-                'storeLinks',
-                'storeModelID',
-                'storeLocal',
-                'storeGlobal',
-                'storeTime',
-                'storeStepLength',
-                'storePreStepKineticEnergy',
+            DEFAULT_LEAVES = {
+                'S': True,
+                'energy': True,
+                'weight': True,
+                'partID': False,
+                'trackID': False,
+                'parentID': False,
+                'modelID': False,
+                'turn': True,
+                'x': True,
+                'y': True,
+                'z': True,
+                'X': True,
+                'Y': True,
+                'Z': True,
+                'T': True,
+                'stepLength': False,
+                'preStepKineticEnergy': False,
+                'n': False,
+                'storeTurn': False,
+                'storeLinks': False,
+                'storeModelID': False,
+                'storeLocal': False,
+                'storeGlobal': False,
+                'storeTime': False,
+                'storeStepLength': False,
+                'storePreStepKineticEnergy': False,
             }
 
         class PrimaryLastHit(PrimaryFirstHit):
             pass
 
         class ApertureImpacts(Output.Branch):
-            LEAVES = {
+            DEFAULT_LEAVES = {
                 'n',
                 'energy',
                 'S',
@@ -645,7 +733,7 @@ class BDSimOutput(Output):
                 return self._optics
 
         class Sampler(Output.Branch):
-            LEAVES = {
+            DEFAULT_LEAVES = {
                 'x',
                 'xp',
                 'y',
@@ -708,48 +796,113 @@ class BDSimOutput(Output):
 
 
 class ReBDSimOutput(Output):
-    def __init__(self, filename: str = 'output.root', path: str = '.'):
-        """
-        Note: we purposedly expose the 'ModelTree' tree as "model" to keep the same name as for a regular BDSimOutput
-        object. The "Model" directory, which in almost all cases will be unused is exposed as "model_dir".
-        Args:
-            filename:
-            path:
-        """
-        super().__init__(filename, path)
-        # self.header = BDSimOutput.Header(output=self, tree=self.files[0]['Header'])
-        # self.model = BDSimOutput.Model(output=self, tree=self.files[0]['ModelTree'])
-        # self.beam = Output.Directory(directory=self.files[0]['Beam'])
-        self.event = Output.Directory(self, directory=self.files[0]['Event'])
-        # self.run = Output.Directory(directory=self.files[0]['Run'])
-        # self.options = Output.Directory(directory=self.files[0]['Options'])
-        # self.model_dir = Output.Directory(directory=self.files[0]['Model'])
+    def __getattr__(self, item):
+        try:
+            self._root_directory.get(item.title())
+        except KeyError:
+            raise BDSimOutputException(f"Key {item} is invalid.")
+
+        if item in (
+            'beam',
+            'event',
+            'run',
+            'options'
+            'model_dir'
+        ):
+            setattr(self,
+                    item,
+                    Output.Directory(parent=self, directory=self._root_directory[item.title()])
+                    )
+        elif item == 'model':
+            setattr(self,
+                    item.rstrip('_'),
+                    getattr(BDSimOutput, item.title())(parent=self)
+                    )
+
+        else:
+            setattr(self,
+                    item,
+                    getattr(BDSimOutput, item.title())(parent=self)
+                    )
+        return getattr(self, item)
 
 
 class ReBDSimOpticsOutput(ReBDSimOutput):
     def __getattr__(self, item):
-        if item in (
+        try:
+            self._root_directory.get(item.title())
+        except KeyError:
+            raise BDSimOutputException(f"Key {item} is invalid.")
+
+        if item.rstrip('_') in (
             'optics',
         ):
             setattr(self,
-                    item,
-                    getattr(ReBDSimOpticsOutput, item.capitalize())(output=self, tree=item.capitalize())
+                    item.rstrip('_'),
+                    getattr(ReBDSimOpticsOutput, item.rstrip('_').title())(parent=self)
                     )
-            return getattr(self, item)
+            if item.endswith('_'):
+                return getattr(self, item.rstrip('_'))
+            else:
+                return getattr(getattr(self, item.rstrip('_')), item.rstrip('_'))
         else:
             return getattr(super(), item)
 
     class Optics(Output.Tree):
-        def __getattr__(self, item):
-            if item in (
-                    'optics',
-            ):
-                b = ''.join([i.capitalize() for i in item.split('_')])
-                setattr(self,
-                        item,
-                        getattr(ReBDSimOpticsOutput.Optics, b)(branch='', tree=self)
-                        )
-                return getattr(self, item)
 
         class Optics(Output.Branch):
-            pass
+            BRANCH_NAME = ''
+            DEFAULT_LEAVES = {
+                'Emitt_x': (True, None),
+                'Emitt_y': (True, None),
+                'Alpha_x': (True, None),
+                'Alpha_y': (True, None),
+                'Beta_x': (True, None),
+                'Beta_y': (True, None),
+                'Gamma_x': (True, None),
+                'Gamma_y': (True, None),
+                'Disp_x': (True, None),
+                'Disp_y': (True, None),
+                'Disp_xp': (True, None),
+                'Disp_yp': (True, None),
+                'Mean_x': (True, None),
+                'Mean_y': (True, None),
+                'Mean_xp': (True, None),
+                'Mean_yp': (True, None),
+                'Sigma_x': (True, None),
+                'Sigma_y': (True, None),
+                'Sigma_xp': (True, None),
+                'Sigma_yp': (True, None),
+                'S': (True, None),
+                'Npart': (True, None),
+                'Sigma_Emitt_x': (True, None),
+                'Sigma_Emitt_y': (True, None),
+                'Sigma_Alpha_x': (True, None),
+                'Sigma_Alpha_y': (True, None),
+                'Sigma_Beta_x': (True, None),
+                'Sigma_Beta_y': (True, None),
+                'Sigma_Gamma_x': (True, None),
+                'Sigma_Gamma_y': (True, None),
+                'Sigma_Disp_x': (True, None),
+                'Sigma_Disp_y': (True, None),
+                'Sigma_Disp_xp': (True, None),
+                'Sigma_Disp_yp': (True, None),
+                'Sigma_Mean_x': (True, None),
+                'Sigma_Mean_y': (True, None),
+                'Sigma_Mean_xp': (True, None),
+                'Sigma_Mean_yp': (True, None),
+                'Sigma_Sigma_x': (True, None),
+                'Sigma_Sigma_y': (True, None),
+                'Sigma_Sigma_xp': (True, None),
+                'Sigma_Sigma_yp': (True, None),
+                'Mean_E': (True, None),
+                'Mean_t': (True, None),
+                'Sigma_E': (True, None),
+                'Sigma_t': (True, None),
+                'Sigma_Mean_E': (True, None),
+                'Sigma_Mean_t': (True, None),
+                'Sigma_Sigma_E': (True, None),
+                'Sigma_Sigma_t': (True, None),
+                'xyCorrelationCoefficent': (True, None),
+            }
+
