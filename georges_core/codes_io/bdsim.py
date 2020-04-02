@@ -5,6 +5,7 @@ Design goals:
  - No dependency on (py)ROOT(py) is needed. The module uses `uproot` instead.
  - Enables and favors exploration of the ROOT files. No prior knowledge of the content should be required
  to explore and discover the data structure.
+ - provide analysis tools exploiting the new Awkward 1.0 library (https://arxiv.org/pdf/2001.06307.pdf)
 """
 from __future__ import annotations
 from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
@@ -904,4 +905,3 @@ class ReBDSimOpticsOutput(ReBDSimOutput):
                 'Sigma_Sigma_t': [True, None],
                 'xyCorrelationCoefficent': [True, None],
             }
-
