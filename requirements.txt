@@ -5,3 +5,4 @@ pandas
 pint
 plotly
 uproot
+numpy-quaternion

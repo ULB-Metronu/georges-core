@@ -65,7 +65,7 @@ class Kinematics:
             else:
                 self._type = 'gamma'
         else:
-            raise ZgoubiKinematicsException("Invalid kinematic quantity.")
+            raise KinematicsException("Invalid kinematic quantity.")
 
     def __repr__(self):
         return str(self)
@@ -104,7 +104,7 @@ class Kinematics:
             try:
                 return globals()[c](self._q, particle=self._p)
             except KeyError:
-                raise ZgoubiKinematicsException(f"Invalid conversion attempted: {c}.")
+                raise KinematicsException(f"Invalid conversion attempted: {c}.")
 
     def to_range(self, magnitude: bool = False) -> Union[float, _Q]:
         """
@@ -397,7 +397,7 @@ def ekin_to_range(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return: proton range in water
     """
     if particle is not _Proton:
-        raise ZgoubiKinematicsException("Conversion to range only works for protons.")
+        raise KinematicsException("Conversion to range only works for protons.")
 
     b = 0.008539
     c = 0.5271
@@ -646,8 +646,8 @@ def range_to_ekin(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         the kinetic energy of the particle.
     """
-    if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+    # if not isinstance(particle, _Proton):
+    #     raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
@@ -671,7 +671,7 @@ def range_to_momentum(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+        raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
@@ -695,7 +695,7 @@ def range_to_brho(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+        raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
@@ -719,7 +719,7 @@ def range_to_pv(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+        raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
@@ -743,7 +743,7 @@ def range_to_beta(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+        raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
@@ -767,7 +767,7 @@ def range_to_gamma(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     if not isinstance(particle, _Proton):
-        raise ZgoubiKinematicsException("Conversion from range only works for protons.")
+        raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
     b = -0.00490
