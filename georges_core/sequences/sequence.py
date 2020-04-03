@@ -13,6 +13,7 @@ from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
+from ..codes_io import load_bdsim_model, load_bdsim_beam_distribution, load_bdsim_kinematics
 from .. import ureg as _ureg
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -259,6 +260,22 @@ class Sequence(metaclass=SequenceType):
 
         """
         return SurveySequence()
+
+    @staticmethod
+    def from_bdsim(filename: str = 'output.root',
+                   path: str = '.',
+                   ):
+        """
+        TODO
+
+        Returns:
+
+        """
+        return BDSIMSequence(filename=filename,
+                             path=path,
+                             from_element=None,
+                             to_element=None
+                             )
 
 
 class PlacementSequence(Sequence):
@@ -706,5 +723,46 @@ class SurveySequence(PlacementSequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return _pd.DataFrame(dicts).set_index('NAME')
+
+    df = property(to_df)
+
+
+class BDSIMSequence(Sequence):
+
+    def __init__(self,
+                 filename: str = 'output.root',
+                 path: str = '.',
+                 from_element: str = None,
+                 to_element: str = None,
+                 ):
+        """
+
+        Args:
+            filename: the name of the physics
+            path:
+            from_element:
+            to_element:
+        """
+        bdsim_model = load_bdsim_model(filename, path, with_units=True).loc[from_element:to_element]
+
+        bdsim_kinematics = load_bdsim_kinematics(filename, path)
+        particle = bdsim_kinematics.particule
+
+        bdsim_beam_distribution = load_bdsim_beam_distribution(filename, path)
+        bdsim_beam_distribution['DPP'] = bdsim_beam_distribution['P'].apply(
+            lambda e: ((e/bdsim_kinematics.momentum)-1).magnitude)
+
+        super().__init__(name="BDSIM",
+                         data=bdsim_model,
+                         metadata=SequenceMetadata(
+                             data=_pd.Series({
+                                 'BEAM_DISTRIBUTION': bdsim_beam_distribution[['X', 'PX', 'Y', 'PY', 'T', 'DPP']],
+                             }),
+                             kinematics=bdsim_kinematics,
+                             particle=particle)
+                         )
+
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
+        return self._data
 
     df = property(to_df)
