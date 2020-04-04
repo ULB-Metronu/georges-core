@@ -747,7 +747,6 @@ class BDSimOutput(Output):
                 'z': [True, None],
                 'zp': [True, None],
                 'T': [True, None],
-                'p': [True, None],
                 'energy': [True, None],
                 'p': [True, None],
                 'turnNumber': [True, None],
@@ -769,9 +768,9 @@ class BDSimOutput(Output):
                 if turn_number == - 1 and primary_only is False:
                     return data
                 elif turn_number == -1 and primary_only is True:
-                    return data[validity[1, :] == 0]
+                    return data[validity[:, 1] == 0]
                 elif primary_only is False:
-                    return data[validity[0, :] == turn_number]
+                    return data[validity[:, 0] == turn_number]
                 else:
                     return data[_np.logical_and(validity[:, 1] == 0, validity[:, 0] == turn_number), :]
 
