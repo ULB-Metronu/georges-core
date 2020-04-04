@@ -849,6 +849,33 @@ class BDSimOutput(Output):
 
         class Collimator(Output.Branch):
             DEFAULT_LEAVES = {
+                'primaryInteracted': [True, None],
+                'primaryStopped': [True, None],
+                'n': [True, None],
+                'energy': [True, None],
+                'energyDeposited': [True, None],
+                'xln': [False, None],
+                'yln': [False, None],
+                'zln': [False, None],
+                'xpln': [False, None],
+                'ypln': [False, None],
+                'T': [False, None],
+                'weight': [False, None],
+                'partID': [False, None],
+                'parentID': [False, None],
+                'turn': [False, None],
+                'firstPrimaryHitThisTurn': [False, None],
+                'impactParameterX': [False, None],
+                'impactParameterY': [False, None],
+                'isIon': [False, None],
+                'ionA': [False, None],
+                'ionZ': [False, None],
+                'turnSet': [False, None],
+                'charge': [False, None],
+                'kineticEnergy': [False, None],
+                'mass': [False, None],
+                'rigidity': [False, None],
+                'totalEnergyDeposited': [False, None],
             }
 
 
