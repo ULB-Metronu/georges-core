@@ -463,6 +463,23 @@ class BDSimOutput(Output):
         ...
 
     class Model(Output.Tree):
+        @property
+        def sampler_names(self):
+            return self.model.sampler_names
+
+        @property
+        def collimator_names(self):
+            return self.model.collimator_names
+
+        class Model(Output.Branch):
+            @property
+            def sampler_names(self):
+                return [e.decode('utf-8') for e in self.array('samplerNamesUnique')[0]]
+
+            @property
+            def collimator_names(self):
+                return [e.decode('utf-8') for e in self.array('collimatorBranchNamesUnique')[0]]
+
         def to_df(self) -> _pd.DataFrame:
             """
 
@@ -580,42 +597,58 @@ class BDSimOutput(Output):
 
             elif item == 'samplers':
                 self.samplers = BDSimOutput.Event.Samplers({
-                    b.decode('utf-8').rstrip('.'):
-                        BDSimOutput.Event.Sampler(parent=self, branch_name=b.decode('utf-8'))
-                    for b in self.tree.keys() if b.decode('utf-8') not in (
-                        'Summary.',
-                        'Primary.',
-                        'PrimaryGlobal.',
-                        'Eloss.',
-                        'ElossVacuum.',
-                        'ElossTunnel.',
-                        'ElossWorld.',
-                        'ElossWorldExit.',
-                        'PrimaryFirstHit.',
-                        'PrimaryLastHit.',
-                        'ApertureImpacts.',
-                        'Trajectory.',
-                        'Histos.',
-                        'Primary.',
-                    )})
+                    s.rstrip('.'):
+                        BDSimOutput.Event.Sampler(parent=self, branch_name=s)
+                    for s in self.parent.model.sampler_names})
                 return self.samplers
 
             elif item == 'collimators':
-                ...
+                self.collimators = BDSimOutput.Event.Collimators({
+                    s.rstrip('.'):
+                        BDSimOutput.Event.Collimator(parent=self, branch_name=s)
+                    for s in self.parent.model.collimator_names})
+                return self.collimators
 
         class ELoss(Output.Branch):
+            DEFAULT_LEAVES = {
+                'Eloss.n': [True, None],
+                'Eloss.energy': [True, None],
+                'Eloss.S': [True, None],
+                'Eloss.weight': [True, None],
+                'Eloss.partID': [True, None],
+                'Eloss.trackID': [True, None],
+                'Eloss.parentID': [True, None],
+                'Eloss.modelID': [True, None],
+                'Eloss.turn': [True, None],
+                'Eloss.x': [True, None],
+                'Eloss.y': [True, None],
+                'Eloss.z': [True, None],
+                'Eloss.X': [True, None],
+                'Eloss.Y': [True, None],
+                'Eloss.Z': [True, None],
+                'Eloss.T': [True, None],
+                'Eloss.stepLength': [True, None],
+                'Eloss.preStepKineticEnergy': [True, None],
+                'Eloss.storeTurn': [True, None],
+                'Eloss.storeLinks': [True, None],
+                'Eloss.storeModelID': [True, None],
+                'Eloss.storeLocal': [True, None],
+                'Eloss.storeGlobal': [True, None],
+                'Eloss.storeTime': [True, None],
+                'Eloss.storeStepLength': [True, None],
+                'Eloss.storePreStepKineticEnergy': [True, None],
+            }
+
+        class ELossVacuum(ELoss):
             pass
 
-        class ELossVacuum(Output.Branch):
+        class ELossTunnel(ELoss):
             pass
 
-        class ELossTunnel(Output.Branch):
+        class ELossWorld(ELoss):
             pass
 
-        class ELossWorld(Output.Branch):
-            pass
-
-        class ELossWorldExit(Output.Branch):
+        class ELossWorldExit(ELoss):
             pass
 
         class Primary(Output.Branch):
@@ -798,6 +831,25 @@ class BDSimOutput(Output):
                     'n': data[:, -2].sum(),
                     'S': data[0, -1],
                 }
+
+        class Collimators(UserDict):
+            def to_df(self, samplers: Optional[List[str]] = None, columns: Optional[List[str]] = None) -> _pd.DataFrame:
+                ...
+
+            def to_np(self, samplers: Optional[List[str]] = None, columns: Optional[List[str]] = None) -> _np.ndarray:
+                ...
+
+            @property
+            def df(self) -> _pd.DataFrame:
+                return self.to_df()
+
+            @property
+            def np(self) -> _np.ndarray:
+                return self.to_np()
+
+        class Collimator(Output.Branch):
+            DEFAULT_LEAVES = {
+            }
 
 
 class ReBDSimOutput(Output):
