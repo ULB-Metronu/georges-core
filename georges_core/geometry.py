@@ -1,8 +1,6 @@
 """
 TODO
 """
-import numpy as _np
-
 import numpy as np
 
 

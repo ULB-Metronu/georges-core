@@ -7,7 +7,7 @@ from .frame import Frame as _Frame
 
 
 class Patchable:
-    """Patchable elements are Zgoubi commands that affect the placement of the reference frame.
+    """Patchable elements are beamline elements that affect the placement of the reference frame.
 
     A default implementation of the placement methods is provided for subclasses. It only places the entrance frame
     at the location of the placement frame and all other frames are set to the entrance frame ('point-like' element).
