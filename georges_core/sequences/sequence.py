@@ -12,8 +12,11 @@ from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, transport_element_factory
+from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, \
+    transport_element_factory
+from ..codes_io import BDSimOutput
 from .. import ureg as _ureg
+
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
 
@@ -24,7 +27,13 @@ __all__ = ['SequenceException',
            'TwissSequence',
            'SurveySequence',
            'TransportSequence',
+           'BDSIMSequence',
            ]
+
+_BDSIM_TO_MAD_CONVENTION: Mapping[str, str] = {
+    'Rcol': 'RectangularCollimator',
+    'Ecol': 'EllipticalCollimator',
+}
 
 
 class SequenceException(Exception):
@@ -91,6 +100,7 @@ class Sequence(metaclass=SequenceType):
     """Sequence.
 
     """
+
     def __init__(self,
                  name: str = '',
                  data=None,
@@ -155,6 +165,7 @@ class Sequence(metaclass=SequenceType):
                             return _
                         else:
                             return _.m_as(unit)
+
                     return do
 
                 df['AT_ENTRY'] = df['AT_ENTRY'].apply(safe_convert('meter'))
@@ -281,6 +292,7 @@ class PlacementSequence(Sequence):
     """Placement Sequence.
 
     """
+
     def __init__(self,
                  name: str = '',
                  data: Optional[List[Tuple[_Element,
@@ -535,7 +547,8 @@ class PlacementSequence(Sequence):
         length = self._data[-1][3]
         self._data = self._data[::-1]
         self._data = [
-            (e, length-at_entry, length-at_center, length-at_exit) for e, at_entry, at_center, at_exit in self._data
+            (e, length - at_entry, length - at_center, length - at_exit) for e, at_entry, at_center, at_exit in
+            self._data
         ]
         return self
 
@@ -742,24 +755,70 @@ class BDSIMSequence(Sequence):
             from_element:
             to_element:
         """
-        bdsim_model = load_bdsim_model(filename, path, with_units=True).loc[from_element:to_element]
+        # Load the model
+        bdsim_data = BDSimOutput(filename=filename, path=path)
+        bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
+        self.set_units(bdsim_model)
 
-        bdsim_kinematics = load_bdsim_kinematics(filename, path)
-        particle = bdsim_kinematics.particule
+        # Load the beam properties
+        #TODO bug when getting the beam. To simplify
+        bdsim_beam = bdsim_data.beam
+        bdsim_beam = bdsim_beam.tree.pandas.df(["Beam.GMAD::BeamBase.beamEnergy", "Beam.GMAD::BeamBase.particle"])
+        particle_name = bdsim_beam["Beam.GMAD::BeamBase.particle"].values[0].decode('utf-8').capitalize()
+        particle_energy = bdsim_beam["Beam.GMAD::BeamBase.beamEnergy"].values[0]
+        p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
+        kin = _Kinematics(particle_energy * _ureg.GeV, kinetic=False, particle=p)
 
-        bdsim_beam_distribution = load_bdsim_beam_distribution(filename, path)
-        bdsim_beam_distribution['DPP'] = bdsim_beam_distribution['P'].apply(
-            lambda e: ((e/bdsim_kinematics.momentum)-1).magnitude)
+        # Load the beam distribution
+        beam_distribution = bdsim_data.event.primary.df.copy()
+        beam_distribution['dpp'] = beam_distribution['p'].apply(lambda e: ((e/kin.momentum.m_as("GeV/c"))-1))
+        beam_distribution = beam_distribution[["x", 'y', 'xp', 'yp', 'dpp']]
+        beam_distribution.rename(columns={
+            "xp": "px",
+            "yp": "py"
+        }, inplace=True)
+        beam_distribution.columns = map(str.upper, beam_distribution.columns)
+        beam_distribution['T'] = 0
 
         super().__init__(name="BDSIM",
                          data=bdsim_model,
                          metadata=SequenceMetadata(
                              data=_pd.Series({
-                                 'BEAM_DISTRIBUTION': bdsim_beam_distribution[['X', 'PX', 'Y', 'PY', 'T', 'DPP']],
+                                 'BEAM_DISTRIBUTION': beam_distribution[['X', 'PX', 'Y', 'PY', 'T', 'DPP']],
                              }),
-                             kinematics=bdsim_kinematics,
-                             particle=particle)
+                             kinematics=kin,
+                             particle=p)
                          )
+
+    # TODO keep this function here ?
+    @staticmethod
+    def set_units(model: _pd.DataFrame = None):
+        # Specify the units
+        for c in model.columns:
+            try:
+                model[c] = model[c].apply(float)
+            except ValueError:
+                pass
+
+        model['CLASS'] = model['TYPE'].apply(str.capitalize)
+        model['CLASS'] = model['CLASS'].apply(lambda e: _BDSIM_TO_MAD_CONVENTION.get(e, e))
+
+        model.loc[model["CLASS"] == "RectangularCollimator", "APERTYPE"] = "rectangular"
+        model.loc[model["CLASS"] == "Dump", "APERTYPE"] = "rectangular"
+        model.loc[model["CLASS"] == "EllipticalCollimator", "APERTYPE"] = "elliptical"
+
+        model['L'] = model['L'].apply(lambda e: e * _ureg.m)
+        model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
+        model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
+        model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(list, axis=1)
+        model['K1'] = model['K1'].apply(lambda e: e * _ureg.m ** -2)
+        model['K1S'] = model['K1S'].apply(lambda e: e * _ureg.m ** -2)
+        model['K2'] = model['K2'].apply(lambda e: e * _ureg.m ** -3)
+        model['E1'] = model['E1'].apply(lambda e: e * _ureg.radian)
+        model['E2'] = model['E2'].apply(lambda e: e * _ureg.radian)
+        model['HGAP'] = model['HGAP'].apply(lambda e: e * _ureg.meter)
+        model['TILT'] = model['TILT'].apply(lambda e: e * _ureg.radian)
+        model['B'] = model['B'].apply(lambda e: e * _ureg.T)
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         return self._data

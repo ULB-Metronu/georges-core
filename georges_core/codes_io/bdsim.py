@@ -980,6 +980,7 @@ class BDSimOutput(Output):
                 'xp': [True, None],
                 'yp': [True, None],
                 'zp': [True, None],
+                'p': [True, None],
                 'T': [True, None],
                 'S': [False, None],
                 'r': [False, None],
