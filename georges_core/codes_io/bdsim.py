@@ -8,7 +8,7 @@ Design goals:
  - provide analysis tools exploiting the new Awkward 1.0 library (https://arxiv.org/pdf/2001.06307.pdf)
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Mapping
+from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
 from collections import UserDict
 import logging
 import os
@@ -243,8 +243,7 @@ class Output(metaclass=OutputType):
             """A proxy for the uproot method.
             """
             if branches is None:
-                branches = self._active_leaves
-                branches = [self.branch_name + b for b, _ in branches.items() if _[0] is True]
+                branches = [self.branch_name + b for b, _ in self._active_leaves.items() if _[0] is True]
             else:
                 branches = [self.branch_name + b for b in branches]
             df = self.parent.tree.pandas.df(branches,
@@ -852,8 +851,8 @@ class BDSimOutput(Output):
                 'primaryInteracted': [True, None],
                 'primaryStopped': [True, None],
                 'n': [True, None],
-                'energy': [True, None],
-                'energyDeposited': [True, None],
+                'energy': [False, None],
+                'energyDeposited': [False, None],
                 'xln': [False, None],
                 'yln': [False, None],
                 'zln': [False, None],
