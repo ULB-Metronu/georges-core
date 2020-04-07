@@ -696,6 +696,14 @@ class BDSimOutput(Output):
 
     class Model(Output.Tree):
         @property
+        def component_names(self):
+            return self.model.component_names
+
+        @property
+        def placement_names(self):
+            return self.model.placement_names
+
+        @property
         def sampler_names(self):
             return self.model.sampler_names
 
@@ -704,6 +712,90 @@ class BDSimOutput(Output):
             return self.model.collimator_names
 
         class Model(Output.Branch):
+
+            DEFAULT_LEAVES = {
+                'n': [True, None],
+                'samplerNamesUnique': [False, None],
+                'componentName': [False, None],
+                'placementName': [False, None],
+                'componentType': [True, None],
+                'length': [True, None],
+                'staPos': [True, None],
+                'midPos': [True, None],
+                'endPos': [True, None],
+                'staRot': [True, None],
+                'midRot': [True, None],
+                'endRot': [True, None],
+                'staRefPos': [True, None],
+                'midRefPos': [True, None],
+                'endRefPos': [True, None],
+                'staRefRot': [True, None],
+                'midRefRot': [True, None],
+                'endRefRot': [True, None],
+                'tilt': [True, None],
+                'offsetX': [True, None],
+                'offsetY': [True, None],
+                'staS': [True, None],
+                'midS': [True, None],
+                'endS': [True, None],
+                'beamPipeType': [True, None],
+                'beamPipeAper1': [True, None],
+                'beamPipeAper2': [True, None],
+                'beamPipeAper3': [True, None],
+                'beamPipeAper4': [True, None],
+                'material': [True, None],
+                'k1': [True, None],
+                'k2': [True, None],
+                'k3': [True, None],
+                'k4': [False, None],
+                'k5': [False, None],
+                'k6': [False, None],
+                'k7': [False, None],
+                'k8': [False, None],
+                'k9': [False, None],
+                'k10': [False, None],
+                'k11': [False, None],
+                'k12': [False, None],
+                'k1s': [False, None],
+                'k2s': [False, None],
+                'k3s': [False, None],
+                'k4s': [False, None],
+                'k5s': [False, None],
+                'k6s': [False, None],
+                'k7s': [False, None],
+                'k8s': [False, None],
+                'k9s': [False, None],
+                'k10s': [False, None],
+                'k11s': [False, None],
+                'k12s': [False, None],
+                'ks': [False, None],
+                'hkick': [True, None],
+                'vkick': [True, None],
+                'bField': [True, None],
+                'eField': [True, None],
+                'e1': [True, None],
+                'e2': [True, None],
+                'hgap': [True, None],
+                'fint': [True, None],
+                'fintx': [True, None],
+                'fintk2': [True, None],
+                'fintxk2': [True, None],
+                'storeCollimatorInfo': [False, None],
+                'collimatorIndices': [False, None],
+                'collimatorIndicesByName': [False, None],
+                'nCollimators': [False, None],
+                'collimatorInfo': [False, None],
+                'collimatorBranchNamesUnique': [False, None],
+            }
+
+            @property
+            def component_names(self):
+                return [e.decode('utf-8') for e in self.array('componentName')[0]]
+
+            @property
+            def placement_names(self):
+                return [e.decode('utf-8') for e in self.array('placementName')[0]]
+
             @property
             def sampler_names(self):
                 return [e.decode('utf-8') for e in self.array('samplerNamesUnique')[0]]
@@ -726,7 +818,7 @@ class BDSimOutput(Output):
                                  'Model.material': 'MATERIAL',
                                  'Model.beamPipeType': 'APERTYPE',
                                  }.items():
-                data = [_.decode('utf-8') for _ in self.trees[0].array(branch=[branch])[0]]
+                data = [_.decode('utf-8') for _ in self.array(branch=[branch])[0]]
                 model_geometry_df[name] = data
 
             # Scalar
@@ -767,20 +859,20 @@ class BDSimOutput(Output):
                                  'Model.fint': 'FINT',
                                  'Model.fintx': 'FINTX'
                                  }.items():
-                model_geometry_df[name] = self.trees[0].array(branch=[branch])[0]
+                model_geometry_df[name] = self.array(branch=[branch])[0]
 
             # Aperture
             for branch, name in {'Model.beamPipeAper1': 'APERTURE1',
                                  'Model.beamPipeAper2': 'APERTURE2',
                                  'Model.beamPipeAper3': 'APERTURE3',
                                  'Model.beamPipeAper4': 'APERTURE4'}.items():
-                model_geometry_df[name] = self.trees[0].array(branch=[branch])[0]
+                model_geometry_df[name] = self.array(branch=[branch])[0]
 
             # Vectors
             geometry_branches = {'Model.staPos': 'ENTRY_',
                                  'Model.midPos': 'CENTER_',
                                  'Model.endPos': 'EXIT_'}
-            data = self.trees[0].pandas.df(branches=geometry_branches.keys(), flatten=True)
+            data = self.pandas(branches=geometry_branches.keys(), flatten=True)
             for branch, name in geometry_branches.items():
                 data.rename({f"{branch}.fX": f"{name}X", f"{branch}.fY": f"{name}Y", f"{branch}.fZ": f"{name}Z"},
                             axis='columns', inplace=True)
@@ -791,43 +883,24 @@ class BDSimOutput(Output):
             return self._df
 
     class Run(Output.Tree):
-        def __getattr__(self, item):
-            if item in (
-                    'summary',
-            ):
-                setattr(self,
-                        item,
-                        getattr(BDSimOutput.Run, item.capitalize())(branch='Summary.', tree=self)
-                        )
-                return getattr(self, item)
 
         class Summary(Output.Branch):
+            DEFAULT_LEAVES = {
+                'startTime': [True, None],
+                'stopTime': [True, None],
+                'durationWall': [True, None],
+                'durationCPU': [True, None],
+                'seedStateAtStart': [True, None],
+            }
+
+        class Histos(Output.Branch):
             DEFAULT_LEAVES = {
 
             }
 
     class Event(Output.Tree):
         def __getattr__(self, item):
-            if item in (
-                    'eloss',
-                    'eloss_vacuum',
-                    'eloss_tunnel',
-                    'eloss_world',
-                    'eloss_world_exit',
-                    'primary',
-                    'primary_first_hit',
-                    'primary_last_hit',
-                    'aperture_impacts',
-                    'histos'
-            ):
-                b = ''.join([i.capitalize() for i in item.split('_')])
-                setattr(self,
-                        item,
-                        getattr(BDSimOutput.Event, b)(parent=self)
-                        )
-                return getattr(self, item)
-
-            elif item == 'samplers':
+            if item == 'samplers':
                 self.samplers = BDSimOutput.Event.Samplers({
                     s.rstrip('.'):
                         BDSimOutput.Event.Sampler(parent=self, branch_name=s)
@@ -840,35 +913,37 @@ class BDSimOutput(Output):
                         BDSimOutput.Event.Collimator(parent=self, branch_name=s)
                     for s in self.parent.model.collimator_names})
                 return self.collimators
+            else:
+                super().__getattr__(item)
 
         class ELoss(Output.Branch):
             DEFAULT_LEAVES = {
-                'Eloss.n': [True, None],
-                'Eloss.energy': [True, None],
-                'Eloss.S': [True, None],
-                'Eloss.weight': [True, None],
-                'Eloss.partID': [True, None],
-                'Eloss.trackID': [True, None],
-                'Eloss.parentID': [True, None],
-                'Eloss.modelID': [True, None],
-                'Eloss.turn': [True, None],
-                'Eloss.x': [True, None],
-                'Eloss.y': [True, None],
-                'Eloss.z': [True, None],
-                'Eloss.X': [True, None],
-                'Eloss.Y': [True, None],
-                'Eloss.Z': [True, None],
-                'Eloss.T': [True, None],
-                'Eloss.stepLength': [True, None],
-                'Eloss.preStepKineticEnergy': [True, None],
-                'Eloss.storeTurn': [True, None],
-                'Eloss.storeLinks': [True, None],
-                'Eloss.storeModelID': [True, None],
-                'Eloss.storeLocal': [True, None],
-                'Eloss.storeGlobal': [True, None],
-                'Eloss.storeTime': [True, None],
-                'Eloss.storeStepLength': [True, None],
-                'Eloss.storePreStepKineticEnergy': [True, None],
+                'n': [True, None],
+                'energy': [True, None],
+                'S': [True, None],
+                'weight': [True, None],
+                'partID': [True, None],
+                'trackID': [True, None],
+                'parentID': [True, None],
+                'modelID': [True, None],
+                'turn': [True, None],
+                'x': [True, None],
+                'y': [True, None],
+                'z': [True, None],
+                'X': [True, None],
+                'Y': [True, None],
+                'Z': [True, None],
+                'T': [True, None],
+                'stepLength': [True, None],
+                'preStepKineticEnergy': [True, None],
+                'storeTurn': [True, None],
+                'storeLinks': [True, None],
+                'storeModelID': [True, None],
+                'storeLocal': [True, None],
+                'storeGlobal': [True, None],
+                'storeTime': [True, None],
+                'storeStepLength': [True, None],
+                'storePreStepKineticEnergy': [True, None],
             }
 
         class ELossVacuum(ELoss):
