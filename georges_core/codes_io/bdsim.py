@@ -114,6 +114,11 @@ class Output(metaclass=OutputType):
             """The parent Output to which the directory structure is attached."""
             return self._output
 
+        @property
+        def root_directory(self) -> _uproot.rootio.ROOTDirectory:
+            """The associated uproot directory."""
+            return self._directory
+
     class Tree:
         def __init__(self, parent: Output):
             """
@@ -136,7 +141,8 @@ class Output(metaclass=OutputType):
         def __getattr__(self, b):
             branch_class = getattr(self.__class__, b.title().replace('_', ''), None)
             if branch_class is not None:
-                setattr(self, b, branch_class(parent=self))
+                _ = branch_class(parent=self)
+                setattr(self, b, _)
                 return getattr(self, b)
             else:
                 raise AttributeError(f"Branch {b} does not exist for {self.__class__.__name__}")
@@ -201,7 +207,7 @@ class Output(metaclass=OutputType):
         def __new__(cls, *args, **kwargs):
             def toggle(leave):
                 def do_toggle(self):
-                    self._active_leaves[leave][1] = not self._active_leaves[leave][1]
+                    self._active_leaves[leave][0] = not self._active_leaves[leave][0]
                     return self
                 return do_toggle
             instance = super().__new__(cls)
@@ -224,7 +230,7 @@ class Output(metaclass=OutputType):
                 self._branch = parent
             self._df: Optional[_pd.DataFrame] = None
             self._np: Optional[_np.ndarray] = None
-            self._active_leaves: Dict[str, Tuple[bool, Optional[str]]] = self.DEFAULT_LEAVES
+            self._active_leaves: Dict[str, Tuple[bool, Optional[str]]] = self.DEFAULT_LEAVES.copy()
 
         def __getitem__(self, item):
             return self._branch[item]
@@ -914,28 +920,28 @@ class BDSimOutput(Output):
                     for s in self.parent.model.collimator_names})
                 return self.collimators
             else:
-                super().__getattr__(item)
+                return super().__getattr__(item)
 
-        class ELoss(Output.Branch):
+        class Eloss(Output.Branch):
             DEFAULT_LEAVES = {
                 'n': [True, None],
                 'energy': [True, None],
                 'S': [True, None],
                 'weight': [True, None],
-                'partID': [True, None],
-                'trackID': [True, None],
-                'parentID': [True, None],
-                'modelID': [True, None],
-                'turn': [True, None],
-                'x': [True, None],
-                'y': [True, None],
-                'z': [True, None],
-                'X': [True, None],
-                'Y': [True, None],
-                'Z': [True, None],
-                'T': [True, None],
-                'stepLength': [True, None],
-                'preStepKineticEnergy': [True, None],
+                'partID': [False, None],
+                'trackID': [False, None],
+                'parentID': [False, None],
+                'modelID': [False, None],
+                'turn': [False, None],
+                'x': [False, None],
+                'y': [False, None],
+                'z': [False, None],
+                'X': [False, None],
+                'Y': [False, None],
+                'Z': [False, None],
+                'T': [False, None],
+                'stepLength': [False, None],
+                'preStepKineticEnergy': [False, None],
                 'storeTurn': [True, None],
                 'storeLinks': [True, None],
                 'storeModelID': [True, None],
@@ -946,16 +952,16 @@ class BDSimOutput(Output):
                 'storePreStepKineticEnergy': [True, None],
             }
 
-        class ELossVacuum(ELoss):
+        class ELossVacuum(Eloss):
             pass
 
-        class ELossTunnel(ELoss):
+        class ELossTunnel(Eloss):
             pass
 
-        class ELossWorld(ELoss):
+        class ELossWorld(Eloss):
             pass
 
-        class ELossWorldExit(ELoss):
+        class ELossWorldExit(Eloss):
             pass
 
         class Primary(Output.Branch):
