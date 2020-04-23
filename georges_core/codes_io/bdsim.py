@@ -257,7 +257,8 @@ class Output(metaclass=OutputType):
                                             flatten=True,
                                             **kwargs)
             if strip_prefix:
-                df.columns = [c.split('.')[1] for c in df.columns]
+                import re
+                df.columns = [re.split(self.branch_name, c)[1] for c in df.columns]
             return df
 
         def to_df(self) -> _pd.DataFrame:
