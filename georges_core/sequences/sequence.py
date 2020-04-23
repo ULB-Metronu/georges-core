@@ -761,13 +761,11 @@ class BDSIMSequence(Sequence):
         self.set_units(bdsim_model)
 
         # Load the beam properties
-        #TODO bug when getting the beam. To simplify
-        bdsim_beam = bdsim_data.beam
-        bdsim_beam = bdsim_beam.tree.pandas.df(["Beam.GMAD::BeamBase.beamEnergy", "Beam.GMAD::BeamBase.particle"])
-        particle_name = bdsim_beam["Beam.GMAD::BeamBase.particle"].values[0].decode('utf-8').capitalize()
-        particle_energy = bdsim_beam["Beam.GMAD::BeamBase.beamEnergy"].values[0]
+        bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
+        particle_name = bdsim_beam["particle"].values[0].decode('utf-8').capitalize()
+        particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV
         p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
-        kin = _Kinematics(particle_energy * _ureg.GeV, kinetic=False, particle=p)
+        kin = _Kinematics(particle_energy, kinetic=False, particle=p)
 
         # Load the beam distribution
         beam_distribution = bdsim_data.event.primary.df.copy()
@@ -779,7 +777,7 @@ class BDSIMSequence(Sequence):
         }, inplace=True)
         beam_distribution.columns = map(str.upper, beam_distribution.columns)
         beam_distribution['T'] = 0
-
+        beam_distribution.reset_index(inplace=True)  # Remove the multi index
         super().__init__(name="BDSIM",
                          data=bdsim_model,
                          metadata=SequenceMetadata(
@@ -790,7 +788,6 @@ class BDSIMSequence(Sequence):
                              particle=p)
                          )
 
-    # TODO keep this function here ?
     @staticmethod
     def set_units(model: _pd.DataFrame = None):
         # Specify the units
