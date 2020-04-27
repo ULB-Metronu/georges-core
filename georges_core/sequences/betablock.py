@@ -26,6 +26,10 @@ class BetaBlock(metaclass=BetaBlockType):
     emit1: float = 1E-9
     emit2: float = 1E-9
     emit3: float = 1E-9
+    mu1: float = 0.0
+    mu2: float = 0.0
+    cmu1: float = 1.0
+    cmu2: float = 1.0
 
     def __post_init__(self):
         if self.gamma11 is None:
