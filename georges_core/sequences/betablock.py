@@ -13,29 +13,35 @@ class BetaBlockType(type):
 @dataclass
 class BetaBlock(metaclass=BetaBlockType):
     """TODO"""
-    beta11: float = 1.0 * _ureg.m
-    alpha11: float = 0.0
-    gamma11: Optional[float] = None
-    beta22: float = 1.0 * _ureg.m
-    alpha22: float = 0.0
-    gamma22: Optional[float] = None
-    disp1: float = 0.0 * _ureg.m
-    disp2: float = 0.0
-    disp3: float = 0.0 * _ureg.m
-    disp4: float = 0.0
-    emit1: float = 1E-9
-    emit2: float = 1E-9
-    emit3: float = 1E-9
-    mu1: float = 0.0
-    mu2: float = 0.0
-    cmu1: float = 1.0
-    cmu2: float = 1.0
+    BETA11: float = 1.0 * _ureg.m
+    ALPHA11: float = 0.0
+    GAMMA11: Optional[float] = None
+    BETA22: float = 1.0 * _ureg.m
+    ALPHA22: float = 0.0
+    GAMMA22: Optional[float] = None
+    DISP1: float = 0.0 * _ureg.m
+    DISP2: float = 0.0
+    DISP3: float = 0.0 * _ureg.m
+    DISP4: float = 0.0
+    EMIT1: float = 1E-9
+    EMIT2: float = 1E-9
+    EMIT3: float = 1E-9
+    MU1: float = 0.0
+    MU2: float = 0.0
+    CMU1: float = 1.0
+    CMU2: float = 1.0
+    DY: float = 0.0
+    DX: float = 0.0
+    DYP: float = 0.0
+    DXP: float = 0.0
+    DZ: float = 0.0
+    DZP: float = 0.0
 
     def __post_init__(self):
-        if self.gamma11 is None:
-            self.gamma11 = (1 + self.alpha11**2) / self.beta11
-        if self.gamma22 is None:
-            self.gamma22 = (1 + self.alpha22**2) / self.beta22
+        if self.GAMMA11 is None:
+            self.GAMMA11 = (1 + self.ALPHA11**2) / self.BETA11
+        if self.GAMMA22 is None:
+            self.GAMMA22 = (1 + self.ALPHA22**2) / self.BETA22
 
     def __getitem__(self, item):
-        return getattr(self, item.lower())
+        return getattr(self, item)
