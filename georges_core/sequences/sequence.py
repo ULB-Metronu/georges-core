@@ -305,14 +305,16 @@ class Sequence(metaclass=SequenceType):
                                  path=path)
 
     @staticmethod
-    def from_survey():
+    def from_survey(filename: str = 'survey.csv',
+                    path: str = '.',
+                    ):
         """
         TODO
 
         Returns:
 
         """
-        return SurveySequence()
+        return SurveySequence(filename=filename, path=path)
 
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
@@ -808,10 +810,11 @@ class TransportSequence(Sequence):
     df = property(to_df)
 
 
-class SurveySequence(PlacementSequence):
+class SurveySequence(Sequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 metadata: Optional[SequenceMetadata] = None,
                  ):
         """
 
@@ -819,25 +822,46 @@ class SurveySequence(PlacementSequence):
             filename: the name of the physics
             path:
         """
-        transport_input = load_transport_input_file(filename, path)
+        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
+
+        # TODO be more generic
+        sequence['LENGTH'] = sequence['LENGTH'].fillna(0)
+        sequence['AT_CENTER'] = sequence['AT_CENTER'].apply(lambda e: e * _ureg.meter)
+        sequence['LENGTH'] = sequence['LENGTH'].apply(lambda e: e * _ureg.meter)
+        sequence["AT_ENTRY"] = sequence["AT_CENTER"] - 0.5 * sequence["LENGTH"]
+        sequence["AT_EXIT"] = sequence["AT_CENTER"] + 0.5 * sequence["LENGTH"]
+
+        sequence["ANGLE"] = sequence["ANGLE"].apply(lambda e: e * _ureg.radian)
+        sequence["E1"] = sequence["E1"].apply(lambda e: e * _ureg.radian)
+        sequence["E2"] = sequence["E2"].apply(lambda e: e * _ureg.radian)
+
+        # sequence['APERTURE'] = sequence['APERTURE'].fillna('1')
+        sequence['APERTYPE'] = sequence['APERTYPE'].fillna("CIRCULAR")
+
+        def check_apertures(e):
+            if isinstance(e, float):
+                return [e *_ureg.m]
+            else:
+                t = e.split(',')
+                if len(t) == 1:
+                    return [float(t[0]) * _ureg.m]
+
+                if len(t) > 1:
+                    print(t[0])
+                    t[0] = float(t[0]) * _ureg.meter
+                    t[1] = float(t[1]) * _ureg.meter
+                return t
+
+        sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
 
         data = []
         sequence_metadata = SequenceMetadata()
-        for line in transport_input:
-            if len(line.strip()) == 0:
-                continue
-            d = line.split()
-            if d[0].startswith('-'):
-                continue
-            data.append(transport_element_factory(d, sequence_metadata)[0])
+        for element in sequence.iterrows():
+            data.append(csv_element_factory(element))
 
-        if sequence_metadata.kinematics is None:
-            raise SequenceException("Invalid kinematics - Beam not found in input")
-
-        super().__init__(name='TRANSPORT',
-                         data=[d for d in data if d is not None],
-                         metadata=sequence_metadata,
-                         )
+        super().__init__(name='SURVEY',
+                         data=data,
+                         metadata=sequence_metadata)
 
     def to_df(self, df=None, strip_units=False):
         dicts = list(map(dict, self._data))
