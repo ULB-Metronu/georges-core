@@ -27,6 +27,7 @@ __all__ = [
     'BDSimOutput',
     'ReBDSimOutput',
     'ReBDSimOpticsOutput',
+    'ReBDSimCombineOutput',
 ]
 
 
@@ -118,6 +119,11 @@ class Output(metaclass=OutputType):
         def root_directory(self) -> _uproot.rootio.ROOTDirectory:
             """The associated uproot directory."""
             return self._directory
+
+        @property
+        def keys(self) -> List[str]:
+            """The content of the directory."""
+            return self._directory.keys()
 
     class Tree:
         def __init__(self, parent: Output):
@@ -1196,23 +1202,18 @@ class BDSimOutput(Output):
 
 class ReBDSimOutput(Output):
     def __getattr__(self, item):
-        try:
-            self._root_directory.get(item.title())
-        except KeyError:
-            raise BDSimOutputException(f"Key {item} is invalid.")
-
         if item in (
             'beam',
             'event',
             'run',
             'options'
-            'model_dir'
+            'model'
         ):
             setattr(self,
                     item,
                     Output.Directory(parent=self, directory=self._root_directory[item.title()])
                     )
-        elif item == 'model':
+        elif item == 'model_dir':
             setattr(self,
                     item.rstrip('_'),
                     getattr(BDSimOutput, item.title())(parent=self)
@@ -1223,6 +1224,10 @@ class ReBDSimOutput(Output):
                     item,
                     getattr(BDSimOutput, item.title())(parent=self)
                     )
+        try:
+            self._root_directory.get(item.title())
+        except KeyError:
+            raise BDSimOutputException(f"Key {item} is invalid.")
         return getattr(self, item)
 
 
@@ -1304,3 +1309,10 @@ class ReBDSimOpticsOutput(ReBDSimOutput):
                 'Sigma_Sigma_t': [True, None],
                 'xyCorrelationCoefficent': [True, None],
             }
+
+
+class ReBDSimCombineOutput(ReBDSimOutput):
+    def __getattr__(self, item):
+        if item not in ('event', 'header'):
+            return None
+        return super().__getattr__(item)
