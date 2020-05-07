@@ -42,15 +42,29 @@ class BDSimOutputException(Exception):
 
 
 class Histogram:
-    def __init__(self, h, normalization: float = 1.0, coordinates_normalization: float = 1.0):
+    def __init__(self, h):
         self._h = h
-        self.values = normalization * h.values
         self.bins = h.bins
         self.edges = h.edges
         self.variances = h.variances
         self._centers = None
+        self.normalization = 1.0
+        self.coordinates_normalization = 1.0
+
+    def __getattr__(self, item):
+        return getattr(self._h, item)
+
+    def set_normalization(self, normalization: float = 1.0):
         self.normalization = normalization
-        self.coordinates_normalization = coordinates_normalization
+        return self
+
+    def set_coordinates_normalization(self, normalization: float = 1.0):
+        self.coordinates_normalization = normalization
+        return self
+
+    @property
+    def values(self):
+        return self.normalization * self._h.values
 
     @property
     def centers(self):
@@ -86,9 +100,9 @@ class Histogram3d(Histogram):
         imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
         imgdat.SetOrigin(0, 0, 0)
         imgdat.SetSpacing(
-            self.coordinates_normalization * (self.edges[0][-1] - self.edges[0][0]) / (len(self.edges[0]) - 1),
-            self.coordinates_normalization * (self.edges[1][-1] - self.edges[1][0]) / (len(self.edges[1]) - 1),
-            self.coordinates_normalization * (self.edges[2][-1] - self.edges[2][0]) / (len(self.edges[2]) - 1)
+            self.coordinates_normalization * (self.edges[0][1] - self.edges[0][0]),
+            self.coordinates_normalization * (self.edges[1][1] - self.edges[1][0]),
+            self.coordinates_normalization * (self.edges[2][1] - self.edges[2][0])
         )
         writer = _vtk.vtkXMLImageDataWriter()
         writer.SetFileName(os.path.join(path, filename))
@@ -174,7 +188,15 @@ class Output(metaclass=OutputType):
                 setattr(self, name.decode('utf-8').split(';')[0].replace('-', '_'), _build(name, cls))
 
         def __getitem__(self, item):
-            return self._directory[item]
+            item = self._directory[item]
+            if getattr(item, '_fZaxis', None) is not None:
+                return Histogram3d(item)
+            elif getattr(item, '_fYaxis', None) is not None:
+                return Histogram2d(item)
+            elif getattr(item, '_fXaxis', None) is not None:
+                return Histogram(item)
+            else:
+                return self._directory[item]
 
         @property
         def compression(self) -> _uproot.source.compressed.Compression:
