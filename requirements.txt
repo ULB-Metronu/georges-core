@@ -6,3 +6,4 @@ pint
 plotly
 uproot
 numpy-quaternion
+vtk

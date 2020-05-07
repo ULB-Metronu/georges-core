@@ -14,12 +14,15 @@ import logging
 import os
 try:
     import uproot as _uproot
+    import uproot_methods as _uproot_methods
     if TYPE_CHECKING:
         import uproot.source.compressed
 except (ImportError, ImportWarning):
     logging.error("Uproot is required for this module to work.")
 import numpy as _np
 import pandas as _pd
+import vtk as _vtk
+import vtk.util.numpy_support as _vtk_np
 
 __all__ = [
     'Output',
@@ -28,11 +31,79 @@ __all__ = [
     'ReBDSimOutput',
     'ReBDSimOpticsOutput',
     'ReBDSimCombineOutput',
+    'Histogram',
+    'Histogram2d',
+    'Histogram3d'
 ]
 
 
 class BDSimOutputException(Exception):
     pass
+
+
+class Histogram:
+    def __init__(self, h, normalization: float = 1.0, coordinates_normalization: float = 1.0):
+        self._h = h
+        self.values = normalization * h.values
+        self.bins = h.bins
+        self.edges = h.edges
+        self.variances = h.variances
+        self._centers = None
+        self.normalization = normalization
+        self.coordinates_normalization = coordinates_normalization
+
+    @property
+    def centers(self):
+        if self._centers is not None:
+            return self._centers
+        self._centers = [
+            self.coordinates_normalization * _.mean(axis=1)
+            for _ in self.bins
+        ]
+        return self._centers
+
+
+class Histogram2d(Histogram):
+    ...
+
+
+class Histogram3d(Histogram):
+    @property
+    def bins_volume(self):
+        return _np.diff(self._h.bins[0][0])[0] * \
+               _np.diff(self._h.bins[1][0])[0] * \
+               _np.diff(self._h.bins[2][0])[0]
+
+    def to_vtk(self, filename='histogram.vti', path='.'):
+        imgdat = _vtk.vtkImageData()
+        imgdat.GetPointData().SetScalars(
+            _vtk_np.numpy_to_vtk(
+                num_array=self.values.ravel(order='F'),
+                deep=True,
+                array_type=_vtk.VTK_FLOAT
+            )
+        )
+        imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
+        imgdat.SetOrigin(0, 0, 0)
+        imgdat.SetSpacing(
+            self.coordinates_normalization * (self.edges[0][-1] - self.edges[0][0]) / (len(self.edges[0]) - 1),
+            self.coordinates_normalization * (self.edges[1][-1] - self.edges[1][0]) / (len(self.edges[1]) - 1),
+            self.coordinates_normalization * (self.edges[2][-1] - self.edges[2][0]) / (len(self.edges[2]) - 1)
+        )
+        writer = _vtk.vtkXMLImageDataWriter()
+        writer.SetFileName(os.path.join(path, filename))
+        writer.SetInputData(imgdat)
+        writer.Write()
+
+    def to_df(self):
+        index = _pd.MultiIndex.from_product(self.centers, names=('X', 'Y', 'Z'))
+        data = {
+            'edep': self.values.flatten(),
+        }
+        return _pd.DataFrame(index=index, data=data)
+
+    def to_csv(self, filename='histogram.csv', path='.'):
+        self.to_df().to_csv(os.path.join(path, filename), header=False, sep='\t', float_format='% 11.7E')
 
 
 class OutputType(type):
