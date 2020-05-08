@@ -549,7 +549,7 @@ def momentum_to_gamma(p: _Q, particle: _ParticuleType = _Proton) -> float:
 
 def brho_to_ekin(brho: _Q, particle: _ParticuleType = _Proton) -> _Q:
     """
-    Converts magnetic rigidity (brho) to momentum.
+    Converts magnetic rigidity (brho) to kinetic energy.
 
     >>> momentum_to_brho(100 * _ureg.MeV_c).to('tesla * meter')
     <Quantity(0.33356409519815206, 'meter * tesla')>
@@ -559,6 +559,16 @@ def brho_to_ekin(brho: _Q, particle: _ParticuleType = _Proton) -> _Q:
     :return:
     """
     return momentum_to_ekin(brho_to_momentum(brho, particle))
+
+
+def brho_to_etot(brho: _Q, particle: _ParticuleType = _Proton) -> _Q:
+    """
+        Converts magnetic rigidity (brho) to momentum.
+
+        >>> momentum_to_brho(100 * _ureg.MeV_c).to('tesla * meter')
+        <Quantity(0.33356409519815206, 'meter * tesla')>
+    """
+    return momentum_to_etot(brho_to_momentum(brho, particle))
 
 
 def brho_to_momentum(brho: _Q, particle: _ParticuleType = _Proton) -> _Q:
