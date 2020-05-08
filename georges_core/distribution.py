@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import os
 from scipy.optimize import curve_fit
 
 PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
@@ -126,9 +127,10 @@ class Distribution:
             raise DistributionException("Trying to access an invalid data from a beam.")
         return self.__distribution[item]
 
-    def from_csv(self, fname):
+    def from_csv(self, path='.', filename=''):
         """Read a beam distribution from a csv file."""
-        self.__initialize_distribution(distribution=pd.read_csv(fname)[['X', 'PX', 'Y', 'PY', 'DPP']])
+        filename = os.path.join(path, filename)
+        self.__initialize_distribution(distribution=pd.read_csv(filename)[['X', 'PX', 'Y', 'PY', 'DPP']])
         self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
         return self
 
