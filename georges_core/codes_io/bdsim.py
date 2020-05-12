@@ -88,7 +88,7 @@ class Histogram3d(Histogram):
                _np.diff(self._h.bins[1][0])[0] * \
                _np.diff(self._h.bins[2][0])[0]
 
-    def to_vtk(self, filename='histogram.vti', path='.',coordinates=[0,0,0]):
+    def to_vtk(self, filename='histogram.vti', path='.', coordinates=[0, 0, 0]):
         imgdat = _vtk.vtkImageData()
         imgdat.GetPointData().SetScalars(
             _vtk_np.numpy_to_vtk(
@@ -98,7 +98,7 @@ class Histogram3d(Histogram):
             )
         )
         imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
-        imgdat.SetOrigin(coordinates[0],coordinates[1],coordinates[2])
+        imgdat.SetOrigin(coordinates[0], coordinates[1], coordinates[2])
         imgdat.SetSpacing(
             self.coordinates_normalization * (self.edges[0][1] - self.edges[0][0]),
             self.coordinates_normalization * (self.edges[1][1] - self.edges[1][0]),
