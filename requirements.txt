@@ -1,9 +1,10 @@
 matplotlib
 numba
 numpy
+numpy-quaternion
 pandas
 pint
 plotly
+pytest
 uproot
-numpy-quaternion
 vtk
