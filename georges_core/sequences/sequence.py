@@ -608,32 +608,32 @@ class TwissSequence(Sequence):
         """TODO"""
         try:
             return _BetaBlock(
-                beta11=self.df.iloc[0]['BETA11'] * _ureg.m,
-                alpha11=self.df.iloc[0]['ALPHA11'],
-                beta22=self.df.iloc[0]['BETA22'] * _ureg.m,
-                alpha22=self.df.iloc[0]['ALPHA22'],
-                disp1=self.df.iloc[0]['DISP1'] * _ureg.m,
-                disp2=self.df.iloc[0]['DISP2'],
-                disp3=self.df.iloc[0]['DISP3'] * _ureg.m,
-                disp4=self.df.iloc[0]['DISP4'],
-                emit1=self.metadata['EX'],
-                emit2=self.metadata['EY'],
-                emit3=self.metadata['ET'],
+                BETA11=self.df.iloc[0]['BETA11'] * _ureg.m,
+                ALPHA11=self.df.iloc[0]['ALPHA11'],
+                BETA22=self.df.iloc[0]['BETA22'] * _ureg.m,
+                ALPHA22=self.df.iloc[0]['ALPHA22'],
+                DISP1=self.df.iloc[0]['DISP1'] * _ureg.m,
+                DISP2=self.df.iloc[0]['DISP2'],
+                DISP3=self.df.iloc[0]['DISP3'] * _ureg.m,
+                DISP4=self.df.iloc[0]['DISP4'],
+                EMIT1=self.metadata['EX'],
+                EMIT2=self.metadata['EY'],
+                EMIT3=self.metadata['ET'],
             )
         except KeyError:
             try:
                 return _BetaBlock(
-                    beta11=self.df.iloc[0]['BETX'] * _ureg.m,
-                    alpha11=self.df.iloc[0]['ALFX'],
-                    beta22=self.df.iloc[0]['BETY'] * _ureg.m,
-                    alpha22=self.df.iloc[0]['ALFY'],
-                    disp1=self.df.iloc[0]['DX'] * _ureg.m,
-                    disp2=self.df.iloc[0]['DPX'],
-                    disp3=self.df.iloc[0]['DY'] * _ureg.m,
-                    disp4=self.df.iloc[0]['DPY'],
-                    emit1=self.metadata['EX'],
-                    emit2=self.metadata['EY'],
-                    emit3=self.metadata['ET'],
+                    BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
+                    ALPHA11=self.df.iloc[0]['ALFX'],
+                    BETA22=self.df.iloc[0]['BETY'] * _ureg.m,
+                    ALPHA22=self.df.iloc[0]['ALFY'],
+                    DISP1=self.df.iloc[0]['DX'] * _ureg.m,
+                    DISP2=self.df.iloc[0]['DPX'],
+                    DISP3=self.df.iloc[0]['DY'] * _ureg.m,
+                    DISP4=self.df.iloc[0]['DPY'],
+                    EMIT1=self.metadata['EX'],
+                    EMIT2=self.metadata['EY'],
+                    EMIT3=self.metadata['ET'],
                 )
             except KeyError:
                 return _BetaBlock()

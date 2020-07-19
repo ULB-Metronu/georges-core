@@ -75,14 +75,14 @@ class Kinematics:
     def __str__(self):
         return f"""
         {self._p.__name__}
-        Total energy: {self.etot}
-        Kinetic energy: {self.ekin}
-        Momentum: {self.momentum}
-        Magnetic rigidity: {self.brho.to('tesla meter')}
-        Range in water (protons only): {self.range if self._p == _Proton else _np.nan}
-        Relativistic pv: {self.pv}
-        Relativistic beta: {self.beta}
-        Relativistic gamma: {self.gamma}
+        etot: Total energy: {self.etot}
+        ekin: Kinetic energy: {self.ekin}
+        momentum: Momentum: {self.momentum}
+        brho: Magnetic rigidity: {self.brho.to('tesla meter')}
+        range: Range in water (protons only): {self.range if self._p == _Proton else _np.nan}
+        pv: Relativistic pv: {self.pv}
+        beta: Relativistic beta: {self.beta}
+        gamma: Relativistic gamma: {self.gamma}
         """
 
     @property
