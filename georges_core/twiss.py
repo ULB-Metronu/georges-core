@@ -30,7 +30,11 @@ def _get_matrix_elements_block(m: _pd.DataFrame, twiss: Optional[_BetaBlock], bl
         return r11, r12, r21, r22
 
 
-class Parametrization:
+class ParametrizationType(type):
+    pass
+
+
+class Parametrization(metaclass=ParametrizationType):
     pass
 
 
