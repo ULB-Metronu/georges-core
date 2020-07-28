@@ -11,6 +11,7 @@ import numpy as _np
 import pandas as _pd
 from . import ureg as _ureg
 from .sequences import BetaBlock as _BetaBlock
+from . import Kinematics as _Kinematics
 
 
 def _get_matrix_elements_block(m: _pd.DataFrame, twiss: Optional[_BetaBlock], block: int = 1) -> Tuple:
@@ -323,3 +324,208 @@ class WolskiTwiss(Parametrization):
 
     def __call__(self):
         ...
+
+
+class LebedevTwiss(Parametrization):
+    def __init__(self):
+        ...
+
+    def __call__(self,
+                 matrix: _pd.DataFrame,
+                 t: _pd.DataFrame,
+                 kin: _Kinematics) -> _pd.DataFrame:
+        """
+        Uses a step-by-step transfer matrix to compute the generalized Twiss parameters (coupled motions)
+        with the parametrization of V.A. Lebedev and S.A Bogacz. The phase advances are computed as well.
+
+        Args:
+            matrix: the input step-by-step transfer matrix
+            t: tracks_global for the centered particle 'O' of the BeamTwiss
+        Returns:
+            the same DataFrame as the matrix input DataFrame, but with added columns for the computed quantities.
+        """
+        e = 1.6 * 1e-19 * _ureg.C
+        mom = kin.momentum
+
+        # 10 Parameters to describe the 4x4 symplectic transfer matrix
+        betas_1x = []
+        betas_2x = []
+        betas_1y = []
+        betas_2y = []
+
+        alphas_1x = []
+        alphas_2x = []
+        alphas_1y = []
+        alphas_2y = []
+
+        mus_1 = []
+        mus_2 = []
+
+        # Other dependent real functions that appears in the parametrization
+        nus_1 = []
+        nus_2 = []
+
+        # Calculation of the matrix for the transformation of geometric coordinates into the canonical ones
+        b_s = t['BX'].iloc[-1] * _ureg.kG
+        r_s = e * b_s / (mom * _ureg.c)
+        r_s = r_s.to('1/(m*c)').magnitude
+        matrix_rs_tot = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
+
+        b_s = t['BX'].iloc[0] * _ureg.kG
+        r_s = e * b_s / (mom * _ureg.c)
+        r_s = r_s.to('1/(m*c)').magnitude
+        matrix_rs1 = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
+
+        # Total transfer matrix
+        mat = matrix[['R11', 'R12', 'R13', 'R14', 'R15', 'R21', 'R22', 'R23', 'R24',
+                      'R25', 'R31', 'R32', 'R33', 'R34', 'R35', 'R41', 'R42', 'R43', 'R44',
+                      'R45', 'R51', 'R52', 'R53', 'R54', 'R55']]
+        mat_tot = mat.iloc[-1, :]
+
+        matt_tot_geom = _np.array(mat_tot).reshape(5, 5)[:4, :4]
+        matt_tot = matrix_rs_tot @ matt_tot_geom @ _np.linalg.inv(matrix_rs1)
+
+        # Step by step generalized twiss parameters calculation
+        for i in matrix.index:
+
+            # Transformation matrix from geometric coordinates to canonical ones
+            b_s = t['BX'].iloc[i] * _ureg.kG
+            r_s = e * b_s / (mom * _ureg.c)
+            r_s = r_s.to('1/(m*c)').magnitude
+            matrix_rs = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
+
+            mat_i = mat.iloc[i, :]
+            matt_i_geom = _np.array(mat_i).reshape(5, 5)[:4, :4]
+            matt_i = matrix_rs @ matt_i_geom @ _np.linalg.inv(matrix_rs1)
+            m = matt_i @ matt_tot @ _np.linalg.inv(matt_i)
+
+            # Symplectic unit matrix
+            U = _np.array([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1], [0, 0, -1, 0]])
+
+            # Eigenvalues and eigenvectors
+            eigvals, eigvec = _np.linalg.eig(m)
+
+            v1 = eigvec[:, 0]
+            v1_ = eigvec[:, 1]
+            v2 = eigvec[:, 2]
+            v2_ = eigvec[:, 3]
+
+            ortho1 = v1_.T @ U @ v1
+            ratio = -2j / ortho1
+            if _np.real(ratio) < 0:
+                v1 = eigvec[:, 1]
+                v1_ = eigvec[:, 0]
+            ratio = abs(_np.real(ratio))
+            v1 = v1 * _np.sqrt(ratio)
+            v1_ = v1_ * _np.sqrt(ratio)
+
+            ortho2 = v2_.T @ U @ v2
+            ratio = -2j / ortho2
+            if _np.real(ratio) < 0:
+                v2 = eigvec[:, 3]
+                v2_ = eigvec[:, 2]
+            ratio = abs(_np.real(ratio))
+            v2 = v2 * _np.sqrt(ratio)
+            v2_ = v2_ * _np.sqrt(ratio)
+
+            if _np.imag(v1[0]) != 0:
+                save = v1
+                save_ = v1_
+                v1 = v2
+                v1_ = v2_
+                v2 = save
+                v2_ = save_
+
+            # Normalization condition
+            cond1 = v1_.T @ U @ v1
+            cond2 = v2_.T @ U @ v2
+            cond3 = v1.T @ U @ v1
+            cond4 = v2.T @ U @ v2
+            cond5 = v2.T @ U @ v1
+            cond6 = v2_.T @ U @ v1
+            #print(cond1)
+            #print(cond2)
+            #print(cond3)
+            #print(cond4)
+            #print(cond5)
+            #print(cond6)
+
+            # Matrix V, obtained with real and imaginary parts of eigenvectors
+            v = _np.zeros((4, 4))
+            v[:, 0] = _np.real(v1)
+            v[:, 1] = -_np.imag(v1)
+            v[:, 2] = _np.real(v2)
+            v[:, 3] = -_np.imag(v2)
+
+            if i == 0:
+                V1 = v
+
+            # Generalized Twiss parameters alphas and betas from V elements
+            beta_1x = v[0, 0] ** 2
+            beta_2y = v[2, 2] ** 2
+            beta_1y = v[2, 0] ** 2 + v[2, 1] ** 2
+            beta_2x = v[0, 2] ** 2 + v[0, 3] ** 2
+
+            alpha_1x = - v[1, 0] * v[0, 0]
+            alpha_2y = - v[3, 2] * v[3, 3]
+            alpha_1y = -(v[3, 0] * v[2, 0] + v[3, 1] * v[2, 1])
+            alpha_2x = -(v[1, 2] * v[0, 2] + v[1, 3] * v[0, 3])
+
+            nu_1 = -_np.arctan(v[2, 1] / v[2, 0])
+            nu_2 = -_np.arctan(v[0, 3] / v[0, 2])
+
+            betas_1x.append(beta_1x)
+            betas_2x.append(beta_2x)
+            betas_1y.append(beta_1y)
+            betas_2y.append(beta_2y)
+
+            alphas_1x.append(alpha_1x)
+            alphas_2x.append(alpha_2x)
+            alphas_1y.append(alpha_1y)
+            alphas_2y.append(alpha_2y)
+
+            nus_1.append(nu_1)
+            nus_2.append(nu_2)
+
+            # Calculation of phase advances
+            R = _np.linalg.inv(v) @ matt_i @ V1
+            try:
+                mu_1 = _np.arccos(R[0, 0])
+                mu1_b = -_np.arcsin(R[1, 0])
+                mu_2 = _np.arccos(R[2, 2])
+                mu2_b = -_np.arcsin(R[3, 2])
+                if mu1_b < 0:
+                    mu_1 = _np.pi - mu_1
+                if mu2_b < 0:
+                    mu_2 = _np.pi - mu_2
+                mus_1.append(mu_1)
+                mus_2.append(mu_2)
+            except ValueError:
+                print("erreur")
+                mus_1.append(0)
+                mus_2.append(0)
+
+        matrix['BETA1X'] = _np.array(betas_1x)
+        matrix['BETA2X'] = _np.array(betas_2x)
+        matrix['BETA1Y'] = _np.array(betas_1y)
+        matrix['BETA2Y'] = _np.array(betas_2y)
+
+        matrix['ALPHA1X'] = _np.array(alphas_1x)
+        matrix['ALPHA2X'] = _np.array(alphas_2x)
+        matrix['ALPHA1Y'] = _np.array(alphas_1y)
+        matrix['ALPHA2Y'] = _np.array(alphas_2y)
+
+        matrix['NU1'] = _np.array(nus_1)
+        matrix['NU2'] = _np.array(nus_2)
+
+        matrix['MU1'] = _np.array(mus_1)
+        matrix['MU2'] = _np.array(mus_2)
+
+        R = _np.linalg.inv(v) @ matt_tot @ v
+        mu1 = _np.arccos(R[0, 0]) / (2 * _np.pi)
+        mu2 = _np.arccos(R[2, 2]) / (2 * _np.pi)
+        print("mu1 = ", mu1)
+        print("mu2 = ", mu2)
+
+        return matrix
+
