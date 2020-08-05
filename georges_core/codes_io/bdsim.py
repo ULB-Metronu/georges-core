@@ -24,6 +24,11 @@ import pandas as _pd
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
 
+import boost_histogram as bh
+import ROOT as _ROOT
+_ROOT.gSystem.Load('librebdsim')
+from ROOT import BDSBH4D
+
 __all__ = [
     'Output',
     'BDSimOutputException',
@@ -1322,6 +1327,71 @@ class ReBDSimOutput(Output):
         except KeyError:
             raise BDSimOutputException(f"Key {item} is invalid.")
         return getattr(self, item)
+
+    def to_pyboost(BH, energy_axis_type, hist_type):
+
+        if (energy_axis_type == 'log'):
+            histo4d = bh.Histogram(
+                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
+                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
+                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
+                bh.axis.Regular(BH.h_nebins, BH.h_emin, BH.h_emax, transform=bh.axis.transform.log))
+        elif (energy_axis_type == 'linear'):
+            histo4d = bh.Histogram(
+                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
+                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
+                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
+                bh.axis.Regular(BH.h_nebins, BH.h_emin, BH.h_emax))
+        elif (energy_axis_type == 'user'):
+            histo4d = bh.Histogram(
+                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
+                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
+                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
+                bh.axis.Variable(BH.h_ebinsedges))
+
+        for x in range(BH.h_nxbins):
+            for y in range(BH.h_nybins):
+                for z in range(BH.h_nzbins):
+                    for e in range(BH.h_nebins):
+                        if hist_type == 'h':
+                            histo4d[x, y, z, e] = BH.h.at(x, y, z, e)
+                        elif hist_type == 'h_err':
+                            histo4d[x, y, z, e] = BH.h_err.at(x, y, z, e)
+
+        return histo4d
+
+    def Get4dHistogram(self, hist_name, extract_to_pyboost=True, hist_type='h'):
+
+        energy_axis_type = hist_name.split('-')[-1]
+
+        if energy_axis_type == "linear":
+            BH = BDSBH4D("boost_histogram_linear")()
+        elif energy_axis_type == "log":
+            BH = BDSBH4D("boost_histogram_log")()
+        elif energy_axis_type == "user":
+            BH = BDSBH4D("boost_histogram_variable")()
+
+        BH.to_PyROOT(self._file, hist_name)
+
+        if extract_to_pyboost == False:
+            return BH
+        elif extract_to_pyboost == True:
+            return ReBDSimOutput.to_pyboost(BH, energy_axis_type, hist_type)
+
+    def Get4dHistograms(self):
+
+        _4DHistogramsDico = {}
+
+        f = _ROOT.TFile.Open(self._file)
+        Histograms = f.Get("Event/MergedHistograms")
+        numberOfHistogram4d =  Histograms.GetListOfKeys().GetSize()
+
+        for histID in range(numberOfHistogram4d):
+            histoName = Histograms.GetListOfKeys()[histID].GetName()
+            if histoName not in ['PhitsHisto','PlossHisto','ElossHisto','PhitsPEHisto','PlossPEHisto','ElossPEHisto']:
+                _4DHistogramsDico[histoName] = ReBDSimOutput.Get4dHistogram(self,histoName)
+
+        return _4DHistogramsDico
 
 
 class ReBDSimOpticsOutput(ReBDSimOutput):
