@@ -20,7 +20,13 @@ try:
 except (ImportError, ImportWarning):
     logging.error("Uproot is required for this module to work.")
 try:
-    import pybdsim
+    try:
+        import warnings
+        warnings.simplefilter("ignore")
+        import pybdsim
+        warnings.simplefilter("default")
+    except UserWarning:
+        pass
 except (ImportError, ImportWarning):
     logging.error("pybdsim is required for this module to have full functionalities.")
 import numpy as _np
