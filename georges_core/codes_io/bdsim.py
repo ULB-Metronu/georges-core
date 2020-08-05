@@ -19,15 +19,44 @@ try:
         import uproot.source.compressed
 except (ImportError, ImportWarning):
     logging.error("Uproot is required for this module to work.")
+
+_WITH_ROOT = False
+try:
+    try:
+        import warnings
+        warnings.simplefilter("ignore")
+        import ROOT
+        ROOT.gSystem.Load('librebdsim')
+        from ROOT import BDSBH4D
+        warnings.simplefilter("default")
+    except (ImportError, UserWarning):
+        pass
+    _WITH_ROOT = True
+except (ImportError, ImportWarning):
+    logging.warning("ROOT is required for this module to have full functionalities.\n"
+                    "Not all methods will be available.")
+
+_WITH_BOOST_HISTOGRAM = False
+try:
+    try:
+        import warnings
+        warnings.simplefilter("ignore")
+        import boost_histogram as bh
+        warnings.simplefilter("default")
+    except (ImportError, UserWarning):
+        pass
+    _WITH_BOOST_HISTOGRAM = True
+except (ImportError, ImportWarning):
+    logging.warning("boost_histogram is required for this module to have full functionalities.\n"
+                    "Not all methods will be available.")
+
+
+
 import numpy as _np
 import pandas as _pd
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
 
-import boost_histogram as bh
-import ROOT as _ROOT
-_ROOT.gSystem.Load('librebdsim')
-from ROOT import BDSBH4D
 
 __all__ = [
     'Output',
@@ -1328,7 +1357,7 @@ class ReBDSimOutput(Output):
             raise BDSimOutputException(f"Key {item} is invalid.")
         return getattr(self, item)
 
-    def to_pyboost(BH, energy_axis_type, hist_type):
+    def toPyBoost(BH, energy_axis_type, hist_type):
 
         if (energy_axis_type == 'log'):
             histo4d = bh.Histogram(
@@ -1360,7 +1389,7 @@ class ReBDSimOutput(Output):
 
         return histo4d
 
-    def Get4dHistogram(self, hist_name, extract_to_pyboost=True, hist_type='h'):
+    def get4dHistogram(self, hist_name, extract_to_pyboost=True, hist_type='h'):
 
         energy_axis_type = hist_name.split('-')[-1]
 
@@ -1376,22 +1405,32 @@ class ReBDSimOutput(Output):
         if extract_to_pyboost == False:
             return BH
         elif extract_to_pyboost == True:
-            return ReBDSimOutput.to_pyboost(BH, energy_axis_type, hist_type)
+            if _WITH_BOOST_HISTOGRAM:
+                try:
+                    return ReBDSimOutput.toPyBoost(BH, energy_axis_type, hist_type)
+                except OSError:
+                    pass
+            return BH
 
-    def Get4dHistograms(self):
+    def get4dHistograms(self):
 
-        _4DHistogramsDico = {}
+        histograms_dico = {}
 
-        f = _ROOT.TFile.Open(self._file)
-        Histograms = f.Get("Event/MergedHistograms")
-        numberOfHistogram4d =  Histograms.GetListOfKeys().GetSize()
+        if _WITH_ROOT:
+            try:
+                f = ROOT.TFile.Open(self._file)
+                histograms = f.Get("Event/MergedHistograms")
+                numberOfHistogram4d = histograms.GetListOfKeys().GetSize()
 
-        for histID in range(numberOfHistogram4d):
-            histoName = Histograms.GetListOfKeys()[histID].GetName()
-            if histoName not in ['PhitsHisto','PlossHisto','ElossHisto','PhitsPEHisto','PlossPEHisto','ElossPEHisto']:
-                _4DHistogramsDico[histoName] = ReBDSimOutput.Get4dHistogram(self,histoName)
+                for i in range(numberOfHistogram4d):
+                    hist_name = histograms.GetListOfKeys()[i].GetName()
+                    if hist_name not in ['PhitsHisto', 'PlossHisto', 'ElossHisto', 'PhitsPEHisto', 'PlossPEHisto',
+                                         'ElossPEHisto']:
+                        histograms_dico[hist_name] = ReBDSimOutput.get4dHistogram(self, hist_name)
+            except OSError:
+                pass
 
-        return _4DHistogramsDico
+        return histograms_dico
 
 
 class ReBDSimOpticsOutput(ReBDSimOutput):
