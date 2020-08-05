@@ -19,16 +19,22 @@ try:
         import uproot.source.compressed
 except (ImportError, ImportWarning):
     logging.error("Uproot is required for this module to work.")
+    raise ImportError("Uproot is required for this module to work.")
+
+_WITH_PYBDSIM = False
 try:
     try:
         import warnings
         warnings.simplefilter("ignore")
         import pybdsim
         warnings.simplefilter("default")
-    except UserWarning:
+    except (ImportError, UserWarning):
         pass
+    _WITH_PYBDSIM = True
 except (ImportError, ImportWarning):
-    logging.error("pybdsim is required for this module to have full functionalities.")
+    logging.warning("pybdsim is required for this module to have full functionalities.\n"
+                    "Not all methods will be available.")
+
 import numpy as _np
 import pandas as _pd
 import vtk as _vtk
@@ -113,10 +119,11 @@ class Histogram3d(Histogram):
                ):
         _pyroot_file = None
         if origin is None:
-            try:
-                _pyroot_file = pybdsim.Data.Load(os.path.join(reference_path, reference_file))
-            except OSError:
-                pass
+            if _WITH_PYBDSIM:
+                try:
+                    _pyroot_file = pybdsim.Data.Load(os.path.join(reference_path, reference_file))
+                except OSError:
+                    pass
         if _pyroot_file is not None:
             mt = _pyroot_file.GetModelTree()
             md = _pyroot_file.GetModel()
