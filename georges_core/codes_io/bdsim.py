@@ -12,9 +12,11 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
 from collections import UserDict
 import logging
 import os
+
 try:
     import uproot as _uproot
     import uproot_methods as _uproot_methods
+
     if TYPE_CHECKING:
         import uproot.source.compressed
 except (ImportError, ImportWarning):
@@ -24,10 +26,11 @@ _WITH_ROOT = False
 try:
     try:
         import warnings
+
         warnings.simplefilter("ignore")
         import ROOT
+
         ROOT.gSystem.Load('librebdsim')
-        from ROOT import BDSBH4D
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
         pass
@@ -40,8 +43,10 @@ _WITH_BOOST_HISTOGRAM = False
 try:
     try:
         import warnings
+
         warnings.simplefilter("ignore")
         import boost_histogram as bh
+
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
         pass
@@ -50,13 +55,10 @@ except (ImportError, ImportWarning):
     logging.warning("boost_histogram is required for this module to have full functionalities.\n"
                     "Not all methods will be available.")
 
-
-
 import numpy as _np
 import pandas as _pd
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
-
 
 __all__ = [
     'Output',
@@ -122,7 +124,8 @@ class Histogram3d(Histogram):
                _np.diff(self._h.bins[1][0])[0] * \
                _np.diff(self._h.bins[2][0])[0]
 
-    def to_vtk(self, filename='histogram.vti', path='.', coordinates=[0, 0, 0]):
+    def to_vtk(self, filename='histogram.vti', path='.', coordinates=None):
+        coordinates = coordinates or [0, 0, 0]
         imgdat = _vtk.vtkImageData()
         imgdat.GetPointData().SetScalars(
             _vtk_np.numpy_to_vtk(
@@ -152,6 +155,76 @@ class Histogram3d(Histogram):
 
     def to_csv(self, filename='histogram.csv', path='.'):
         self.to_df().to_csv(os.path.join(path, filename), header=False, sep='\t', float_format='% 11.7E')
+
+
+class Histogram4d:
+    def __init__(self, bdsbh4d_histogram, energy_axis_type):
+        self._h = bdsbh4d_histogram
+        self._bh = None
+        self._bh_error = None
+        self._energy_axis_type = energy_axis_type
+
+    def get_pyboost(self, hist_type):
+        if _WITH_BOOST_HISTOGRAM:
+            energy_axis = None
+            if self._energy_axis_type == 'log':
+                energy_axis = bh.axis.Regular(self._h.h_nebins, self._h.h_emin, self._h.h_emax,
+                                              transform=bh.axis.transform.log)
+            elif self._energy_axis_type == 'linear':
+                energy_axis = bh.axis.Regular(self._h.h_nebins, self._h.h_emin, self._h.h_emax)
+            elif self._energy_axis_type == 'user':
+                energy_axis = bh.axis.Variable(self._h.h_ebinsedges)
+
+            histo4d = bh.Histogram(
+                bh.axis.Regular(self._h.h_nxbins, self._h.h_xmin, self._h.h_xmax),
+                bh.axis.Regular(self._h.h_nybins, self._h.h_ymin, self._h.h_ymax),
+                bh.axis.Regular(self._h.h_nzbins, self._h.h_zmin, self._h.h_zmax),
+                energy_axis)
+
+            for x in range(self._h.h_nxbins):
+                for y in range(self._h.h_nybins):
+                    for z in range(self._h.h_nzbins):
+                        for e in range(self._h.h_nebins):
+                            histo4d[x, y, z, e] = getattr(self._h, hist_type).at(x, y, z, e)
+
+            return histo4d
+        else:
+            raise AttributeError("Boost histograms are not available")
+
+    @property
+    def bh(self):
+        if self._bh is None:
+            self._bh = self.get_pyboost('h')
+        return self._bh
+
+    @property
+    def bh_err(self):
+        if self._bh_error is None:
+            self._bh_error = self.get_pyboost('h_err')
+        return self._bh_error
+
+    @property
+    def h(self):
+        return self._h.h
+
+    @property
+    def h_err(self):
+        return self._h.h_err
+
+    @staticmethod
+    def from_root_file(file, name):
+        energy_axis_type = name.split('-')[-1]
+        if energy_axis_type == "linear":
+            bdsbh4d = ROOT.BDSBH4D("boost_histogram_linear")()
+        elif energy_axis_type == "log":
+            bdsbh4d = ROOT.BDSBH4D("boost_histogram_log")()
+        elif energy_axis_type == "user":
+            bdsbh4d = ROOT.BDSBH4D("boost_histogram_variable")()
+
+        # to_PyROOT() is a BDSIM function
+        bdsbh4d.to_PyROOT(file, name)
+
+        return Histogram4d(bdsbh4d, energy_axis_type)
 
 
 class OutputType(type):
@@ -210,11 +283,21 @@ class Output(metaclass=OutputType):
                 parent: the `Output` to which the directory structure is attached
                 directory: the top-level ROOT directory
             """
+
             def _build(n, c):
+                item = self._directory[n]
                 if c.__name__.endswith('Directory'):
-                    return Output.Directory(parent, directory=self._directory[n])
+                    return Output.Directory(parent, directory=item)
+                elif c.__name__.endswith('TH1D'):
+                    return Histogram(item)
+                elif c.__name__.endswith('TH2D'):
+                    return Histogram2d(item)
+                elif c.__name__.endswith('TH3D'):
+                    return Histogram3d(item)
+                elif c.__name__.endswith('TTree'):
+                    return Histogram4d.from_root_file(self.parent._file, n.decode('utf-8').split(';')[0])
                 else:
-                    return self._directory[n]
+                    return item
 
             self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
@@ -222,15 +305,7 @@ class Output(metaclass=OutputType):
                 setattr(self, name.decode('utf-8').split(';')[0].replace('-', '_'), _build(name, cls))
 
         def __getitem__(self, item):
-            item = self._directory[item]
-            if getattr(item, '_fZaxis', None) is not None:
-                return Histogram3d(item)
-            elif getattr(item, '_fYaxis', None) is not None:
-                return Histogram2d(item)
-            elif getattr(item, '_fXaxis', None) is not None:
-                return Histogram(item)
-            else:
-                return self._directory[item]
+            return self._directory[item]
 
         @property
         def compression(self) -> _uproot.source.compressed.Compression:
@@ -342,7 +417,9 @@ class Output(metaclass=OutputType):
                 def do_toggle(self):
                     self._active_leaves[leave][0] = not self._active_leaves[leave][0]
                     return self
+
                 return do_toggle
+
             instance = super().__new__(cls)
             for k in cls.DEFAULT_LEAVES:
                 setattr(instance, f"toggle_{k}", toggle(k).__get__(instance))
@@ -445,13 +522,13 @@ class Output(metaclass=OutputType):
 class BDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-            'header',
-            'geant4data',
-            'beam',
-            'options',
-            'model',
-            'run',
-            'event',
+                'header',
+                'geant4data',
+                'beam',
+                'options',
+                'model',
+                'run',
+                'event',
         ):
             setattr(self,
                     item,
@@ -1330,11 +1407,11 @@ class BDSimOutput(Output):
 class ReBDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-            'beam',
-            'event',
-            'run',
-            'options'
-            'model'
+                'beam',
+                'event',
+                'run',
+                'options'
+                'model'
         ):
             setattr(self,
                     item,
@@ -1357,81 +1434,6 @@ class ReBDSimOutput(Output):
             raise BDSimOutputException(f"Key {item} is invalid.")
         return getattr(self, item)
 
-    def toPyBoost(BH, energy_axis_type, hist_type):
-
-        if (energy_axis_type == 'log'):
-            histo4d = bh.Histogram(
-                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
-                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
-                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
-                bh.axis.Regular(BH.h_nebins, BH.h_emin, BH.h_emax, transform=bh.axis.transform.log))
-        elif (energy_axis_type == 'linear'):
-            histo4d = bh.Histogram(
-                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
-                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
-                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
-                bh.axis.Regular(BH.h_nebins, BH.h_emin, BH.h_emax))
-        elif (energy_axis_type == 'user'):
-            histo4d = bh.Histogram(
-                bh.axis.Regular(BH.h_nxbins, BH.h_xmin, BH.h_xmax),
-                bh.axis.Regular(BH.h_nybins, BH.h_ymin, BH.h_ymax),
-                bh.axis.Regular(BH.h_nzbins, BH.h_zmin, BH.h_zmax),
-                bh.axis.Variable(BH.h_ebinsedges))
-
-        for x in range(BH.h_nxbins):
-            for y in range(BH.h_nybins):
-                for z in range(BH.h_nzbins):
-                    for e in range(BH.h_nebins):
-                        if hist_type == 'h':
-                            histo4d[x, y, z, e] = BH.h.at(x, y, z, e)
-                        elif hist_type == 'h_err':
-                            histo4d[x, y, z, e] = BH.h_err.at(x, y, z, e)
-
-        return histo4d
-
-    def get4dHistogram(self, hist_name, extract_to_pyboost=True, hist_type='h'):
-
-        energy_axis_type = hist_name.split('-')[-1]
-
-        if energy_axis_type == "linear":
-            BH = BDSBH4D("boost_histogram_linear")()
-        elif energy_axis_type == "log":
-            BH = BDSBH4D("boost_histogram_log")()
-        elif energy_axis_type == "user":
-            BH = BDSBH4D("boost_histogram_variable")()
-
-        BH.to_PyROOT(self._file, hist_name)
-
-        if extract_to_pyboost == False:
-            return BH
-        elif extract_to_pyboost == True:
-            if _WITH_BOOST_HISTOGRAM:
-                try:
-                    return ReBDSimOutput.toPyBoost(BH, energy_axis_type, hist_type)
-                except OSError:
-                    pass
-            return BH
-
-    def get4dHistograms(self):
-
-        histograms_dico = {}
-
-        if _WITH_ROOT:
-            try:
-                f = ROOT.TFile.Open(self._file)
-                histograms = f.Get("Event/MergedHistograms")
-                numberOfHistogram4d = histograms.GetListOfKeys().GetSize()
-
-                for i in range(numberOfHistogram4d):
-                    hist_name = histograms.GetListOfKeys()[i].GetName()
-                    if hist_name not in ['PhitsHisto', 'PlossHisto', 'ElossHisto', 'PhitsPEHisto', 'PlossPEHisto',
-                                         'ElossPEHisto']:
-                        histograms_dico[hist_name] = ReBDSimOutput.get4dHistogram(self, hist_name)
-            except OSError:
-                pass
-
-        return histograms_dico
-
 
 class ReBDSimOpticsOutput(ReBDSimOutput):
     def __getattr__(self, item):
@@ -1441,7 +1443,7 @@ class ReBDSimOpticsOutput(ReBDSimOutput):
             raise BDSimOutputException(f"Key {item} is invalid.")
 
         if item.rstrip('_') in (
-            'optics',
+                'optics',
         ):
             setattr(self,
                     item.rstrip('_'),
