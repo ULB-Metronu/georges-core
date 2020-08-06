@@ -40,6 +40,7 @@ setup(
         'pint',
         'plotly',
         'uproot',
+        'vtk',
     ],
     package_data={'georges_core': []},
 )

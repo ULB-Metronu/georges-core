@@ -12,15 +12,28 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
 from collections import UserDict
 import logging
 import os
-
 try:
     import uproot as _uproot
     import uproot_methods as _uproot_methods
-
     if TYPE_CHECKING:
         import uproot.source.compressed
 except (ImportError, ImportWarning):
     logging.error("Uproot is required for this module to work.")
+    raise ImportError("Uproot is required for this module to work.")
+
+_WITH_PYBDSIM = False
+try:
+    try:
+        import warnings
+        warnings.simplefilter("ignore")
+        import pybdsim
+        warnings.simplefilter("default")
+    except (ImportError, UserWarning):
+        pass
+    _WITH_PYBDSIM = True
+except (ImportError, ImportWarning):
+    logging.warning("pybdsim is required for this module to have full functionalities.\n"
+                    "Not all methods will be available.")
 
 _WITH_ROOT = False
 try:
@@ -84,6 +97,7 @@ class Histogram:
         self.edges = h.edges
         self.variances = h.variances
         self._centers = None
+        self._normalized_values = None
         self.normalization = 1.0
         self.coordinates_normalization = 1.0
 
@@ -92,6 +106,7 @@ class Histogram:
 
     def set_normalization(self, normalization: float = 1.0):
         self.normalization = normalization
+        self._normalized_values = self.normalization * self._h.values
         return self
 
     def set_coordinates_normalization(self, normalization: float = 1.0):
@@ -101,6 +116,10 @@ class Histogram:
     @property
     def values(self):
         return self.normalization * self._h.values
+
+    @property
+    def normalized_values(self):
+        return self._normalized_values
 
     @property
     def centers(self):
@@ -124,8 +143,35 @@ class Histogram3d(Histogram):
                _np.diff(self._h.bins[1][0])[0] * \
                _np.diff(self._h.bins[2][0])[0]
 
-    def to_vtk(self, filename='histogram.vti', path='.', coordinates=None):
-        coordinates = coordinates or [0, 0, 0]
+    def to_vtk(self,
+               filename='histogram.vti',
+               path='.',
+               origin=None,
+               reference_file='output.root',
+               reference_path='.'
+               ):
+        _pyroot_file = None
+        if origin is None:
+            if _WITH_PYBDSIM:
+                try:
+                    _pyroot_file = pybdsim.Data.Load(os.path.join(reference_path, reference_file))
+                except OSError:
+                    pass
+        if _pyroot_file is not None:
+            mt = _pyroot_file.GetModelTree()
+            md = _pyroot_file.GetModel()
+            mt.GetEntry(0)
+            mesh_translation = [0.0, 0.0, 0.0]
+            for name in md.model.scoringMeshName:
+                if str(name) in self._h.name.decode('utf-8'):
+                    mesh_translation = md.model.scoringMeshTranslation[name]
+            origin = [
+                mesh_translation.x(),
+                mesh_translation.y(),
+                mesh_translation.z(),
+            ]
+        else:
+            origin = [0.0, 0.0, 0.0] if origin is None else origin
         imgdat = _vtk.vtkImageData()
         imgdat.GetPointData().SetScalars(
             _vtk_np.numpy_to_vtk(
@@ -135,7 +181,10 @@ class Histogram3d(Histogram):
             )
         )
         imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
-        imgdat.SetOrigin(coordinates[0], coordinates[1], coordinates[2])
+        imgdat.SetOrigin(origin[0] - self.coordinates_normalization * (self.edges[0][-1] - self.edges[0][0]) / 2,
+                         origin[1] - self.coordinates_normalization * (self.edges[1][-1] - self.edges[1][0]) / 2,
+                         origin[2] - self.coordinates_normalization * (self.edges[2][-1] - self.edges[2][0]) / 2
+                         )
         imgdat.SetSpacing(
             self.coordinates_normalization * (self.edges[0][1] - self.edges[0][0]),
             self.coordinates_normalization * (self.edges[1][1] - self.edges[1][0]),
@@ -144,17 +193,18 @@ class Histogram3d(Histogram):
         writer = _vtk.vtkXMLImageDataWriter()
         writer.SetFileName(os.path.join(path, filename))
         writer.SetInputData(imgdat)
+        writer.SetDataModeToBinary()
         writer.Write()
 
     def to_df(self):
         index = _pd.MultiIndex.from_product(self.centers, names=('X', 'Y', 'Z'))
         data = {
-            'edep': self.values.flatten(),
+            'edep': self.normalized_values.flatten() / self.bins_volume,
         }
         return _pd.DataFrame(index=index, data=data)
 
-    def to_csv(self, filename='histogram.csv', path='.'):
-        self.to_df().to_csv(os.path.join(path, filename), header=False, sep='\t', float_format='% 11.7E')
+    def to_csv(self, filename='histogram.csv', path='.', **kwargs):
+        self.to_df().to_csv(os.path.join(path, filename), header=False, float_format='% 11.7E', **kwargs)
 
 
 class Histogram4d:
@@ -283,7 +333,6 @@ class Output(metaclass=OutputType):
                 parent: the `Output` to which the directory structure is attached
                 directory: the top-level ROOT directory
             """
-
             def _build(n, c):
                 item = self._directory[n]
                 if c.__name__.endswith('Directory'):
@@ -417,7 +466,6 @@ class Output(metaclass=OutputType):
                 def do_toggle(self):
                     self._active_leaves[leave][0] = not self._active_leaves[leave][0]
                     return self
-
                 return do_toggle
 
             instance = super().__new__(cls)
@@ -522,13 +570,13 @@ class Output(metaclass=OutputType):
 class BDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-                'header',
-                'geant4data',
-                'beam',
-                'options',
-                'model',
-                'run',
-                'event',
+            'header',
+            'geant4data',
+            'beam',
+            'options',
+            'model',
+            'run',
+            'event',
         ):
             setattr(self,
                     item,
@@ -1407,11 +1455,11 @@ class BDSimOutput(Output):
 class ReBDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-                'beam',
-                'event',
-                'run',
-                'options'
-                'model'
+            'beam',
+            'event',
+            'run',
+            'options'
+            'model'
         ):
             setattr(self,
                     item,
@@ -1443,7 +1491,7 @@ class ReBDSimOpticsOutput(ReBDSimOutput):
             raise BDSimOutputException(f"Key {item} is invalid.")
 
         if item.rstrip('_') in (
-                'optics',
+            'optics',
         ):
             setattr(self,
                     item.rstrip('_'),
