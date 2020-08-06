@@ -1,3 +1,4 @@
+boost-histogram
 matplotlib
 numba
 numpy
@@ -5,6 +6,7 @@ numpy-quaternion
 pandas
 pint
 plotly
+pybdsim
 pytest
 uproot
 vtk
