@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
 from collections import UserDict
 import logging
 import os
+import numpy as _np
+import pandas as _pd
+import vtk as _vtk
+import vtk.util.numpy_support as _vtk_np  # noQA
 try:
     import uproot as _uproot
     import uproot_methods as _uproot_methods
@@ -172,12 +176,12 @@ class Histogram3d(Histogram):
             ]
         else:
             origin = [0.0, 0.0, 0.0] if origin is None else origin
-        imgdat = _vtk.vtkImageData()
+        imgdat = _vtk.vtkImageData()  # noQA
         imgdat.GetPointData().SetScalars(
             _vtk_np.numpy_to_vtk(
                 num_array=self.values.ravel(order='F'),
                 deep=True,
-                array_type=_vtk.VTK_FLOAT
+                array_type=_vtk.VTK_FLOAT  # noQA
             )
         )
         imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
@@ -190,7 +194,7 @@ class Histogram3d(Histogram):
             self.coordinates_normalization * (self.edges[1][1] - self.edges[1][0]),
             self.coordinates_normalization * (self.edges[2][1] - self.edges[2][0])
         )
-        writer = _vtk.vtkXMLImageDataWriter()
+        writer = _vtk.vtkXMLImageDataWriter()  # noQA
         writer.SetFileName(os.path.join(path, filename))
         writer.SetInputData(imgdat)
         writer.SetDataModeToBinary()
