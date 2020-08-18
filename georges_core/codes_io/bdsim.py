@@ -1354,6 +1354,7 @@ class BDSimOutput(Output):
                 'zp': [True, None],
                 'T': [True, None],
                 'energy': [True, None],
+                'p': [True, None],
                 'turnNumber': [True, None],
                 'parentID': [True, None],
                 'partID': [True, None],
