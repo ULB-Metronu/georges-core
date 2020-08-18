@@ -1,4 +1,6 @@
 import boost_histogram as bh
+import pandas as pd
+from scipy.interpolate import interp1d
 
 
 class ExtendedHistogram(bh.Histogram):
@@ -16,3 +18,8 @@ class ExtendedHistogram(bh.Histogram):
                     histo3d[x, y, z] = tmp.sum()
 
         return histo3d
+
+    def compute_h10(self, conversionFactorFile):
+        data = pd.read_table(conversionFactorFile, names=["energy", "h10_coeff"])
+        f = interp1d(data['energy'].values, data['h10_coeff'].values)
+        return self.project_to_3d(weights=f(self.axes[3].centers))
