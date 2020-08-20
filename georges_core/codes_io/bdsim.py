@@ -27,6 +27,7 @@ try:
         import warnings
         warnings.simplefilter("ignore")
         import pybdsim
+        pybdsim.Data.LoadROOTLibraries()
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
         pass
@@ -69,8 +70,6 @@ except (ImportError, ImportWarning):
 
 import numpy as _np
 import pandas as _pd
-import vtk as _vtk
-import vtk.util.numpy_support as _vtk_np
 from scipy.interpolate import interp1d
 
 __all__ = [
