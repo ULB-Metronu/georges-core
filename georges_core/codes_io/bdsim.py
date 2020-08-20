@@ -46,7 +46,6 @@ try:
 
         warnings.simplefilter("ignore")
         import ROOT
-
         ROOT.gSystem.Load('librebdsim')
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
@@ -76,6 +75,7 @@ import numpy as _np
 import pandas as _pd
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
+from scipy.interpolate import interp1d
 
 __all__ = [
     'Output',
@@ -141,64 +141,29 @@ class Histogram2d(Histogram):
 
 
 class Histogram3d(Histogram):
+    def __init__(self, h, parent):
+        Histogram.__init__(self,h)
+        self._filename = parent._filename
+        self._path = parent._path
+        self._meshname = h.name.decode('UTF-8').split('-')[0]
+
+    @property
+    def filename(self):
+        return self._filename
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def meshname(self):
+        return self._meshname
+
     @property
     def bins_volume(self):
-        return _np.diff(self._h.bins[0][0])[0] * \
-               _np.diff(self._h.bins[1][0])[0] * \
-               _np.diff(self._h.bins[2][0])[0]
-
-    def to_vtk(self,
-               filename='histogram.vti',
-               path='.',
-               origin=None,
-               reference_file='output.root',
-               reference_path='.'
-               ):
-        _pyroot_file = None
-        if origin is None:
-            if _WITH_PYBDSIM:
-                try:
-                    _pyroot_file = pybdsim.Data.Load(os.path.join(reference_path, reference_file))
-                except OSError:
-                    pass
-        if _pyroot_file is not None:
-            mt = _pyroot_file.GetModelTree()
-            md = _pyroot_file.GetModel()
-            mt.GetEntry(0)
-            mesh_translation = [0.0, 0.0, 0.0]
-            for name in md.model.scoringMeshName:
-                if str(name) in self._h.name.decode('utf-8'):
-                    mesh_translation = md.model.scoringMeshTranslation[name]
-            origin = [
-                mesh_translation.x(),
-                mesh_translation.y(),
-                mesh_translation.z(),
-            ]
-        else:
-            origin = [0.0, 0.0, 0.0] if origin is None else origin
-        imgdat = _vtk.vtkImageData()  # noQA
-        imgdat.GetPointData().SetScalars(
-            _vtk_np.numpy_to_vtk(
-                num_array=self.values.ravel(order='F'),
-                deep=True,
-                array_type=_vtk.VTK_FLOAT  # noQA
-            )
-        )
-        imgdat.SetDimensions(self._h.xnumbins, self._h.ynumbins, self._h.znumbins)
-        imgdat.SetOrigin(origin[0] - self.coordinates_normalization * (self.edges[0][-1] - self.edges[0][0]) / 2,
-                         origin[1] - self.coordinates_normalization * (self.edges[1][-1] - self.edges[1][0]) / 2,
-                         origin[2] - self.coordinates_normalization * (self.edges[2][-1] - self.edges[2][0]) / 2
-                         )
-        imgdat.SetSpacing(
-            self.coordinates_normalization * (self.edges[0][1] - self.edges[0][0]),
-            self.coordinates_normalization * (self.edges[1][1] - self.edges[1][0]),
-            self.coordinates_normalization * (self.edges[2][1] - self.edges[2][0])
-        )
-        writer = _vtk.vtkXMLImageDataWriter()  # noQA
-        writer.SetFileName(os.path.join(path, filename))
-        writer.SetInputData(imgdat)
-        writer.SetDataModeToBinary()
-        writer.Write()
+        return _np.diff(self.bins[0][0])[0] * \
+               _np.diff(self.bins[1][0])[0] * \
+               _np.diff(self.bins[2][0])[0]
 
     def to_df(self):
         index = _pd.MultiIndex.from_product(self.centers, names=('X', 'Y', 'Z'))
@@ -212,11 +177,16 @@ class Histogram3d(Histogram):
 
 
 class Histogram4d:
-    def __init__(self, bdsbh4d_histogram, energy_axis_type):
+    def __init__(self, parent, bdsbh4d_histogram, name):
         self._h = bdsbh4d_histogram
         self._bh = None
         self._bh_error = None
-        self._energy_axis_type = energy_axis_type
+        self._energy_axis_type = name.split('-')[-1]
+        self._filename = parent._filename
+        self._path = parent._path
+        self._meshname = name.split('-')[0]
+        self._cache = None
+        self._coordinates_normalization = 1.0
 
     def get_pyboost(self, hist_type):
         if _WITH_BOOST_HISTOGRAM:
@@ -245,6 +215,37 @@ class Histogram4d:
         else:
             raise AttributeError("Boost histograms are not available")
 
+    def project_to_3d(self, weights=1):
+
+        histo3d = bh.Histogram(*self.bh.axes[0:3])
+
+        for x in range(self.bh.shape[0]):
+            for y in range(self.bh.shape[1]):
+                for z in range(self.bh.shape[2]):
+                    tmp = self.bh[x, y, z, :].view() * weights
+                    histo3d[x, y, z] = tmp.sum()
+
+        self._cache =  histo3d.view()
+        return histo3d
+
+    def compute_h10(self, conversionFactorFile):
+        data = _pd.read_table(conversionFactorFile, names=["energy", "h10_coeff"])
+        f = interp1d(data['energy'].values, data['h10_coeff'].values)
+        self._cache =  self.project_to_3d(weights=f(self.bh.axes[3].centers)).view()
+        return  self.project_to_3d(weights=f(self.bh.axes[3].centers))
+
+    @property
+    def filename(self):
+        return self._filename
+
+    @property
+    def path(self):
+        return self._path
+
+    @property
+    def meshname(self):
+        return self._meshname
+
     @property
     def bh(self):
         if self._bh is None:
@@ -265,8 +266,35 @@ class Histogram4d:
     def h_err(self):
         return self._h.h_err
 
+    @property
+    def values(self):
+        return self._cache
+
+    @property
+    def xnumbins(self):
+        return self.bh.axes[0].size
+
+    @property
+    def ynumbins(self):
+        return self.bh.axes[1].size
+
+    @property
+    def znumbins(self):
+        return self.bh.axes[2].size
+
+    @property
+    def coordinates_normalization(self):
+        return self._coordinates_normalization
+
+    @property
+    def edges(self):
+        edges_x = self.bh.axes[0].edges
+        edges_y = self.bh.axes[1].edges
+        edges_z = self.bh.axes[2].edges
+        return _np.array([edges_x,edges_y,edges_z])
+
     @staticmethod
-    def from_root_file(file, name):
+    def from_root_file(parent, name):
         energy_axis_type = name.split('-')[-1]
         if energy_axis_type == "linear":
             bdsbh4d = ROOT.BDSBH4D("boost_histogram_linear")()
@@ -276,9 +304,9 @@ class Histogram4d:
             bdsbh4d = ROOT.BDSBH4D("boost_histogram_variable")()
 
         # to_PyROOT() is a BDSIM function
-        bdsbh4d.to_PyROOT(file, name)
+        bdsbh4d.to_PyROOT(parent._file, name)
 
-        return Histogram4d(bdsbh4d, energy_axis_type)
+        return Histogram4d(parent, bdsbh4d, name)
 
 
 class OutputType(type):
@@ -298,6 +326,8 @@ class Output(metaclass=OutputType):
             path: the path to the root file
             open_file: attempts to open the master file
         """
+        self._filename = filename
+        self._path = path
         self._file = os.path.join(path, filename)
         if open_file:
             self._root_directory: _uproot.rootio.ROOTDirectory = _uproot.open(self._file)
@@ -346,9 +376,9 @@ class Output(metaclass=OutputType):
                 elif c.__name__.endswith('TH2D'):
                     return Histogram2d(item)
                 elif c.__name__.endswith('TH3D'):
-                    return Histogram3d(item)
+                    return Histogram3d(item,self.parent)
                 elif c.__name__.endswith('TTree'):
-                    return Histogram4d.from_root_file(self.parent._file, n.decode('utf-8').split(';')[0])
+                    return Histogram4d.from_root_file(self.parent, n.decode('utf-8').split(';')[0])
                 else:
                     return item
 
@@ -580,7 +610,7 @@ class BDSimOutput(Output):
             'options',
             'model',
             'run',
-            'event',
+            'event'
         ):
             setattr(self,
                     item,
@@ -980,6 +1010,22 @@ class BDSimOutput(Output):
         def collimator_names(self):
             return self.model.collimator_names
 
+        @property
+        def collimator_names(self):
+            return self.model.collimator_names
+
+        @property
+        def scoring_mesh_names(self):
+            return self.model.scoring_mesh_names
+
+        @property
+        def scoring_mesh_rotations(self):
+            return self.model.scoring_mesh_rotations
+
+        @property
+        def scoring_mesh_tanslations(self):
+            return self.model.scoring_mesh_translations
+
         class Model(Output.Branch):
 
             DEFAULT_LEAVES = {
@@ -1055,6 +1101,9 @@ class BDSimOutput(Output):
                 'nCollimators': [False, None],
                 'collimatorInfo': [False, None],
                 'collimatorBranchNamesUnique': [False, None],
+                'scoringMeshName': [False, None],
+                'scoringMeshRotation': [False, None],
+                'scoringMeshTranslation': [False, None]
             }
 
             @property
@@ -1072,6 +1121,18 @@ class BDSimOutput(Output):
             @property
             def collimator_names(self):
                 return [e.decode('utf-8') for e in self.array('collimatorBranchNamesUnique')[0]]
+
+            @property
+            def scoring_mesh_name(self):
+                return [e.decode('utf-8') for e in self.array('scoringMeshName')[0]]
+
+            @property
+            def scoring_mesh_rotations(self):
+                pass
+
+            @property
+            def scoring_mesh_translations(self):
+                pass
 
         def to_df(self) -> _pd.DataFrame:
             """
