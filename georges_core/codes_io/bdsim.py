@@ -8,7 +8,7 @@ Design goals:
  - provide analysis tools exploiting the new Awkward 1.0 library (https://arxiv.org/pdf/2001.06307.pdf)
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, List, Dict, Tuple
+from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Union
 from collections import UserDict
 import logging
 import os
@@ -329,7 +329,7 @@ class Output(metaclass=OutputType):
         return self._root_directory
 
     class Directory:
-        def __init__(self, parent: Output, directory: _uproot.rootio.ROOTDirectory):
+        def __init__(self, parent: Union[Output, Output.Directory], directory: _uproot.rootio.ROOTDirectory):
             """
             A representation of a (nested) structure of ROOT directories.
 
@@ -1463,13 +1463,13 @@ class ReBDSimOutput(Output):
             'event',
             'run',
             'options'
-            'model'
+            'model_dir'
         ):
             setattr(self,
                     item,
-                    Output.Directory(parent=self, directory=self._root_directory[item.title()])
+                    Output.Directory(parent=self, directory=self._root_directory[item.split('_')[0]])
                     )
-        elif item == 'model_dir':
+        elif item == 'model':
             setattr(self,
                     item.rstrip('_'),
                     getattr(BDSimOutput, item.title())(parent=self)
