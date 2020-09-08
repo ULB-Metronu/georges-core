@@ -12,6 +12,10 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Union
 from collections import UserDict
 import logging
 import os
+import numpy as _np
+import pandas as _pd
+import vtk as _vtk
+import vtk.util.numpy_support as _vtk_np  # noQA
 try:
     import uproot as _uproot
     import uproot_methods as _uproot_methods
@@ -1519,13 +1523,13 @@ class ReBDSimOutput(Output):
             'event',
             'run',
             'options'
-            'model'
+            'model_dir'
         ):
             setattr(self,
                     item,
-                    Output.Directory(parent=self, directory=self._root_directory[item.title()])
+                    Output.Directory(parent=self, directory=self._root_directory[item.split('_')[0]])
                     )
-        elif item == 'model_dir':
+        elif item == 'model':
             setattr(self,
                     item.rstrip('_'),
                     getattr(BDSimOutput, item.title())(parent=self)
