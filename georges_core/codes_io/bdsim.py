@@ -12,17 +12,11 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Union
 from collections import UserDict
 import logging
 import os
-import numpy as _np
-import pandas as _pd
-import vtk as _vtk
-import vtk.util.numpy_support as _vtk_np  # noQA
+
 try:
-    import uproot as _uproot
-    import uproot_methods as _uproot_methods
-    if TYPE_CHECKING:
-        import uproot.source.compressed
+    import uproot4 as _uproot
 except (ImportError, ImportWarning):
-    logging.error("Uproot is required for this module to work.")
+    logging.warning("Uproot4 is required for this module to have full functionalities.\n")
     raise ImportError("Uproot is required for this module to work.")
 
 _WITH_PYBDSIM = False
@@ -96,9 +90,8 @@ class BDSimOutputException(Exception):
 class Histogram:
     def __init__(self, h):
         self._h = h
-        self.bins = h.bins
-        self.edges = h.edges
-        self.variances = h.variances
+        self.edges = h.edges('x')
+        self.variances = h.values_errors()[1]
         self._centers = None
         self._normalized_values = None
         self.normalization = 1.0
@@ -118,7 +111,7 @@ class Histogram:
 
     @property
     def values(self):
-        return self.normalization * self._h.values
+        return self.normalization * self._h.values()
 
     @property
     def normalized_values(self):
@@ -129,8 +122,8 @@ class Histogram:
         if self._centers is not None:
             return self._centers
         self._centers = [
-            self.coordinates_normalization * _.mean(axis=1)
-            for _ in self.bins
+            self.coordinates_normalization * _np.array([self.edges[i],self.edges[i+1]]).mean()
+            for i in range(1,len(self.edges)-2)
         ]
         return self._centers
 
@@ -140,11 +133,12 @@ class Histogram2d(Histogram):
 
 
 class Histogram3d(Histogram):
-    def __init__(self, h, parent):
+    def __init__(self, h, parent,name):
         Histogram.__init__(self,h)
         self._filename = parent._filename
         self._path = parent._path
-        self._meshname = h.name.decode('UTF-8').split('-')[0]
+        self._name = name
+        self._meshname = self._name.split('-')[0]
 
     @property
     def filename(self):
@@ -160,9 +154,9 @@ class Histogram3d(Histogram):
 
     @property
     def bins_volume(self):
-        return _np.diff(self.bins[0][0])[0] * \
-               _np.diff(self.bins[1][0])[0] * \
-               _np.diff(self.bins[2][0])[0]
+        return _np.diff(self._h.edges('x')[1:-1])[0] * \
+               _np.diff(self._h.edges('y')[1:-1])[0] * \
+               _np.diff(self._h.edges('z')[1:-1])[0]
 
     def to_df(self):
         index = _pd.MultiIndex.from_product(self.centers, names=('X', 'Y', 'Z'))
@@ -348,11 +342,6 @@ class Output(metaclass=OutputType):
         return self._root_directory[item]
 
     @property
-    def compression(self) -> _uproot.source.compressed.Compression:
-        """The compression algorithm used for the root file or directory."""
-        return self._root_directory.compression
-
-    @property
     def directory(self) -> _uproot.rootio.ROOTDirectory:
         """Return the master directory attached to this parent."""
         return self._root_directory
@@ -366,33 +355,30 @@ class Output(metaclass=OutputType):
                 parent: the `Output` to which the directory structure is attached
                 directory: the top-level ROOT directory
             """
+
             def _build(n, c):
                 item = self._directory[n]
-                if c.__name__.endswith('Directory'):
+                if c.endswith('Directory'):
                     return Output.Directory(parent, directory=item)
-                elif c.__name__.endswith('TH1D'):
+                elif c.endswith('TH1D'):
                     return Histogram(item)
-                elif c.__name__.endswith('TH2D'):
+                elif c.endswith('TH2D'):
                     return Histogram2d(item)
-                elif c.__name__.endswith('TH3D'):
-                    return Histogram3d(item,self.parent)
-                elif c.__name__.endswith('TTree'):
-                    return Histogram4d.from_root_file(self.parent, n.decode('utf-8').split(';')[0])
+                elif c.endswith('TH3D'):
+                    return Histogram3d(item,self.parent,n)
+                elif c.endswith('TTree'):
+                    return Histogram4d.from_root_file(self.parent, n.split(';')[0])
                 else:
                     return item
 
             self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
-            for name, cls in self._directory.iterclasses():
-                setattr(self, name.decode('utf-8').split(';')[0].replace('-', '_'), _build(name, cls))
+            for name, cls in self._directory.iterclassnames(recursive=False):
+                setattr(self, name.split(';')[0].replace('-','_'), _build(name, cls))
+
 
         def __getitem__(self, item):
             return self._directory[item]
-
-        @property
-        def compression(self) -> _uproot.source.compressed.Compression:
-            """The compression algorithm used for the directory."""
-            return self._directory.compression
 
         @property
         def parent(self) -> Output:
@@ -410,7 +396,7 @@ class Output(metaclass=OutputType):
             return self._directory.keys()
 
     class Tree:
-        def __init__(self, parent: Output):
+        def __init__(self, parent: Output, target_tree=None):
             """
             A representation of a ROOT TTree structure.
 
@@ -418,7 +404,13 @@ class Output(metaclass=OutputType):
                 parent: the `Output` to which the parent is attached
             """
             self._parent = parent
-            self._tree: uproot.rootio.TTree = parent[self.__class__.__name__]
+
+            if target_tree is None:
+                self._treename = self._tree.name
+            else:
+                self._treename = target_tree
+
+            self._tree: _uproot.rootio.TTree = parent[self.__class__.__name__]
             self._df: Optional[_pd.DataFrame] = None
             self._np: Optional[_np.ndarray] = None
 
@@ -439,11 +431,11 @@ class Output(metaclass=OutputType):
 
         def array(self, branch=None, **kwargs) -> _np.ndarray:
             """A proxy for the `uproot` `array` method."""
-            return self.tree.array(branch=branch, **kwargs)
+            return self._tree[self._treename+'.'][self._treename+'.'+branch].array().tolist()[0]
 
         def arrays(self, branches=None, **kwargs):
             """A proxy for the `uproot` `arrays` method."""
-            return self.tree.arrays(branches=branches, **kwargs)
+            return [self._tree[self._treename+'.'][self._treename+'.'+b].array().tolist()[0] for b in branches]
 
         def pandas(self, branches=None, **kwargs):
             """A proxy for the `uproot` `pandas` method."""
@@ -467,16 +459,16 @@ class Output(metaclass=OutputType):
 
         @property
         def branches_names(self) -> List[str]:
-            return [b.decode('utf-8') for b in self.tree.keys()]
+            return [b for b in self.tree.keys() if '/' not in b]
 
         @property
-        def branches(self) -> List[uproot.rootio.TBranchElement]:
-            return [b for b in self.tree.values()]
+        def branches(self) -> List[_uproot.rootio.TBranchElement]:
+            return [b for b in self.tree.values() if b.name[-1] == '.']
 
         @property
         def numentries(self) -> int:
             """Provides the number of entries in the parent (without reading the entire file)."""
-            return self.tree.numentries
+            return self.tree.num_entries
 
         @property
         def df(self) -> _pd.DataFrame:
@@ -528,14 +520,14 @@ class Output(metaclass=OutputType):
 
         def array(self, branch=None, **kwargs) -> _np.ndarray:
             """A proxy for the `uproot` `array` method."""
-            return self.parent.array(branch=self.branch_name + branch, **kwargs)
+            return self.parent.array(branch=branch, **kwargs)
 
         def arrays(self, branches=None, **kwargs):
             """A proxy for the uproot method.
             """
             if branches is None:
                 branches = self._active_leaves
-            return self.parent.arrays(branches=[self.branch_name + b for b in branches], **kwargs)
+            return self.parent.arrays(branches=[b for b in branches], **kwargs)
 
         def pandas(self, branches: List[str] = None, strip_prefix: bool = True, **kwargs):
             """A proxy for the uproot method.
@@ -544,9 +536,7 @@ class Output(metaclass=OutputType):
                 branches = [self.branch_name + b for b, _ in self._active_leaves.items() if _[0] is True]
             else:
                 branches = [self.branch_name + b for b in branches]
-            df = self.parent.tree.pandas.df(branches,
-                                            flatten=True,
-                                            **kwargs)
+            df = self.parent.tree.arrays(branches,library='pandas')
             if strip_prefix:
                 import re
                 df.columns = [re.split(self.branch_name, c)[1] for c in df.columns]
@@ -573,14 +563,14 @@ class Output(metaclass=OutputType):
         def branch_name(self) -> str:
             if self.BRANCH_NAME == '':
                 return ''
-            name = self.branch.name.decode('utf-8')
+            name = self.branch.name
             if not name.endswith('.'):
                 return name + '.'
             else:
                 return name
 
         @property
-        def leaves(self) -> List[uproot.rootio.TBranchElement]:
+        def leaves(self) -> List[_uproot.rootio.TBranchElement]:
             return self._branch.values()
 
         @property
@@ -1010,20 +1000,16 @@ class BDSimOutput(Output):
             return self.model.collimator_names
 
         @property
-        def collimator_names(self):
-            return self.model.collimator_names
-
-        @property
         def scoring_mesh_names(self):
             return self.model.scoring_mesh_names
 
         @property
-        def scoring_mesh_rotations(self):
-            return self.model.scoring_mesh_rotations
+        def scoring_mesh_translations(self):
+            return self.model.scoring_mesh_translations
 
         @property
-        def scoring_mesh_tanslations(self):
-            return self.model.scoring_mesh_translations
+        def scoring_mesh_rotations(self):
+            return self.model.scoring_mesh_rotations
 
         class Model(Output.Branch):
 
@@ -1107,31 +1093,31 @@ class BDSimOutput(Output):
 
             @property
             def component_names(self):
-                return [e.decode('utf-8') for e in self.array('componentName')[0]]
+                return self.array('componentName')
 
             @property
             def placement_names(self):
-                return [e.decode('utf-8') for e in self.array('placementName')[0]]
+                return self.array('placementName')
 
             @property
             def sampler_names(self):
-                return [e.decode('utf-8') for e in self.array('samplerNamesUnique')[0]]
+                return self.array('samplerNamesUnique')
 
             @property
             def collimator_names(self):
-                return [e.decode('utf-8') for e in self.array('collimatorBranchNamesUnique')[0]]
+                return self.array('collimatorBranchNamesUnique')
 
             @property
-            def scoring_mesh_name(self):
-                return [e.decode('utf-8') for e in self.array('scoringMeshName')[0]]
-
-            @property
-            def scoring_mesh_rotations(self):
-                pass
+            def scoring_mesh_names(self):
+                return self.array('scoringMeshName')
 
             @property
             def scoring_mesh_translations(self):
-                pass
+                return dict(tuple(self.array('scoringMeshTranslation')))
+
+            @property
+            def scoring_mesh_rotations(self):
+                return dict(tuple(self.array('scoringMeshRotation')))
 
         def to_df(self) -> _pd.DataFrame:
             """
@@ -1142,74 +1128,79 @@ class BDSimOutput(Output):
             model_geometry_df = _pd.DataFrame()
 
             # Names and strings
-            for branch, name in {'Model.componentName': 'NAME',
-                                 'Model.componentType': 'TYPE',
-                                 'Model.material': 'MATERIAL',
-                                 'Model.beamPipeType': 'APERTYPE',
+            for branch, name in {'componentName': 'NAME',
+                                 'componentType': 'TYPE',
+                                 'material': 'MATERIAL',
+                                 'beamPipeType': 'APERTYPE',
                                  }.items():
-                data = [_.decode('utf-8') for _ in self.array(branch=[branch])[0]]
+                data = self.array(branch=branch)
                 model_geometry_df[name] = data
 
             # Scalar
-            for branch, name in {'Model.length': 'L',
-                                 'Model.staS': 'AT_ENTRY',
-                                 'Model.midS': 'AT_CENTER',
-                                 'Model.endS': 'AT_EXIT',
-                                 'Model.tilt': 'TILT',
-                                 'Model.k1': 'K1',
-                                 'Model.k2': 'K2',
-                                 'Model.k3': 'K3',
-                                 'Model.k4': 'K4',
-                                 'Model.k5': 'K5',
-                                 'Model.k6': 'K6',
-                                 'Model.k7': 'K7',
-                                 'Model.k8': 'K8',
-                                 'Model.k9': 'K9',
-                                 'Model.k10': 'K10',
-                                 'Model.k11': 'K11',
-                                 'Model.k12': 'K12',
-                                 'Model.k1s': 'K1S',
-                                 'Model.k2s': 'K2S',
-                                 'Model.k3s': 'K3S',
-                                 'Model.k4s': 'K4S',
-                                 'Model.k5s': 'K5S',
-                                 'Model.k6s': 'K6S',
-                                 'Model.k7s': 'K7S',
-                                 'Model.k8s': 'K8S',
-                                 'Model.k9s': 'K9S',
-                                 'Model.k10s': 'K10S',
-                                 'Model.k11s': 'K11S',
-                                 'Model.k12s': 'K12S',
-                                 'Model.bField': 'B',
-                                 'Model.eField': 'E',
-                                 'Model.e1': 'E1',
-                                 'Model.e2': 'E2',
-                                 'Model.hgap': 'HGAP',
-                                 'Model.fint': 'FINT',
-                                 'Model.fintx': 'FINTX'
+            for branch, name in {'length': 'L',
+                                 'staS': 'AT_ENTRY',
+                                 'midS': 'AT_CENTER',
+                                 'endS': 'AT_EXIT',
+                                 'tilt': 'TILT',
+                                 'k1': 'K1',
+                                 'k2': 'K2',
+                                 'k3': 'K3',
+                                 'k4': 'K4',
+                                 'k5': 'K5',
+                                 'k6': 'K6',
+                                 'k7': 'K7',
+                                 'k8': 'K8',
+                                 'k9': 'K9',
+                                 'k10': 'K10',
+                                 'k11': 'K11',
+                                 'k12': 'K12',
+                                 'k1s': 'K1S',
+                                 'k2s': 'K2S',
+                                 'k3s': 'K3S',
+                                 'k4s': 'K4S',
+                                 'k5s': 'K5S',
+                                 'k6s': 'K6S',
+                                 'k7s': 'K7S',
+                                 'k8s': 'K8S',
+                                 'k9s': 'K9S',
+                                 'k10s': 'K10S',
+                                 'k11s': 'K11S',
+                                 'k12s': 'K12S',
+                                 'bField': 'B',
+                                 'eField': 'E',
+                                 'e1': 'E1',
+                                 'e2': 'E2',
+                                 'hgap': 'HGAP',
+                                 'fint': 'FINT',
+                                 'fintx': 'FINTX'
                                  }.items():
-                model_geometry_df[name] = self.array(branch=[branch])[0]
+                model_geometry_df[name] = self.array(branch=branch)
 
             # Aperture
-            for branch, name in {'Model.beamPipeAper1': 'APERTURE1',
-                                 'Model.beamPipeAper2': 'APERTURE2',
-                                 'Model.beamPipeAper3': 'APERTURE3',
-                                 'Model.beamPipeAper4': 'APERTURE4'}.items():
-                model_geometry_df[name] = self.array(branch=[branch])[0]
+            for branch, name in {'beamPipeAper1': 'APERTURE1',
+                                 'beamPipeAper2': 'APERTURE2',
+                                 'beamPipeAper3': 'APERTURE3',
+                                 'beamPipeAper4': 'APERTURE4'}.items():
+                model_geometry_df[name] = self.array(branch=branch)
 
             # Vectors
-            geometry_branches = {'Model.staPos': 'ENTRY_',
-                                 'Model.midPos': 'CENTER_',
-                                 'Model.endPos': 'EXIT_'}
-            data = self.pandas(branches=geometry_branches.keys(), flatten=True)
+            geometry_branches = {'staPos': 'ENTRY_',
+                                 'midPos': 'CENTER_',
+                                 'endPos': 'EXIT_'}
+
+            data_df = _pd.DataFrame()
             for branch, name in geometry_branches.items():
-                data.rename({f"{branch}.fX": f"{name}X", f"{branch}.fY": f"{name}Y", f"{branch}.fZ": f"{name}Z"},
-                            axis='columns', inplace=True)
+                data = _pd.DataFrame(self.array(branch)).rename({"fX": f"{name}X", "fY": f"{name}Y", "fZ": f"{name}Z"},
+                                                                axis='columns')
+                data_df = _pd.concat([data_df,data],axis='columns')
 
             # Concatenate
-            self._df = _pd.concat([model_geometry_df, data.loc[0]], axis='columns', sort=False).set_index('NAME')
+            self._df = _pd.concat([model_geometry_df, data_df], axis='columns', sort=False).set_index('NAME')
 
             return self._df
+
+    class ModelTree(Model):
+        pass
 
     class Run(Output.Tree):
 
@@ -1522,19 +1513,19 @@ class ReBDSimOutput(Output):
             'beam',
             'event',
             'run',
-            'options'
+            'options',
             'model_dir'
         ):
             setattr(self,
                     item,
-                    Output.Directory(parent=self, directory=self._root_directory[item.split('_')[0]])
+                    Output.Directory(parent=self, directory=self._root_directory[item.split('_')[0].title()])
                     )
+            return self
         elif item == 'model':
             setattr(self,
-                    item.rstrip('_'),
-                    getattr(BDSimOutput, item.title())(parent=self)
+                    item,
+                    getattr(BDSimOutput, 'ModelTree')(parent=self, target_tree='Model'),
                     )
-
         else:
             setattr(self,
                     item,
