@@ -23,8 +23,10 @@ _WITH_PYBDSIM = False
 try:
     try:
         import warnings
+
         warnings.simplefilter("ignore")
         import pybdsim
+
         pybdsim.Data.LoadROOTLibraries()
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
@@ -41,6 +43,7 @@ try:
 
         warnings.simplefilter("ignore")
         import ROOT
+
         ROOT.gSystem.Load('librebdsim')
         warnings.simplefilter("default")
     except (ImportError, UserWarning):
@@ -88,9 +91,8 @@ class BDSimOutputException(Exception):
 
 
 class Histogram:
-    def __init__(self, h):
+    def __init__(self, h):  # h is a THxD
         self._h = h
-        self.edges = h.edges('x')
         self.variances = h.values_errors()[1]
         self._centers = None
         self._normalized_values = None
@@ -111,19 +113,26 @@ class Histogram:
 
     @property
     def values(self):
-        return self.normalization * self._h.values()
+        return self._h.to_numpy()[0]
 
     @property
     def normalized_values(self):
         return self._normalized_values
 
     @property
+    def xnumbins(self):
+        return len(self._h.edges('x')[1:-1])-1
+
+
+class Histogram1D(Histogram):
+
+    @property
     def centers(self):
         if self._centers is not None:
             return self._centers
         self._centers = [
-            self.coordinates_normalization * _np.array([self.edges[i],self.edges[i+1]]).mean()
-            for i in range(1,len(self.edges)-2)
+            self.coordinates_normalization * (self.edges[i] + self.edges[i + 1]) / 2
+            for i in range(1, len(self.edges) - 2)
         ]
         return self._centers
 
@@ -133,12 +142,14 @@ class Histogram2d(Histogram):
 
 
 class Histogram3d(Histogram):
-    def __init__(self, h, parent,name):
-        Histogram.__init__(self,h)
+    def __init__(self, h, parent, name):
+        Histogram.__init__(self, h)
         self._filename = parent._filename
         self._path = parent._path
         self._name = name
         self._meshname = self._name.split('-')[0]
+        self._parent = parent
+
 
     @property
     def filename(self):
@@ -157,6 +168,29 @@ class Histogram3d(Histogram):
         return _np.diff(self._h.edges('x')[1:-1])[0] * \
                _np.diff(self._h.edges('y')[1:-1])[0] * \
                _np.diff(self._h.edges('z')[1:-1])[0]
+
+    @property
+    def edges(self):
+        return _np.array([list(self._h.edges('x')[1:-1]),
+                          list(self._h.edges('y')[1:-1]),
+                          list(self._h.edges('z')[1:-1])])
+
+    @property
+    def ynumbins(self):
+        return len(self._h.edges('y')[1:-1])-1
+
+    @property
+    def znumbins(self):
+        return len(self._h.edges('z')[1:-1])-1
+
+    @property
+    def scoring_mesh_translations(self):
+        dico = self._parent.model.scoring_mesh_translations[self._meshname]
+        return [dico['fX'], dico['fY'], dico['fZ']]
+
+    @property
+    def scoring_mesh_rotations(self):
+        return self._parent.model.scoring_mesh_rotations[self._meshname]
 
     def to_df(self):
         index = _pd.MultiIndex.from_product(self.centers, names=('X', 'Y', 'Z'))
@@ -180,6 +214,16 @@ class Histogram4d:
         self._meshname = name.split('-')[0]
         self._cache = None
         self._coordinates_normalization = 1.0
+        self._parent = parent
+
+    @property
+    def scoring_mesh_translations(self):
+        dico = self._parent.model.scoring_mesh_translations[self._meshname]
+        return [dico['fX'], dico['fY'], dico['fZ']]
+
+    @property
+    def scoring_mesh_rotations(self):
+        return self._parent.model.scoring_mesh_rotations[self._meshname]
 
     def get_pyboost(self, hist_type):
         if _WITH_BOOST_HISTOGRAM:
@@ -218,14 +262,14 @@ class Histogram4d:
                     tmp = self.bh[x, y, z, :].view() * weights
                     histo3d[x, y, z] = tmp.sum()
 
-        self._cache =  histo3d.view()
+        self._cache = histo3d.view()
         return histo3d
 
     def compute_h10(self, conversionFactorFile):
         data = _pd.read_table(conversionFactorFile, names=["energy", "h10_coeff"])
         f = interp1d(data['energy'].values, data['h10_coeff'].values)
-        self._cache =  self.project_to_3d(weights=f(self.bh.axes[3].centers)).view()
-        return  self.project_to_3d(weights=f(self.bh.axes[3].centers))
+        self._cache = self.project_to_3d(weights=f(self.bh.axes[3].centers)).view()
+        return self.project_to_3d(weights=f(self.bh.axes[3].centers))
 
     @property
     def filename(self):
@@ -284,7 +328,7 @@ class Histogram4d:
         edges_x = self.bh.axes[0].edges
         edges_y = self.bh.axes[1].edges
         edges_z = self.bh.axes[2].edges
-        return _np.array([edges_x,edges_y,edges_z])
+        return _np.array([edges_x, edges_y, edges_z])
 
     @staticmethod
     def from_root_file(parent, name):
@@ -365,7 +409,7 @@ class Output(metaclass=OutputType):
                 elif c.endswith('TH2D'):
                     return Histogram2d(item)
                 elif c.endswith('TH3D'):
-                    return Histogram3d(item,self.parent,n)
+                    return Histogram3d(item, self.parent, n)
                 elif c.endswith('TTree'):
                     return Histogram4d.from_root_file(self.parent, n.split(';')[0])
                 else:
@@ -374,8 +418,7 @@ class Output(metaclass=OutputType):
             self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
             for name, cls in self._directory.iterclassnames(recursive=False):
-                setattr(self, name.split(';')[0].replace('-','_'), _build(name, cls))
-
+                setattr(self, name.split(';')[0].replace('-', '_'), _build(name, cls))
 
         def __getitem__(self, item):
             return self._directory[item]
@@ -396,7 +439,7 @@ class Output(metaclass=OutputType):
             return self._directory.keys()
 
     class Tree:
-        def __init__(self, parent: Output, target_tree=None):
+        def __init__(self, parent: Output, tree_name: str = None):
             """
             A representation of a ROOT TTree structure.
 
@@ -404,13 +447,8 @@ class Output(metaclass=OutputType):
                 parent: the `Output` to which the parent is attached
             """
             self._parent = parent
-
-            if target_tree is None:
-                self._treename = self._tree.name
-            else:
-                self._treename = target_tree
-
-            self._tree: _uproot.rootio.TTree = parent[self.__class__.__name__]
+            self._tree_name = tree_name or self.__class__.__name__
+            self._tree: _uproot.rootio.TTree = parent[self._tree_name]
             self._df: Optional[_pd.DataFrame] = None
             self._np: Optional[_np.ndarray] = None
 
@@ -423,19 +461,20 @@ class Output(metaclass=OutputType):
         def __getattr__(self, b):
             branch_class = getattr(self.__class__, b.title().replace('_', ''), None)
             if branch_class is not None:
-                _ = branch_class(parent=self)
+                _ = branch_class(parent=self, branch_name=self.__class__.__name__)
                 setattr(self, b, _)
                 return getattr(self, b)
             else:
-                raise AttributeError(f"Branch {b} does not exist for {self.__class__.__name__}")
+                raise AttributeError(f"Branch {b} does not exist for {self._tree_name}")
 
         def array(self, branch=None, **kwargs) -> _np.ndarray:
             """A proxy for the `uproot` `array` method."""
-            return self._tree[self._treename+'.'][self._treename+'.'+branch].array().tolist()[0]
+            return self._tree[self.__class__.__name__ + '.'][self.__class__.__name__ + '.' + branch].array().tolist()[0]
 
         def arrays(self, branches=None, **kwargs):
             """A proxy for the `uproot` `arrays` method."""
-            return [self._tree[self._treename+'.'][self._treename+'.'+b].array().tolist()[0] for b in branches]
+            return [self._tree[self.__class__.__name__ + '.'][self.__class__.__name__ + '.' + b].array().tolist()[0] for
+                    b in branches]
 
         def pandas(self, branches=None, **kwargs):
             """A proxy for the `uproot` `pandas` method."""
@@ -491,6 +530,7 @@ class Output(metaclass=OutputType):
                 def do_toggle(self):
                     self._active_leaves[leave][0] = not self._active_leaves[leave][0]
                     return self
+
                 return do_toggle
 
             instance = super().__new__(cls)
@@ -536,7 +576,7 @@ class Output(metaclass=OutputType):
                 branches = [self.branch_name + b for b, _ in self._active_leaves.items() if _[0] is True]
             else:
                 branches = [self.branch_name + b for b in branches]
-            df = self.parent.tree.arrays(branches,library='pandas')
+            df = self.parent.tree.arrays(branches, library='pandas')
             if strip_prefix:
                 import re
                 df.columns = [re.split(self.branch_name, c)[1] for c in df.columns]
@@ -593,13 +633,13 @@ class Output(metaclass=OutputType):
 class BDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-            'header',
-            'geant4data',
-            'beam',
-            'options',
-            'model',
-            'run',
-            'event'
+                'header',
+                'geant4data',
+                'beam',
+                'options',
+                'model',
+                'run',
+                'event'
         ):
             setattr(self,
                     item,
@@ -1023,9 +1063,9 @@ class BDSimOutput(Output):
                 'staPos': [True, None],
                 'midPos': [True, None],
                 'endPos': [True, None],
-                'staRot': [True, None],
-                'midRot': [True, None],
-                'endRot': [True, None],
+                'staRot': [False, None],
+                'midRot': [False, None],
+                'endRot': [False, None],
                 'staRefPos': [True, None],
                 'midRefPos': [True, None],
                 'endRefPos': [True, None],
@@ -1192,15 +1232,12 @@ class BDSimOutput(Output):
             for branch, name in geometry_branches.items():
                 data = _pd.DataFrame(self.array(branch)).rename({"fX": f"{name}X", "fY": f"{name}Y", "fZ": f"{name}Z"},
                                                                 axis='columns')
-                data_df = _pd.concat([data_df,data],axis='columns')
+                data_df = _pd.concat([data_df, data], axis='columns')
 
             # Concatenate
             self._df = _pd.concat([model_geometry_df, data_df], axis='columns', sort=False).set_index('NAME')
 
             return self._df
-
-    class ModelTree(Model):
-        pass
 
     class Run(Output.Tree):
 
@@ -1510,31 +1547,30 @@ class BDSimOutput(Output):
 class ReBDSimOutput(Output):
     def __getattr__(self, item):
         if item in (
-            'beam',
-            'event',
-            'run',
-            'options',
-            'model_dir'
+                'beam',
+                'event',
+                'run',
+                'options',
+                'model_dir'
         ):
+            try:
+                self._root_directory.get(item.split('_')[0].title())
+            except KeyError:
+                raise BDSimOutputException(f"Key {item} is invalid.")
             setattr(self,
                     item,
                     Output.Directory(parent=self, directory=self._root_directory[item.split('_')[0].title()])
                     )
-            return self
         elif item == 'model':
             setattr(self,
                     item,
-                    getattr(BDSimOutput, 'ModelTree')(parent=self, target_tree='Model'),
+                    getattr(BDSimOutput, item.title())(parent=self, tree_name='ModelTree'),
                     )
         else:
             setattr(self,
                     item,
                     getattr(BDSimOutput, item.title())(parent=self)
                     )
-        try:
-            self._root_directory.get(item.title())
-        except KeyError:
-            raise BDSimOutputException(f"Key {item} is invalid.")
         return getattr(self, item)
 
 
@@ -1546,7 +1582,7 @@ class ReBDSimOpticsOutput(ReBDSimOutput):
             raise BDSimOutputException(f"Key {item} is invalid.")
 
         if item.rstrip('_') in (
-            'optics',
+                'optics',
         ):
             setattr(self,
                     item.rstrip('_'),
