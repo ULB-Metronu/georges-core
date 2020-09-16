@@ -112,10 +112,6 @@ class Histogram:
         return self
 
     @property
-    def values(self):
-        return self._h.to_numpy()[0]
-
-    @property
     def normalized_values(self):
         return self._normalized_values
 
@@ -124,7 +120,7 @@ class Histogram:
         return len(self._h.edges('x')[1:-1])-1
 
 
-class Histogram1D(Histogram):
+class Histogram1d(Histogram):
 
     @property
     def centers(self):
@@ -135,6 +131,10 @@ class Histogram1D(Histogram):
             for i in range(1, len(self.edges) - 2)
         ]
         return self._centers
+
+    @property
+    def values(self):
+        return self._h.values()[1:-1]
 
 
 class Histogram2d(Histogram):
@@ -162,6 +162,10 @@ class Histogram3d(Histogram):
     @property
     def meshname(self):
         return self._meshname
+
+    @property
+    def values(self):
+        return self._h.values().reshape(self.znumbins+2,self.ynumbins+2,self.xnumbins+2).transpose(2,1,0)[1:-1,1:-1,1:-1]
 
     @property
     def bins_volume(self):
@@ -405,7 +409,7 @@ class Output(metaclass=OutputType):
                 if c.endswith('Directory'):
                     return Output.Directory(parent, directory=item)
                 elif c.endswith('TH1D'):
-                    return Histogram(item)
+                    return Histogram1d(item)
                 elif c.endswith('TH2D'):
                     return Histogram2d(item)
                 elif c.endswith('TH3D'):
