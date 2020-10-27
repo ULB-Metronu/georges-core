@@ -92,6 +92,9 @@ Element.make_subclass('Drift')
 Element.make_subclass('Quadrupole',
                       K1=0.0 * _ureg.m**-2,
                       K1L=0.0 * _ureg.m**-1,
+                      E1=0.0 * _ureg.radian,
+                      E2=0.0 * _ureg.radian,
+                      TILT=0.0 * _ureg.radian,
                       )
 Element.make_subclass('Sextupole')
 Element.make_subclass('Octupole')
@@ -108,5 +111,13 @@ Element.make_subclass('SBend',
                       ANGLE=0.0 * _ureg.radian,
                       TILT=0.0 * _ureg.radian,
                       )
+Element.make_subclass('HKicker',
+                      L=0.0 * _ureg.m,
+                      KICK=0.0 * _ureg.radian,
+                      TILT=0.0 * _ureg.radian)
+Element.make_subclass('VKicker',
+                      L=0.0 * _ureg.m,
+                      KICK=0.0 * _ureg.radian,
+                      TILT=0.0 * _ureg.radian)
 Element.make_subclass('Cavity')
 Element.make_subclass('Steerer')
