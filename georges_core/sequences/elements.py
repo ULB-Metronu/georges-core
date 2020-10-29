@@ -97,6 +97,7 @@ Element.make_subclass('Quadrupole',
                       E2=0.0 * _ureg.radian,
                       TILT=0.0 * _ureg.radian,
                       )
+Element.make_subclass('Solenoid')
 Element.make_subclass('Sextupole')
 Element.make_subclass('Octupole')
 Element.make_subclass('Decapole')
