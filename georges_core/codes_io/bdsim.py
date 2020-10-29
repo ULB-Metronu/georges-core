@@ -127,8 +127,8 @@ class Histogram1d(Histogram):
         if self._centers is not None:
             return self._centers
         self._centers = [
-            self.coordinates_normalization * (self.edges[i] + self.edges[i + 1]) / 2
-            for i in range(1, len(self.edges) - 2)
+            self.coordinates_normalization * (self.edges()[i] + self.edges()[i + 1]) / 2
+            for i in range(1, len(self.edges()) - 2)
         ]
         return self._centers
 
@@ -178,6 +178,15 @@ class Histogram3d(Histogram):
         return _np.array([list(self._h.edges('x')[1:-1]),
                           list(self._h.edges('y')[1:-1]),
                           list(self._h.edges('z')[1:-1])])
+
+    @property
+    def centers(self):
+        if self._centers is not None:
+            return self._centers
+        self._centers = [[
+            self.coordinates_normalization * (self.edges[j][i] + self.edges[j][i + 1]) / 2
+            for i in range(len(self.edges[j])-1)] for j in range(3)]
+        return self._centers
 
     @property
     def ynumbins(self):

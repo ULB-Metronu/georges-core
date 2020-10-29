@@ -23,14 +23,14 @@ def histogram3d_to_vtk(histogram3d,
         )
     )
     imgdat.SetDimensions(histogram3d.xnumbins, histogram3d.ynumbins, histogram3d.znumbins)
-    imgdat.SetOrigin(origin[0] - histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2,
-                     origin[1] - histogram3d.coordinates_normalization * (histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2,
-                     origin[2] - histogram3d.coordinates_normalization * (histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2
+    imgdat.SetOrigin(1000*(origin[0] - histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2),
+                     1000*(origin[1] - histogram3d.coordinates_normalization * (histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2),
+                     1000*(origin[2] - histogram3d.coordinates_normalization * (histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2)
                      )
     imgdat.SetSpacing(
-        histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]),
-        histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]),
-        histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0])
+        1000*histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]),
+        1000*histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]),
+        1000*histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0])
     )
     writer = _vtk.vtkXMLImageDataWriter()
     writer.SetFileName(os.path.join(path, filename))
