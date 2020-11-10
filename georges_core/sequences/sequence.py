@@ -577,6 +577,8 @@ class TwissSequence(Sequence):
                  path: str = '.',
                  *,
                  columns: List = None,
+                 lines: int = None,
+                 with_units: bool = True,
                  from_element: str = None,
                  to_element: str = None,
                  element_keys: Optional[Mapping[str, str]] = None,
@@ -587,12 +589,14 @@ class TwissSequence(Sequence):
             filename: the name of the physics
             path:
             columns:
+            lines:
+            with_units:
             from_element:
             to_element:
             element_keys:
         """
-        twiss_headers = load_madx_twiss_headers(filename, path)
-        twiss_table = load_madx_twiss_table(filename, path, columns).loc[from_element:to_element]
+        twiss_headers = load_madx_twiss_headers(filename, path, lines)
+        twiss_table = load_madx_twiss_table(filename, path, columns, lines, with_units).loc[from_element:to_element]
         particle_name = twiss_headers['PARTICLE'].capitalize()
         p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
         k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)

@@ -112,23 +112,25 @@ MADX_TWISS_HEADERS: List[str] = [
 """MAD-X Twiss headers (by default, when all columns are selected)."""
 
 
-def load_madx_twiss_headers(filename: str = 'twiss.outx', path: str = '.') -> _pd.Series:
+def load_madx_twiss_headers(filename: str = 'twiss.outx', path: str = '.', lines: int = None) -> _pd.Series:
     """
 
     Args:
         filename: name of the Twiss table file
         path: path to the Twiss table file
+        lines: number of lines in the Twiss table file
 
     Returns:
 
     """
+    lines = lines or MADX_TWISS_TABLE_HEADER_ROWS - 1
     _ = _pd.read_csv(os.path.join(path, filename),
                      sep=r'\s+',
                      usecols=['KEY', 'VALUE'],
                      squeeze=True,
                      index_col=0,
                      names=['@', 'KEY', '_', 'VALUE'],
-                     )[0:46]
+                     )[0:lines]
     for c in ('MASS', 'CHARGE', 'ENERGY', 'PC', 'GAMMA', 'KBUNCH', 'BCURRENT', 'SIGE', 'SIGT', 'NPART', 'EX', 'EY',
               'ET', 'BV_FLAG', 'LENGTH', 'ALFA', 'ORBIT5', 'GAMMATR', 'Q1', 'Q2', 'DXMAX', 'DYMAX', 'XCOMAX', 'YCOMAX',
               'BETXMAX', 'BETYMAX', 'XCORMS', 'YCORMS', 'DXRMS', 'DYRMS', 'DELTAP', 'SYNCH_1', 'SYNCH_2', 'SYNCH_3',
@@ -144,6 +146,7 @@ def load_madx_twiss_headers(filename: str = 'twiss.outx', path: str = '.') -> _p
 def load_madx_twiss_table(filename: str = 'twiss.outx',
                           path: str = '.',
                           columns: List = None,
+                          lines: int = None,
                           with_units: bool = True,
                           ) -> _pd.DataFrame:
     """
@@ -152,15 +155,17 @@ def load_madx_twiss_table(filename: str = 'twiss.outx',
         filename: name of the Twiss table file
         path: path to the Twiss table file
         columns: the list of columns in the Twiss file
+        lines: number of lines in the Twiss table file
         with_units:
 
     Returns:
         A DataFrame representing the Twiss table.
     """
     columns = columns or MADX_TWISS_HEADERS
+    lines = lines or MADX_TWISS_TABLE_HEADER_ROWS
     _: _pd.DataFrame = _pd \
         .read_csv(os.path.join(path, filename),
-                  skiprows=MADX_TWISS_TABLE_HEADER_ROWS,
+                  skiprows=lines,
                   sep=r'\s+',
                   index_col=False,
                   names=columns,
@@ -168,7 +173,7 @@ def load_madx_twiss_table(filename: str = 'twiss.outx',
         .drop(0)
     for c in _.columns:
         try:
-            _[c] = _[c].apply(float)
+            _[c] = _pd.to_numeric(_[c])
         except ValueError:
             pass
     if with_units:
