@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import os
-from scipy.optimize import curve_fit
 
 PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
 PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'DT']
@@ -162,7 +161,6 @@ class Distribution:
 
     def from_5d_multigaussian_distribution(self, **kwargs):
         """Initialize a beam with a 5D particle distribution."""
-        keys = {'n', 'X', 'PX', 'Y', 'PY', 'DPP', 'XRMS', 'PXRMS', 'YRMS', 'PYRMS', 'DPPRMS'}
         self.from_5d_sigma_matrix(n=kwargs.get('n', DEFAULT_N_PARTICLES),
                                   X=kwargs.get('X', 0),
                                   PX=kwargs.get('PX', 0),
@@ -262,7 +260,7 @@ class Distribution:
         )
 
     def from_5d_sigma_matrix(self, **kwargs):
-        """Initialize a beam with a 5D particle distribution from a \Sigma matrix."""
+        """Initialize a beam with a 5D particle distribution from a Sigma matrix."""
         distribution = Distribution.generate_from_5d_sigma_matrix(**kwargs)
         self.__initialize_distribution(pd.DataFrame(distribution))
         self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
