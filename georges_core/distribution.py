@@ -190,12 +190,12 @@ class Distribution:
         gammay = (1 + alphay ** 2) / betay
 
         self.from_5d_sigma_matrix(n=kwargs.get('n', DEFAULT_N_PARTICLES),
-                                  X=kwargs.get('X', 0),
-                                  PX=kwargs.get('PX', 0),
-                                  Y=kwargs.get('Y', 0),
-                                  PY=kwargs.get('PY', 0),
-                                  DPP=kwargs.get('DPP', 0),
-                                  DPPRMS=kwargs.get('DPPRMS', 0),
+                                  x=kwargs.get('X', 0),
+                                  px=kwargs.get('PX', 0),
+                                  y=kwargs.get('Y', 0),
+                                  py=kwargs.get('PY', 0),
+                                  dpp=kwargs.get('DPP', 0),
+                                  dpprms=kwargs.get('DPPRMS', 0),
                                   s11=betax * kwargs['EMITX'],
                                   s12=-alphax * kwargs['EMITX'],
                                   s22=gammax * kwargs['EMITX'],
@@ -206,7 +206,58 @@ class Distribution:
         return self
 
     @staticmethod
-    def generate_from_5d_sigma_matrix(**kwargs):
+    def generate_from_5d_sigma_matrix(n: int,
+                                      x: float = 0,
+                                      px: float = 0,
+                                      y: float = 0,
+                                      py: float = 0,
+                                      dpp: float = 0,
+                                      s11: float = 0,
+                                      s12: float = 0,
+                                      s13: float = 0,
+                                      s14: float = 0,
+                                      s15: float = 0,
+                                      s22: float = 0,
+                                      s23: float = 0,
+                                      s24: float = 0,
+                                      s25: float = 0,
+                                      s33: float = 0,
+                                      s34: float = 0,
+                                      s35: float = 0,
+                                      s44: float = 0,
+                                      s45: float = 0,
+                                      dpprms: float = 0,
+                                      matrix=None,
+                                      ):
+        """
+
+        Args:
+            n:
+            x:
+            px:
+            y:
+            py:
+            dpp:
+            s11:
+            s12:
+            s13:
+            s14:
+            s15:
+            s22:
+            s23:
+            s24:
+            s25:
+            s33:
+            s34:
+            s35:
+            s44:
+            s45:
+            dpprms:
+            matrix:
+
+        Returns:
+
+        """
         # For performance considerations, see
         # https://software.intel.com/en-us/blogs/2016/06/15/faster-random-number-generation-in-intel-distribution-for-python
         try:
@@ -216,48 +267,37 @@ class Distribution:
             import numpy.random
             generator = numpy.random.multivariate_normal
 
-        s11 = kwargs.get('s11', 0)
-        s12 = kwargs.get('s12', 0)
-        s13 = kwargs.get('s13', 0)
-        s14 = kwargs.get('s14', 0)
-        s15 = kwargs.get('s15', 0)
         s21 = s12
-        s22 = kwargs.get('s22', 0)
-        s23 = kwargs.get('s23', 0)
-        s24 = kwargs.get('s24', 0)
-        s25 = kwargs.get('s25', 0)
         s31 = s13
         s32 = s23
-        s33 = kwargs.get('s33', 0)
-        s34 = kwargs.get('s34', 0)
-        s35 = kwargs.get('s35', 0)
         s41 = s14
         s42 = s24
         s43 = s34
-        s44 = kwargs.get('s44', 0)
-        s45 = kwargs.get('s45', 0)
         s51 = s15
         s52 = s25
         s53 = s35
         s54 = s45
-        s55 = kwargs.get('DPPRMS', 0) ** 2
+        s55 = dpprms ** 2
 
-        return generator(
-            [kwargs.get('X', 0),
-             kwargs.get('PX', 0),
-             kwargs.get('Y', 0),
-             kwargs.get('PY', 0),
-             kwargs.get('DPP', 0)
-             ],
-            np.array([
-                [s11, s12, s13, s14, s15],
-                [s21, s22, s23, s24, s25],
-                [s31, s32, s33, s34, s35],
-                [s41, s42, s43, s44, s45],
-                [s51, s52, s53, s54, s55]
-            ]),
-            int(kwargs.get('n', DEFAULT_N_PARTICLES))
-        )
+        if matrix is not None:
+            assert matrix.shape == (5, 5)
+            return generator(
+                [x, px, y, py, dpp],
+                matrix,
+                int(n)
+            )
+        else:
+            return generator(
+                [x, px, y, py, dpp],
+                np.array([
+                    [s11, s12, s13, s14, s15],
+                    [s21, s22, s23, s24, s25],
+                    [s31, s32, s33, s34, s35],
+                    [s41, s42, s43, s44, s45],
+                    [s51, s52, s53, s54, s55]
+                ]),
+                int(n)
+            )
 
     def from_5d_sigma_matrix(self, **kwargs):
         """Initialize a beam with a 5D particle distribution from a Sigma matrix."""
