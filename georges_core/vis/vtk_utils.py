@@ -110,8 +110,6 @@ def beam_to_vtk(filename, output = 'beam', option_ISO = False, option_NOT_ISO = 
                     line0.GetPointIds().SetId(k % 2, k)
                     line1.GetPointIds().SetId((k - 1) % 2, k)
 
-                    k += 1
-
                 # Create a polydata to store everything in
                 linesPolyData = _vtk.vtkPolyData()
 
