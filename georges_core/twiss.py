@@ -54,6 +54,7 @@ class Twiss(Parametrization):
 
     def __call__(self,
                  matrix: _pd.DataFrame,
+                 end: Union[int, str] = -1
                  ) -> _pd.DataFrame:
         """
         Uses a step-by-step transfer matrix to compute the Twiss parameters (uncoupled). The phase advance and the
@@ -66,7 +67,7 @@ class Twiss(Parametrization):
             the same DataFrame as the input, but with added columns for the computed quantities.
         """
         if self._twiss_init is None:
-            twiss_init = self.compute_periodic_twiss(matrix)
+            twiss_init = self.compute_periodic_twiss(matrix, end)
         else:
             twiss_init = self._twiss_init
 
