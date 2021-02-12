@@ -265,6 +265,24 @@ class Histogram4d:
         else:
             raise AttributeError("Boost histograms are not available")
 
+    def extract_spectrum(self, x, y, z, path='.'):
+
+        f = open(f"{path}/fluxes_{self.meshname}_{x}_{y}_{z}", 'w')
+        spectrum = list(self.bh[x, y, z, :].to_numpy()[0])
+        spectrum.reverse()
+
+        i = 1
+        for value in spectrum:
+            f.write("  {:.4E}".format(value))
+            if i % 6 == 0:
+                f.write('\n')
+            i += 1
+        f.write("  {:.4E}\n".format(0))
+        f.write(' 1.000\n')
+        f.write(f'fluxes_{self.meshname}_{x}_{y}_{z}')
+
+        f.close()
+
     def project_to_3d(self, weights=1):
 
         histo3d = bh.Histogram(*self.bh.axes[0:3])
