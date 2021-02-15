@@ -277,8 +277,7 @@ class Histogram4d:
             if i % 6 == 0:
                 f.write('\n')
             i += 1
-        f.write("  {:.4E}\n".format(0))
-        f.write(' 1.000\n')
+        f.write('\n 1.000\n')
         f.write(f'fluxes_{self.meshname}_{x}_{y}_{z}')
 
         f.close()
