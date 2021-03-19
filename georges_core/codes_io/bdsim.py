@@ -93,7 +93,7 @@ class BDSimOutputException(Exception):
 class Histogram:
     def __init__(self, h):  # h is a THxD
         self._h = h
-        self.variances = h.values_errors()[1]
+        self.variances = h.variances()
         self._centers = None
         self._normalized_values = None
         self.normalization = 1.0
@@ -117,7 +117,7 @@ class Histogram:
 
     @property
     def xnumbins(self):
-        return len(self._h.edges('x')[1:-1])-1
+        return len(self._h.axes[0].edges())-1
 
 
 class Histogram1d(Histogram):
@@ -127,14 +127,14 @@ class Histogram1d(Histogram):
         if self._centers is not None:
             return self._centers
         self._centers = [
-            self.coordinates_normalization * (self.edges()[i] + self.edges()[i + 1]) / 2
-            for i in range(1, len(self.edges()) - 2)
+            self.coordinates_normalization * (self._h.axes[0].edges()[i] + self._h.axes[0].edges()[i + 1]) / 2
+            for i in range(1, len(self._h.axes[0].edges()) - 2)
         ]
         return self._centers
 
     @property
     def values(self):
-        return self._h.values()[1:-1]
+        return self._h.values()
 
 
 class Histogram2d(Histogram):
@@ -165,19 +165,19 @@ class Histogram3d(Histogram):
 
     @property
     def values(self):
-        return self._h.values().reshape(self.znumbins+2,self.ynumbins+2,self.xnumbins+2).transpose(2,1,0)[1:-1,1:-1,1:-1]
+        return self._h.values()
 
     @property
     def bins_volume(self):
-        return _np.diff(self._h.edges('x')[1:-1])[0] * \
-               _np.diff(self._h.edges('y')[1:-1])[0] * \
-               _np.diff(self._h.edges('z')[1:-1])[0]
+        return _np.diff(self._h.axes[0].edges())[0] * \
+               _np.diff(self._h.axes[1].edges())[0] * \
+               _np.diff(self._h.axes[2].edges())[0]
 
     @property
     def edges(self):
-        return _np.array([list(self._h.edges('x')[1:-1]),
-                          list(self._h.edges('y')[1:-1]),
-                          list(self._h.edges('z')[1:-1])])
+        return _np.array([list(self._h.axes[0].edges()),
+                          list(self._h.axes[1].edges()),
+                          list(self._h.axes[2].edges())])
 
     @property
     def centers(self):
@@ -190,11 +190,11 @@ class Histogram3d(Histogram):
 
     @property
     def ynumbins(self):
-        return len(self._h.edges('y')[1:-1])-1
+        return len(self._h.axes[1].edges())-1
 
     @property
     def znumbins(self):
-        return len(self._h.edges('z')[1:-1])-1
+        return len(self._h.axes[2].edges())-1
 
     @property
     def scoring_mesh_translations(self):
