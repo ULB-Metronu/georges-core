@@ -265,22 +265,35 @@ class Histogram4d:
         else:
             raise AttributeError("Boost histograms are not available")
 
-    def extract_spectrum(self, x, y, z, path='.'):
+    def extract_spectrum(self, x=0, y=0, z=0, path='.', all=False):
 
-        f = open(f"{path}/fluxes_{self.meshname}_{x}_{y}_{z}", 'w')
-        spectrum = list(self.bh[x, y, z, :].to_numpy()[0])
-        spectrum.reverse()
+        if not all:
+            all_x = [x]
+            all_y = [y]
+            all_z = [z]
+        else:
+            all_x = range(self.xnumbins)
+            all_y = range(self.ynumbins)
+            all_z = range(self.znumbins)
 
-        i = 1
-        for value in spectrum:
-            f.write("  {:.4E}".format(value))
-            if i % 6 == 0:
-                f.write('\n')
-            i += 1
-        f.write('\n 1.000\n')
-        f.write(f'fluxes_{self.meshname}_{x}_{y}_{z}')
+        for _x in all_x:
+            for _y in all_y:
+                for _z in all_z:
 
-        f.close()
+                    f = open(f"{path}/fluxes_{self.meshname}_{_x}_{_y}_{_z}", 'w')
+                    spectrum = list(self.bh[_x, _y, _z, :].to_numpy()[0])
+                    spectrum.reverse()
+
+                    i = 1
+                    for value in spectrum:
+                        f.write("  {:.4E}".format(value))
+                        if i % 6 == 0:
+                            f.write('\n')
+                        i += 1
+                    f.write('\n 1.000\n')
+                    f.write(f'fluxes_{self.meshname}_{_x}_{_y}_{_z}')
+
+                    f.close()
 
     def project_to_3d(self, weights=1):
 
@@ -430,28 +443,33 @@ class Output(metaclass=OutputType):
                 directory: the top-level ROOT directory
             """
 
-            def _build(n, c):
-                item = self._directory[n]
-                if c.endswith('Directory'):
-                    return Output.Directory(parent, directory=item)
-                elif c.endswith('TH1D'):
-                    return Histogram1d(item)
-                elif c.endswith('TH2D'):
-                    return Histogram2d(item)
-                elif c.endswith('TH3D'):
-                    return Histogram3d(item, self.parent, n)
-                elif c.endswith('TTree'):
-                    return Histogram4d.from_root_file(self.parent, n.split(';')[0])
-                else:
-                    return item
-
             self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
             for name, cls in self._directory.iterclassnames(recursive=False):
-                setattr(self, name.split(';')[0].replace('-', '_'), _build(name, cls))
+                setattr(self, name.split(';')[0].replace('-', '_'), self.build(name, cls))
 
         def __getitem__(self, item):
             return self._directory[item]
+
+        def build(self, n, c):
+            item = self._directory[n]
+            if c.endswith('Directory'):
+                return Output.Directory(self.parent, directory=item)
+            elif c.endswith('TH1D'):
+                return Histogram1d(item)
+            elif c.endswith('TH2D'):
+                return Histogram2d(item)
+            elif c.endswith('TH3D'):
+                return Histogram3d(item, self.parent, n)
+            elif c.endswith('TTree'):
+                return Histogram4d.from_root_file(self.parent, n.split(';')[0])
+            else:
+                return item
+
+        def get(self, name):
+            for n, c in self._directory.iterclassnames(recursive=False):
+                if n == name:
+                    return self.build(n, c)
 
         @property
         def parent(self) -> Output:
