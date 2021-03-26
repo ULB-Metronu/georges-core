@@ -567,6 +567,56 @@ class PlacementSequence(Sequence):
         pass
 
 
+class MadNGTwissSequence(Sequence):
+    """
+    TODO
+    Merge with Twiss sequence
+    """
+
+    def __init__(self,
+                 filename: str = 'twiss.outx',
+                 path: str = '.',
+                 *,
+                 particleName: str = 'Proton',
+                 kinematics: _Kinematics = None,
+                 columns: List = None,
+                 lines: int = None,
+                 with_units: bool = True,
+                 from_element: str = None,
+                 to_element: str = None,
+                 element_keys: Optional[Mapping[str, str]] = None,
+                 ):
+        """
+
+        Args:
+            filename: the name of the physics
+            path:
+            columns:
+            lines:
+            with_units:
+            from_element:
+            to_element:
+            element_keys:
+        """
+        twiss_headers = load_madng_twiss_headers(filename, path, lines)
+        twiss_table = load_madng_twiss_table(filename, path, columns, lines, with_units).loc[from_element:to_element]
+        twiss_table.columns = map(str.upper, twiss_table.columns)
+        p = getattr(_particles, particleName)
+        super().__init__(name="MAD-NG",
+                         data=twiss_table,
+                         metadata=SequenceMetadata(data=twiss_headers,
+                                                   kinematics=kinematics,
+                                                   particle=p),
+                         element_keys=element_keys
+                         )
+
+    def to_df(self) -> _pd.DataFrame:
+        """TODO"""
+        return self._data
+
+    df = property(to_df)
+
+
 class TwissSequence(Sequence):
     """
     TODO

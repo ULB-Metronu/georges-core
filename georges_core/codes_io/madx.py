@@ -182,6 +182,8 @@ def load_madx_twiss_table(filename: str = 'twiss.outx',
         _['E2'] = _['E2'].apply(lambda e: e * _ureg.radian)
         _['ANGLE'] = _['ANGLE'].apply(lambda e: e * _ureg.radian)
         _['K1L'] = _['K1L'].apply(lambda e: e / _ureg.m)
+        _['K2L'] = _['K2L'].apply(lambda e: e / _ureg.m**2)
+        _['K3L'] = _['K3L'].apply(lambda e: e / _ureg.m**3)
         _['TILT'] = _['TILT'].apply(lambda e: e * _ureg.radian)
     return _.set_index('NAME')
 
