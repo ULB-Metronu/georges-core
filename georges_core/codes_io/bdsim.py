@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Union
 from collections import UserDict
 import logging
 import os
+import numpy as _np
+import pandas as _pd
+from scipy.interpolate import interp1d
 
 try:
     import uproot4 as _uproot
@@ -69,9 +72,6 @@ except (ImportError, ImportWarning):
     logging.warning("boost_histogram is required for this module to have full functionalities.\n"
                     "Not all methods will be available.")
 
-import numpy as _np
-import pandas as _pd
-from scipy.interpolate import interp1d
 
 __all__ = [
     'Output',
@@ -144,12 +144,11 @@ class Histogram2d(Histogram):
 class Histogram3d(Histogram):
     def __init__(self, h, parent, name):
         Histogram.__init__(self, h)
-        self._filename = parent._filename
-        self._path = parent._path
+        self._filename = parent.filename
+        self._path = parent.path
         self._name = name
         self._meshname = self._name.split('-')[0]
         self._parent = parent
-
 
     @property
     def filename(self):
@@ -222,8 +221,8 @@ class Histogram4d:
         self._bh = None
         self._bh_error = None
         self._energy_axis_type = name.split('-')[-1]
-        self._filename = parent._filename
-        self._path = parent._path
+        self._filename = parent.filename
+        self._path = parent.path
         self._meshname = name.split('-')[0]
         self._cache = None
         self._coordinates_normalization = 1.0
@@ -265,9 +264,9 @@ class Histogram4d:
         else:
             raise AttributeError("Boost histograms are not available")
 
-    def extract_spectrum(self, x=0, y=0, z=0, path='.', all=False):
+    def extract_spectrum(self, x=0, y=0, z=0, path='.', extract_all=False):
 
-        if not all:
+        if not extract_all:
             all_x = [x]
             all_y = [y]
             all_z = [z]
@@ -308,8 +307,8 @@ class Histogram4d:
         self._cache = histo3d.view()
         return histo3d
 
-    def compute_h10(self, conversionFactorFile):
-        data = _pd.read_table(conversionFactorFile, names=["energy", "h10_coeff"])
+    def compute_h10(self, conversionfactorfile):
+        data = _pd.read_table(conversionfactorfile, names=["energy", "h10_coeff"])
         f = interp1d(data['energy'].values, data['h10_coeff'].values)
         self._cache = self.project_to_3d(weights=f(self.bh.axes[3].centers)).view()
         return self.project_to_3d(weights=f(self.bh.axes[3].centers))
@@ -384,7 +383,7 @@ class Histogram4d:
             bdsbh4d = ROOT.BDSBH4D("boost_histogram_variable")()
 
         # to_PyROOT() is a BDSIM function
-        bdsbh4d.to_PyROOT(parent._file, name)
+        bdsbh4d.to_PyROOT(parent.file, name)
 
         return Histogram4d(parent, bdsbh4d, name)
 
@@ -432,6 +431,19 @@ class Output(metaclass=OutputType):
     def directory(self) -> _uproot.rootio.ROOTDirectory:
         """Return the master directory attached to this parent."""
         return self._root_directory
+
+    @property
+    def file(self):
+        return self._file
+
+    @property
+    def filename(self):
+        return self._filename
+
+    @property
+    def path(self):
+        return self._path
+
 
     class Directory:
         def __init__(self, parent: Union[Output, Output.Directory], directory: _uproot.rootio.ROOTDirectory):

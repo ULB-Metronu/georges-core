@@ -9,3 +9,4 @@ plotly
 pytest
 uproot
 vtk
+scipy
