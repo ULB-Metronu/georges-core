@@ -12,6 +12,9 @@ from typing import TYPE_CHECKING, Optional, List, Dict, Tuple, Union
 from collections import UserDict
 import logging
 import os
+import numpy as _np
+import pandas as _pd
+from scipy.interpolate import interp1d
 
 try:
     import uproot4 as _uproot
@@ -69,9 +72,6 @@ except (ImportError, ImportWarning):
     logging.warning("boost_histogram is required for this module to have full functionalities.\n"
                     "Not all methods will be available.")
 
-import numpy as _np
-import pandas as _pd
-from scipy.interpolate import interp1d
 
 __all__ = [
     'Output',
@@ -93,7 +93,7 @@ class BDSimOutputException(Exception):
 class Histogram:
     def __init__(self, h):  # h is a THxD
         self._h = h
-        self.variances = h.values_errors()[1]
+        self.variances = h.variances()
         self._centers = None
         self._normalized_values = None
         self.normalization = 1.0
@@ -117,7 +117,7 @@ class Histogram:
 
     @property
     def xnumbins(self):
-        return len(self._h.edges('x')[1:-1])-1
+        return len(self._h.axes[0].edges())-1
 
 
 class Histogram1d(Histogram):
@@ -127,14 +127,14 @@ class Histogram1d(Histogram):
         if self._centers is not None:
             return self._centers
         self._centers = [
-            self.coordinates_normalization * (self.edges[i] + self.edges[i + 1]) / 2
-            for i in range(1, len(self.edges) - 2)
+            self.coordinates_normalization * (self._h.axes[0].edges()[i] + self._h.axes[0].edges()[i + 1]) / 2
+            for i in range(1, len(self._h.axes[0].edges()) - 2)
         ]
         return self._centers
 
     @property
     def values(self):
-        return self._h.values()[1:-1]
+        return self._h.values()
 
 
 class Histogram2d(Histogram):
@@ -144,12 +144,11 @@ class Histogram2d(Histogram):
 class Histogram3d(Histogram):
     def __init__(self, h, parent, name):
         Histogram.__init__(self, h)
-        self._filename = parent._filename
-        self._path = parent._path
+        self._filename = parent.filename
+        self._path = parent.path
         self._name = name
         self._meshname = self._name.split('-')[0]
         self._parent = parent
-
 
     @property
     def filename(self):
@@ -165,27 +164,36 @@ class Histogram3d(Histogram):
 
     @property
     def values(self):
-        return self._h.values().reshape(self.znumbins+2,self.ynumbins+2,self.xnumbins+2).transpose(2,1,0)[1:-1,1:-1,1:-1]
+        return self._h.values()
 
     @property
     def bins_volume(self):
-        return _np.diff(self._h.edges('x')[1:-1])[0] * \
-               _np.diff(self._h.edges('y')[1:-1])[0] * \
-               _np.diff(self._h.edges('z')[1:-1])[0]
+        return _np.diff(self._h.axes[0].edges())[0] * \
+               _np.diff(self._h.axes[1].edges())[0] * \
+               _np.diff(self._h.axes[2].edges())[0]
 
     @property
     def edges(self):
-        return _np.array([list(self._h.edges('x')[1:-1]),
-                          list(self._h.edges('y')[1:-1]),
-                          list(self._h.edges('z')[1:-1])])
+        return _np.array([list(self._h.axes[0].edges()),
+                          list(self._h.axes[1].edges()),
+                          list(self._h.axes[2].edges())])
+
+    @property
+    def centers(self):
+        if self._centers is not None:
+            return self._centers
+        self._centers = [[
+            self.coordinates_normalization * (self.edges[j][i] + self.edges[j][i + 1]) / 2
+            for i in range(len(self.edges[j])-1)] for j in range(3)]
+        return self._centers
 
     @property
     def ynumbins(self):
-        return len(self._h.edges('y')[1:-1])-1
+        return len(self._h.axes[1].edges())-1
 
     @property
     def znumbins(self):
-        return len(self._h.edges('z')[1:-1])-1
+        return len(self._h.axes[2].edges())-1
 
     @property
     def scoring_mesh_translations(self):
@@ -213,8 +221,8 @@ class Histogram4d:
         self._bh = None
         self._bh_error = None
         self._energy_axis_type = name.split('-')[-1]
-        self._filename = parent._filename
-        self._path = parent._path
+        self._filename = parent.filename
+        self._path = parent.path
         self._meshname = name.split('-')[0]
         self._cache = None
         self._coordinates_normalization = 1.0
@@ -256,6 +264,36 @@ class Histogram4d:
         else:
             raise AttributeError("Boost histograms are not available")
 
+    def extract_spectrum(self, x=0, y=0, z=0, path='.', extract_all=False):
+
+        if not extract_all:
+            all_x = [x]
+            all_y = [y]
+            all_z = [z]
+        else:
+            all_x = range(self.xnumbins)
+            all_y = range(self.ynumbins)
+            all_z = range(self.znumbins)
+
+        for _x in all_x:
+            for _y in all_y:
+                for _z in all_z:
+
+                    f = open(f"{path}/fluxes_{self.meshname}_{_x}_{_y}_{_z}", 'w')
+                    spectrum = list(self.bh[_x, _y, _z, :].to_numpy()[0])
+                    spectrum.reverse()
+
+                    i = 1
+                    for value in spectrum:
+                        f.write("  {:.4E}".format(value))
+                        if i % 6 == 0:
+                            f.write('\n')
+                        i += 1
+                    f.write('\n 1.000\n')
+                    f.write(f'fluxes_{self.meshname}_{_x}_{_y}_{_z}')
+
+                    f.close()
+
     def project_to_3d(self, weights=1):
 
         histo3d = bh.Histogram(*self.bh.axes[0:3])
@@ -269,8 +307,8 @@ class Histogram4d:
         self._cache = histo3d.view()
         return histo3d
 
-    def compute_h10(self, conversionFactorFile):
-        data = _pd.read_table(conversionFactorFile, names=["energy", "h10_coeff"])
+    def compute_h10(self, conversionfactorfile):
+        data = _pd.read_table(conversionfactorfile, names=["energy", "h10_coeff"])
         f = interp1d(data['energy'].values, data['h10_coeff'].values)
         self._cache = self.project_to_3d(weights=f(self.bh.axes[3].centers)).view()
         return self.project_to_3d(weights=f(self.bh.axes[3].centers))
@@ -345,7 +383,7 @@ class Histogram4d:
             bdsbh4d = ROOT.BDSBH4D("boost_histogram_variable")()
 
         # to_PyROOT() is a BDSIM function
-        bdsbh4d.to_PyROOT(parent._file, name)
+        bdsbh4d.to_PyROOT(parent.file, name)
 
         return Histogram4d(parent, bdsbh4d, name)
 
@@ -394,6 +432,19 @@ class Output(metaclass=OutputType):
         """Return the master directory attached to this parent."""
         return self._root_directory
 
+    @property
+    def file(self):
+        return self._file
+
+    @property
+    def filename(self):
+        return self._filename
+
+    @property
+    def path(self):
+        return self._path
+
+
     class Directory:
         def __init__(self, parent: Union[Output, Output.Directory], directory: _uproot.rootio.ROOTDirectory):
             """
@@ -404,28 +455,33 @@ class Output(metaclass=OutputType):
                 directory: the top-level ROOT directory
             """
 
-            def _build(n, c):
-                item = self._directory[n]
-                if c.endswith('Directory'):
-                    return Output.Directory(parent, directory=item)
-                elif c.endswith('TH1D'):
-                    return Histogram1d(item)
-                elif c.endswith('TH2D'):
-                    return Histogram2d(item)
-                elif c.endswith('TH3D'):
-                    return Histogram3d(item, self.parent, n)
-                elif c.endswith('TTree'):
-                    return Histogram4d.from_root_file(self.parent, n.split(';')[0])
-                else:
-                    return item
-
             self._output: Output = parent
             self._directory: _uproot.rootio.ROOTDirectory = directory
             for name, cls in self._directory.iterclassnames(recursive=False):
-                setattr(self, name.split(';')[0].replace('-', '_'), _build(name, cls))
+                setattr(self, name.split(';')[0].replace('-', '_'), self.build(name, cls))
 
         def __getitem__(self, item):
             return self._directory[item]
+
+        def build(self, n, c):
+            item = self._directory[n]
+            if c.endswith('Directory'):
+                return Output.Directory(self.parent, directory=item)
+            elif c.endswith('TH1D'):
+                return Histogram1d(item)
+            elif c.endswith('TH2D'):
+                return Histogram2d(item)
+            elif c.endswith('TH3D'):
+                return Histogram3d(item, self.parent, n)
+            elif c.endswith('TTree'):
+                return Histogram4d.from_root_file(self.parent, n.split(';')[0])
+            else:
+                return item
+
+        def get(self, name):
+            for n, c in self._directory.iterclassnames(recursive=False):
+                if n == name:
+                    return self.build(n, c)
 
         @property
         def parent(self) -> Output:
