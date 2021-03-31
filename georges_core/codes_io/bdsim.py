@@ -1514,6 +1514,7 @@ class BDSimOutput(Output):
                 'weight': [True, None],
                 'n': [True, None],
                 'S': [True, None],
+                'kineticEnergy': [True, None],
             }
 
             def to_np(self,
