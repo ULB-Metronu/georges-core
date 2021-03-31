@@ -7,3 +7,4 @@ from .patchable import Patchable
 from .vis import Artist, GnuplotArtist, PlotlyArtist, vtk_utils
 from .geometry import *
 from .distribution import *
+from .twiss import *
