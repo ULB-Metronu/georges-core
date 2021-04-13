@@ -12,7 +12,9 @@ import pandas as _pd
 from . import ureg as _ureg
 from .sequences import BetaBlock as _BetaBlock
 from . import Kinematics as _Kinematics
+from .frame import Frame as _Frame
 import cmath
+
 
 def _get_matrix_elements_block(m: _pd.DataFrame, twiss: Optional[_BetaBlock], block: int = 1) -> Tuple:
     """Extract parameters from the DataFrame."""
@@ -406,8 +408,8 @@ class LebedevTwiss(Parametrization):
 
     @staticmethod
     def get_B_rotated(t):
-        frame = georges_core.frame.Frame()
-        frame_rotated = frame.rotate([0.0 * _.rad, _np.arctan(t['P']) * _.rad, _np.arctan(-t['T']) * _.rad])
+        frame = _Frame()
+        frame_rotated = frame.rotate([0.0 * _ureg.rad, _np.arctan(t['P']) * _ureg.rad, _np.arctan(-t['T']) * _ureg.rad])
         element_rotation = frame_rotated.get_rotation_matrix()
         t['SREF_'] = 1.0
         return _np.dot(element_rotation, t[['BX', 'BY', 'BZ']].values.T)
