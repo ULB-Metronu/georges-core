@@ -7,26 +7,46 @@ import uproot4
 def histogram3d_to_vtk(histogram3d,
                        filename='histogram.vti',
                        path='.',
-                       origin_from_file=True
+                       name='Flux',
+                       origin_from_file=True,
+                       origin=[0.0, 0.0, 0.0]
                        ):
+    def copyAndNameArray(data, name):
+        if data is not None:
+            outdata = data.NewInstance()
+            outdata.DeepCopy(data)
+            outdata.SetName(name)
+            return outdata
+        else:
+            return None
 
     if origin_from_file is True:
         origin = histogram3d.scoring_mesh_translations
-    else:
-        origin = [0.0, 0.0, 0.0]
 
     imgdat = _vtk.vtkImageData()
     imgdat.GetPointData().SetScalars(
-        _vtk_np.numpy_to_vtk(
-            num_array=histogram3d.values.ravel(order='F'),
-            deep=True,
-            array_type=_vtk.VTK_FLOAT
+        copyAndNameArray(
+            _vtk_np.numpy_to_vtk(
+                num_array=histogram3d.values.ravel(order='F'),
+                deep=True,
+                array_type=_vtk.VTK_FLOAT
+            )
+            , name
         )
     )
     imgdat.SetDimensions(histogram3d.xnumbins, histogram3d.ynumbins, histogram3d.znumbins)
-    imgdat.SetOrigin(origin[0] - (histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2) + (histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]) / 2),
-                     origin[1] - (histogram3d.coordinates_normalization * (histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2) + (histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]) / 2),
-                     origin[2] - (histogram3d.coordinates_normalization * (histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2) + (histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0]) / 2)
+    imgdat.SetOrigin(origin[0] - (
+            histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2) + (
+                             histogram3d.coordinates_normalization * (
+                             histogram3d.edges[0][1] - histogram3d.edges[0][0]) / 2),
+                     origin[1] - (histogram3d.coordinates_normalization * (
+                             histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2) + (
+                             histogram3d.coordinates_normalization * (
+                             histogram3d.edges[1][1] - histogram3d.edges[1][0]) / 2),
+                     origin[2] - (histogram3d.coordinates_normalization * (
+                             histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2) + (
+                             histogram3d.coordinates_normalization * (
+                             histogram3d.edges[2][1] - histogram3d.edges[2][0]) / 2)
                      )
     imgdat.SetSpacing(
         histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]),
@@ -39,8 +59,9 @@ def histogram3d_to_vtk(histogram3d,
     writer.SetDataModeToBinary()
     writer.Write()
 
-def beam_to_vtk(filename, output = 'beam', option_ISO = False, option_NOT_ISO = False, option_primaries = False, option_secondaries = False):
 
+def beam_to_vtk(filename, output='beam', option_ISO=False, option_NOT_ISO=False, option_primaries=False,
+                option_secondaries=False):
     file = uproot4.open(filename)
     evt = file.get('Event')
 
@@ -126,6 +147,7 @@ def beam_to_vtk(filename, output = 'beam', option_ISO = False, option_NOT_ISO = 
                 mb.SetBlock(mbIndex, linesPolyData)
                 mbIndex += 1
 
+        print(mbIndex)
         print(f"Progress: {i / len(tracks) * 100}%")
 
     writer = _vtk.vtkXMLMultiBlockDataWriter()
@@ -134,4 +156,3 @@ def beam_to_vtk(filename, output = 'beam', option_ISO = False, option_NOT_ISO = 
     print(f"Trying to write file {output}.vtm")
     writer.SetFileName(f"{output}.vtm")
     writer.Write()
-
