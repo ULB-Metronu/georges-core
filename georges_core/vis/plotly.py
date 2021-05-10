@@ -40,15 +40,21 @@ class PlotlyArtist(_Artist):
             'editable': False,
         }
         self._layout: Mapping[Any, Any] = layout or {
+            'font': {'family': "serif", 'size': 18},
+            'plot_bgcolor': 'rgba(0,0,0,0)',
             'xaxis': {
                 'showgrid': True,
                 'linecolor': 'black',
                 'linewidth': 1,
                 'mirror': True,
+                'gridcolor': 'grey',
+                'gridwidth': 0.1
             },
             'yaxis': {
                 'linecolor': 'black',
                 'linewidth': 1,
+                'gridcolor': 'grey',
+                'gridwidth': 0.1,
                 'mirror': True,
                 'exponentformat': 'power',
             },
