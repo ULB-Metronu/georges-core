@@ -101,6 +101,10 @@ def load_madng_twiss_table(filename: str = 'twiss.outx',
         _['k1'] = _['k1'].apply(lambda e: e / _ureg.m ** 2)
         _['k2'] = _['k2'].apply(lambda e: e / _ureg.m ** 3)
         _['k3'] = _['k3'].apply(lambda e: e / _ureg.m ** 4)
+        _['k0l'] = _['k0l'].apply(lambda e: e)
+        _['k1l'] = _['k1l'].apply(lambda e: e / _ureg.m)
+        _['k2l'] = _['k2l'].apply(lambda e: e / _ureg.m ** 2)
+        _['k3l'] = _['k3l'].apply(lambda e: e / _ureg.m ** 3)
         _['tilt'] = _['tilt'].apply(lambda e: e * _ureg.radian)
 
     _.rename(columns={'kind': 'keyword', 'name': 'NAME'}, inplace=True)
