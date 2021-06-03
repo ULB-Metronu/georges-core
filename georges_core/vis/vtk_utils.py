@@ -1,7 +1,7 @@
 import os
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
-import uproot4
+import uproot
 
 
 def histogram3d_to_vtk(histogram3d,
@@ -62,7 +62,7 @@ def histogram3d_to_vtk(histogram3d,
 
 def beam_to_vtk(filename, output='beam', option_ISO=False, option_NOT_ISO=False, option_primaries=False,
                 option_secondaries=False):
-    file = uproot4.open(filename)
+    file = uproot.open(filename)
     evt = file.get('Event')
 
     partID_tracks = evt.arrays(['Trajectory.partID'], library='np')['Trajectory.partID']

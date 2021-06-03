@@ -17,9 +17,9 @@ import pandas as _pd
 from scipy.interpolate import interp1d
 
 try:
-    import uproot4 as _uproot
+    import uproot as _uproot
 except (ImportError, ImportWarning):
-    logging.warning("Uproot4 is required for this module to have full functionalities.\n")
+    logging.warning("Uproot is required for this module to have full functionalities.\n")
     raise ImportError("Uproot is required for this module to work.")
 
 _WITH_PYBDSIM = False
