@@ -14,7 +14,6 @@ from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, \
     transport_element_factory
-from ..codes_io import BDSimOutput
 from .. import ureg as _ureg
 
 if TYPE_CHECKING:
@@ -739,6 +738,7 @@ class SurveySequence(PlacementSequence):
     df = property(to_df)
 
 
+# TODO use with pybdsim
 class BDSIMSequence(Sequence):
 
     def __init__(self,
