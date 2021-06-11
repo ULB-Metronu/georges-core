@@ -814,7 +814,7 @@ class SurveySequence(PlacementSequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
-                 metadata: Optional[SequenceMetadata] = None,
+                 metadata: Optional[SequenceMetadata] = None
                  ):
         """
 
@@ -871,6 +871,7 @@ class SurveySequence(PlacementSequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
+
 
 # TODO use with pybdsim
 class BDSIMSequence(Sequence):
