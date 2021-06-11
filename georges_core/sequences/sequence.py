@@ -570,7 +570,7 @@ class PlacementSequence(Sequence):
         for e in self._data:
             length = (e[1] - at).m_as('m')
             if length > 1e-6:
-                expanded.append((drift_element(f"D_{e[0].NAME}", L=length * _ureg.m),
+                expanded.append((drift_element(f"D_{e[0].NAME}", L=length * _ureg.m, APERTYPE=None),
                                  at,
                                  at + length * _ureg.m / 2,
                                  at + length * _ureg.m,
@@ -810,7 +810,7 @@ class TransportSequence(Sequence):
     df = property(to_df)
 
 
-class SurveySequence(Sequence):
+class SurveySequence(PlacementSequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
@@ -834,30 +834,30 @@ class SurveySequence(Sequence):
         sequence["ANGLE"] = sequence["ANGLE"].apply(lambda e: e * _ureg.radian)
         sequence["E1"] = sequence["E1"].apply(lambda e: e * _ureg.radian)
         sequence["E2"] = sequence["E2"].apply(lambda e: e * _ureg.radian)
-
-        # sequence['APERTURE'] = sequence['APERTURE'].fillna('1')
         sequence['APERTYPE'] = sequence['APERTYPE'].fillna("CIRCULAR")
 
+        # TODO can be improved in oone line
         def check_apertures(e):
             if isinstance(e, float):
-                return [e *_ureg.m]
+                return [e * _ureg.m]
             else:
-                t = e.split(',')
-                if len(t) == 1:
-                    return [float(t[0]) * _ureg.m]
+                return [float(i) * _ureg.m for i in e.split(',')]
 
-                if len(t) > 1:
-                    print(t[0])
-                    t[0] = float(t[0]) * _ureg.meter
-                    t[1] = float(t[1]) * _ureg.meter
-                return t
+        def define_collimators(e):
+            if e["TYPE"] == 'COLLIMATOR':
+                e["TYPE"] = f"{e['APERTYPE']}COLLIMATOR"
+            return e["TYPE"]
 
         sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
+        sequence["TYPE"] = sequence.apply(lambda e: define_collimators(e), axis=1)
 
         data = []
         sequence_metadata = SequenceMetadata()
         for element in sequence.iterrows():
-            data.append(csv_element_factory(element))
+            data.append((csv_element_factory(element),
+                         element[1]['AT_ENTRY'],
+                         element[1]['AT_CENTER'],
+                         element[1]['AT_EXIT']))
 
         super().__init__(name='SURVEY',
                          data=data,
@@ -871,7 +871,6 @@ class SurveySequence(Sequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
-
 
 # TODO use with pybdsim
 class BDSIMSequence(Sequence):

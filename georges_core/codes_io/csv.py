@@ -18,7 +18,6 @@ CSV_TO_SEQUENCE = {
                                                                        K1=0*_ureg.m**-2,
                                                                        APERTURE=_[1]['APERTURE'],
                                                                        APERTYPE=_[1]['APERTYPE'])),
-
     "SBEND": (lambda _: georges_core.sequences.Element.SBend(_[0],
                                                              L=_[1]['LENGTH'],
                                                              K1=0*_ureg.m**-2,
@@ -26,17 +25,40 @@ CSV_TO_SEQUENCE = {
                                                              E2=_[1]["E2"] if not _np.isnan(_[1]["E2"]) else 0 * _ureg.radians,
                                                              APERTURE=_[1]['APERTURE'],
                                                              APERTYPE=_[1]['APERTYPE'])),
+    "CIRCULARCOLLIMATOR": (lambda _: georges_core.sequences.Element.CircularCollimator(_[0],
+                                                                                       L=_[1]['LENGTH'],
+                                                                                       APERTURE=_[1]['APERTURE'],
+                                                                                       APERTYPE="CIRCULAR")),
+    "RECTANGULARCOLLIMATOR": (lambda _: georges_core.sequences.Element.RectangularCollimator(_[0],
+                                                                                          L=_[1]['LENGTH'],
+                                                                                          APERTURE=_[1]['APERTURE'],
+                                                                                          APERTYPE="RECTANGULAR")),
+    "ELLIPTICALCOLLIMATOR": (lambda _: georges_core.sequences.Element.EllipticalCollimator(_[0],
+                                                                                           L=_[1]['LENGTH'],
+                                                                                           APERTURE=_[1]['APERTURE'],
+                                                                                           APERTYPE="ELLIPTICAL")),
+    "SCATTERER": (lambda _: georges_core.sequences.Element.Scatterer(_[0],
+                                                                     MATERIAL=_[1]["MATERIAL"],
+                                                                     APERTYPE=None)),
 
-    "COLLIMATOR": (lambda _: georges_core.sequences.Element.Collimator(_[0],
-                                                L=_[1]['LENGTH'],
-                                                APERTURE=_[1]['APERTURE'],
-                                                APERTYPE=_[1]['APERTYPE'])),
+    "SROTATION": (lambda _: georges_core.sequences.Element.SRotation(_[0],
+                                                                     ANGLE=0 *_ureg.radians)),
 
+    "HKICKER": (lambda _: georges_core.sequences.Element.HKicker(_[0],
+                                                                 L=_[1]['LENGTH'],
+                                                                 KICK=0,
+                                                                 APERTURE=_[1]['APERTURE'],
+                                                                 APERTYPE=_[1]['APERTYPE'])),
+
+    "VKICKER": (lambda _: georges_core.sequences.Element.VKicker(_[0],
+                                                                 L=_[1]['LENGTH'],
+                                                                 KICK=0,
+                                                                 APERTURE=_[1]['APERTURE'],
+                                                                 APERTYPE=_[1]['APERTYPE'])),
 }
 
 
 def csv_element_factory(d):
-
     if d[1]['TYPE'] in CSV_TO_SEQUENCE.keys():
         res = CSV_TO_SEQUENCE[d[1]['TYPE']](d)
     else:
