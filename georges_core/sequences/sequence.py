@@ -834,9 +834,8 @@ class SurveySequence(PlacementSequence):
         sequence["ANGLE"] = sequence["ANGLE"].apply(lambda e: e * _ureg.radian)
         sequence["E1"] = sequence["E1"].apply(lambda e: e * _ureg.radian)
         sequence["E2"] = sequence["E2"].apply(lambda e: e * _ureg.radian)
-        sequence['APERTYPE'] = sequence['APERTYPE'].fillna("CIRCULAR")
 
-        # TODO can be improved in oone line
+        # TODO can be improved in one line
         def check_apertures(e):
             if isinstance(e, float):
                 return [e * _ureg.m]

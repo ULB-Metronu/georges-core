@@ -38,18 +38,24 @@ CSV_TO_SEQUENCE = {
                                                                                            APERTURE=_[1]['APERTURE'],
                                                                                            APERTYPE="ELLIPTICAL")),
     "SCATTERER": (lambda _: georges_core.sequences.Element.Scatterer(_[0],
+                                                                     L=_[1]["LENGTH"],
                                                                      MATERIAL=_[1]["MATERIAL"],
+                                                                     KINETIC_ENERGY=0*_ureg.MeV,
                                                                      APERTYPE=None)),
 
+    "DEGRADER": (lambda _: georges_core.sequences.Element.Degrader(_[0],
+                                                                   KINETIC_ENERGY=0*_ureg.MeV,
+                                                                   APERTYPE=None)),
+
     "SROTATION": (lambda _: georges_core.sequences.Element.SRotation(_[0],
-                                                                     ANGLE=0 *_ureg.radians)),
+                                                                     ANGLE=0 *_ureg.radians,
+                                                                     APERTYPE=None)),
 
     "HKICKER": (lambda _: georges_core.sequences.Element.HKicker(_[0],
                                                                  L=_[1]['LENGTH'],
                                                                  KICK=0,
                                                                  APERTURE=_[1]['APERTURE'],
                                                                  APERTYPE=_[1]['APERTYPE'])),
-
     "VKICKER": (lambda _: georges_core.sequences.Element.VKicker(_[0],
                                                                  L=_[1]['LENGTH'],
                                                                  KICK=0,
