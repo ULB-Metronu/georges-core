@@ -38,6 +38,13 @@ class BetaBlock(metaclass=BetaBlockType):
     DXP: float = 0.0
     DZ: float = 0.0
     DZP: float = 0.0
+    BETA12: float = 0.0 * _ureg.m
+    BETA21: float = 0.0 * _ureg.m
+    ALPHA12: float = 0.0
+    ALPHA21: float = 0.0
+    NU1: float = 0.0
+    NU2: float = 0.0
+    U: float = 0.0
 
     def __post_init__(self):
         if self.GAMMA11 is None:
