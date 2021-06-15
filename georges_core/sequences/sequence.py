@@ -823,6 +823,23 @@ class SurveySequence(PlacementSequence):
             path:
         """
         sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
+        if sequence.get(['AT_ENTRY', 'AT_CENTER', 'AT_EXIT']) is None:
+            if sequence.get(['X', 'Y']) is not None:
+                s = sequence
+                offset = s['ORBIT_LENGTH'][0] / 2.0
+                if pd.isnull(offset):
+                    offset = 0
+                ssequence['AT_CENTER'] = pd.DataFrame(npl.norm([
+                    s['X'].diff().fillna(0.0),
+                    s['Y'].diff().fillna(0.0)
+                ], axis=0) - (
+                        s['LENGTH'].fillna(0.0) / 2.0 - s[
+                    'ORBIT_LENGTH'].fillna(0.0) / 2.0
+                ) + (
+                        s['LENGTH'].shift(1).fillna(0.0) / 2.0 - s[
+                    'ORBIT_LENGTH'].shift(1).fillna(0.0) / 2.0
+                )).cumsum() + offset
+
 
         # TODO be more generic
         sequence['LENGTH'] = sequence['LENGTH'].fillna(0)
