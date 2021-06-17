@@ -5,6 +5,8 @@ from dataclasses import dataclass
 import pandas as _pd
 from .. import ureg as _ureg
 from .. import Q_ as _Q
+import numpy as _np
+
 
 class BetaBlockType(type):
     """TODO"""

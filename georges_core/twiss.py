@@ -39,7 +39,68 @@ class ParametrizationType(type):
 
 
 class Parametrization(metaclass=ParametrizationType):
-    pass
+
+    def compute_canonical_transformation_matrix(self, matrix_row: _pd.Series, kin: _Kinematics) -> _pd.Series:
+        b_s = matrix_row['BX'] * _ureg.kG
+        r_s = b_s / kin.brho
+        r_s = r_s.to('1/(m)').magnitude
+        matrix_rs = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
+        matrix_row["matrix_rs"] = matrix_rs
+        matrix_row["RS"] = r_s
+        matrix_row["BS"] = b_s.magnitude
+        return matrix_row
+
+    @staticmethod
+    def compute_canonical_transfer_matrices(matrix_row: _pd.Series, matrix_rs1: _np.ndarray) -> _pd.Series:
+        mat = matrix_row[['R11', 'R12', 'R13', 'R14',
+                          'R21', 'R22', 'R23', 'R24',
+                          'R31', 'R32', 'R33', 'R34',
+                          'R41', 'R42', 'R43', 'R44']].apply(float).values.reshape(4, 4)
+
+        matrix_rs = matrix_row['matrix_rs']
+        m_canon = matrix_rs @ mat @ _np.linalg.inv(matrix_rs1)
+        matrix_row['m_canon'] = m_canon
+
+        return matrix_row
+
+    @staticmethod
+    def compute_one_turn_transfer_matrix(matrix_row: _pd.Series, mat_tot: _np.ndarray) -> _pd.Series:
+        m_i = matrix_row['m_canon']
+        m = m_i @ mat_tot @ _np.linalg.inv(m_i)
+        matrix_row['m'] = m
+
+        return matrix_row
+
+    def compute_eigenvectors(self, matrix_row: _pd.Series, lambda1_0) -> _pd.Series:
+        U = _np.array([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1], [0, 0, -1, 0]])
+
+        # Eigenvalues and eigenvectors of the one period transfer matrix
+        eigvals, eigvec = _np.linalg.eig(matrix_row['m'])
+        v1, v1_, v2, v2_ = self.compute_orderded_turned_normalized_eigenvectors(eigvec, lambda1_0, eigvals)
+        matrix_row['v1'] = v1
+        matrix_row['v2'] = v2
+        matrix_row['v1_'] = v1_
+        matrix_row['v2_'] = v2_
+
+        return matrix_row
+
+    def compute_orderded_turned_normalized_eigenvectors(self, eigvec: _np.ndarray, lambda1_0: float,
+                                                        eigvals: _np.ndarray):
+        #Fonction redéfinie dans les classes-filles !
+        v1, v1_, v2, v2_ = _np.identidy(4)
+        return v1, v1_, v2, v2_
+
+    @staticmethod
+    def phase_unrolling(phi, s):
+        """TODO"""
+        if phi[0] < 0:
+            phi[0] += 1 * _np.pi
+        for i in range(1, phi.shape[0]):
+            if phi[i] < 0:
+                phi[i] += 1 * _np.pi
+            if phi[i - 1] - phi[i] > 0.5 and s[i - 1] - s[i] < 0.0:
+                phi[i:] += 1 * _np.pi
+        return phi
 
 
 class Twiss(Parametrization):
@@ -313,10 +374,6 @@ class Twiss(Parametrization):
         return _BetaBlock(**twiss)
 
 
-class TengEdwardsTwiss(Parametrization):
-    ...
-
-
 class Parzen(Parametrization):
     def __init__(self,
                  twiss_init: Optional[_BetaBlock] = None,
@@ -388,26 +445,15 @@ class Parzen(Parametrization):
         matrix['MU1'] = round(matrix['MU1'] - matrix.iloc[0]['MU1'], 10)
         matrix['MU2'] = round(matrix['MU2'] - matrix.iloc[0]['MU2'], 10)
 
-        def phase_unrolling(phi, s):
-            """TODO"""
-            if phi[0] < 0:
-                phi[0] += 1 * _np.pi
-            for i in range(1, phi.shape[0]):
-                if phi[i] < 0:
-                    phi[i] += 1 * _np.pi
-                if phi[i - 1] - phi[i] > 0.5 and s[i - 1] - s[i] < 0.0:
-                    phi[i:] += 1 * _np.pi
-            return phi
-
         try:
             from numba import njit
-            phase_unrolling = njit(phase_unrolling)
+            self.phase_unrolling = njit(self.phase_unrolling)
         except ModuleNotFoundError:
             pass
 
         if self._with_phase_unrolling:
-            matrix['MU1'] = phase_unrolling(matrix['MU1'].values, matrix['S'].values)
-            matrix['MU2'] = phase_unrolling(matrix['MU2'].values, matrix['S'].values)
+            matrix['MU1'] = self.phase_unrolling(matrix['MU1'].values, matrix['S'].values)
+            matrix['MU2'] = self.phase_unrolling(matrix['MU2'].values, matrix['S'].values)
 
         self.check_tunes(matrix.iloc[-1])
 
@@ -435,51 +481,16 @@ class Parzen(Parametrization):
         phi_2_ok = 0.0
 
         u_1 = _np.array(
-            [[((-alpha_1 - j) * _np.exp(-j * phi_1_ok)) / (_np.sqrt(beta_1)),
-              -_np.sqrt(beta_1) * _np.exp(-j * phi_1_ok), 0, 0],
-             [-((-alpha_1 + j) * _np.exp(j * phi_1_ok)) / (_np.sqrt(beta_1)), _np.sqrt(beta_1) * _np.exp(j * phi_1_ok),
-              0, 0],
-             [0, 0, (-alpha_2 - j) * _np.exp(-j * phi_2_ok) / (_np.sqrt(beta_2)),
-              -_np.sqrt(beta_2) * _np.exp(-j * phi_2_ok)],
-             [0, 0, -(-alpha_2 + j) * _np.exp(j * phi_2_ok) / (_np.sqrt(beta_2)),
-              _np.sqrt(beta_2) * _np.exp(j * phi_2_ok)]
+            [[((-alpha_1 - j) * _np.exp(-j * phi_1_ok)) / (_np.sqrt(beta_1)),-_np.sqrt(beta_1) * _np.exp(-j * phi_1_ok), 0, 0],
+             [-((-alpha_1 + j) * _np.exp(j * phi_1_ok)) / (_np.sqrt(beta_1)), _np.sqrt(beta_1) * _np.exp(j * phi_1_ok), 0, 0],
+             [0, 0, (-alpha_2 - j) * _np.exp(-j * phi_2_ok) / (_np.sqrt(beta_2)), -_np.sqrt(beta_2) * _np.exp(-j * phi_2_ok)],
+             [0, 0, -(-alpha_2 + j) * _np.exp(j * phi_2_ok) / (_np.sqrt(beta_2)), _np.sqrt(beta_2) * _np.exp(j * phi_2_ok)]
              ])
         u_1 = u_1 / _np.sqrt(-2j)
 
         u1 = _np.linalg.inv(u_1)
 
         return u1, r_decoupling
-
-    def compute_canonical_transformation_matrix(self, matrix_row: _pd.Series, kin: _Kinematics) -> _pd.Series:
-        b_s = matrix_row['BX'] * _ureg.kG
-        r_s = b_s / kin.brho
-        r_s = r_s.to('1/(m)').magnitude
-        matrix_rs = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
-        matrix_row["matrix_rs"] = matrix_rs
-        matrix_row["RS"] = r_s
-        matrix_row["BS"] = b_s.magnitude
-        return matrix_row
-
-    @staticmethod
-    def compute_canonical_transfer_matrices(matrix_row: _pd.Series, matrix_rs1: _np.ndarray) -> _pd.Series:
-        mat = matrix_row[['R11', 'R12', 'R13', 'R14',
-                          'R21', 'R22', 'R23', 'R24',
-                          'R31', 'R32', 'R33', 'R34',
-                          'R41', 'R42', 'R43', 'R44']].apply(float).values.reshape(4, 4)
-
-        matrix_rs = matrix_row['matrix_rs']
-        m_canon = matrix_rs @ mat @ _np.linalg.inv(matrix_rs1)
-        matrix_row['m_canon'] = m_canon
-
-        return matrix_row
-
-    @staticmethod
-    def compute_one_turn_transfer_matrix(matrix_row: _pd.Series, mat_tot: _np.ndarray) -> _pd.Series:
-        m_i = matrix_row['m_canon']
-        m = m_i @ mat_tot @ _np.linalg.inv(m_i)
-        matrix_row['m'] = m
-
-        return matrix_row
 
     @staticmethod
     def compute_normalized_eigenvectors(v1, v1_):
@@ -526,25 +537,6 @@ class Parzen(Parametrization):
 
         return v1, v1_, v2, v2_
 
-    def compute_eigenvectors(self, matrix_row: _pd.Series, lambda1_0) -> _pd.Series:
-        U = _np.array([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1], [0, 0, -1, 0]])
-
-        # Eigenvalues and eigenvectors of the one period transfer matrix
-        eigvals, eigvec = _np.linalg.eig(matrix_row['m'])
-        v1, v1_, v2, v2_ = self.compute_orderded_turned_normalized_eigenvectors(eigvec, lambda1_0, eigvals)
-        matrix_row['v1'] = v1
-        matrix_row['v2'] = v2
-        matrix_row['v1_'] = v1_
-        matrix_row['v2_'] = v2_
-
-        cond5 = v2.T @ U @ v1
-        cond6 = v2_.T @ U @ v1
-
-        matrix_row['COND5'] = cmath.polar(cond5)[0]
-        matrix_row['COND6'] = cmath.polar(cond6)[0]
-
-        return matrix_row
-
     def compute_eigenvectors_from_initial_eigvecs(self, matrix_row: _pd.Series, x_1: _np.ndarray) -> _pd.Series:
         matt_i = matrix_row['m_canon']
         eigvec = matt_i @ x_1
@@ -590,14 +582,10 @@ class Parzen(Parametrization):
         phi_2_ok = _np.arctan(_np.imag(v2[2]) / _np.real(v2[2]))
 
         u_ = _np.array(
-            [[((-alpha_1 - j) * _np.exp(-j * phi_1_ok)) / (_np.sqrt(beta_1)),
-              -_np.sqrt(beta_1) * _np.exp(-j * phi_1_ok), 0, 0],
-             [-((-alpha_1 + j) * _np.exp(j * phi_1_ok)) / (_np.sqrt(beta_1)), _np.sqrt(beta_1) * _np.exp(j * phi_1_ok),
-              0, 0],
-             [0, 0, (-alpha_2 - j) * _np.exp(-j * phi_2_ok) / (_np.sqrt(beta_2)),
-              -_np.sqrt(beta_2) * _np.exp(-j * phi_2_ok)],
-             [0, 0, -(-alpha_2 + j) * _np.exp(j * phi_2_ok) / (_np.sqrt(beta_2)),
-              _np.sqrt(beta_2) * _np.exp(j * phi_2_ok)]
+            [[((-alpha_1 - j) * _np.exp(-j * phi_1_ok)) / (_np.sqrt(beta_1)), -_np.sqrt(beta_1) * _np.exp(-j * phi_1_ok), 0, 0],
+             [-((-alpha_1 + j) * _np.exp(j * phi_1_ok)) / (_np.sqrt(beta_1)), _np.sqrt(beta_1) * _np.exp(j * phi_1_ok), 0, 0],
+             [0, 0, (-alpha_2 - j) * _np.exp(-j * phi_2_ok) / (_np.sqrt(beta_2)), -_np.sqrt(beta_2) * _np.exp(-j * phi_2_ok)],
+             [0, 0, -(-alpha_2 + j) * _np.exp(j * phi_2_ok) / (_np.sqrt(beta_2)), _np.sqrt(beta_2) * _np.exp(j * phi_2_ok)]
              ])
 
         u_ = u_ / (_np.sqrt(-2j))
@@ -703,6 +691,9 @@ class Parzen(Parametrization):
         return check
 
 
+EdwardsTengTwiss = Parzen
+
+
 class RipkenTwiss(Parametrization):
     ...
 
@@ -776,10 +767,8 @@ class LebedevTwiss(Parametrization):
 
             # Calculation of the the normalisation matrix
             matrix = matrix.apply(lambda row: self.compute_turned_normalisation_matrix(row, V1), axis=1)
-            mu1_init = matrix.iloc[0]["MU1_BIS"]
-            mu2_init = matrix.iloc[0]["MU2_BIS"]
-            matrix = matrix.apply(lambda row: self.compute_phase_advances_from_V2_turned(row, mu1_init, mu2_init),
-                                  axis=1)
+            matrix['MU1_BIS'] = matrix['MU1_BIS'] - matrix.iloc[0]["MU1_BIS"]
+            matrix['MU2_BIS'] = matrix['MU2_BIS'] - matrix.iloc[0]["MU2_BIS"]
             matrix = matrix.apply(self.compute_normalisation_matrix_from_V2_turned, axis=1)
 
             # Parametrisation
@@ -790,28 +779,17 @@ class LebedevTwiss(Parametrization):
             matrix = matrix.apply(lambda row: self.compute_phase_advances(row, matrix.iloc[0]['Normalisation_matrix']),
                                   axis=1)
 
-        def phase_unrolling(phi, s):
-            """TODO"""
-            if phi[0] < 0:
-                phi[0] += 1 * _np.pi
-            for i in range(1, phi.shape[0]):
-                if phi[i] < 0:
-                    phi[i] += 1 * _np.pi
-                if phi[i - 1] - phi[i] > 0.5 and s[i - 1] - s[i] < 0.0:
-                    phi[i:] += 1 * _np.pi
-            return phi
-
         try:
             from numba import njit
-            phase_unrolling = njit(phase_unrolling)
+            self.phase_unrolling = njit(self.phase_unrolling)
         except ModuleNotFoundError:
             pass
 
         if self._with_phase_unrolling:
-            matrix['MU1'] = phase_unrolling(matrix['MU1'].values, matrix['S'].values)
-            matrix['MU2'] = phase_unrolling(matrix['MU2'].values, matrix['S'].values)
-            matrix['MU1_BIS'] = phase_unrolling(matrix['MU1_BIS'].values, matrix['S'].values)
-            matrix['MU2_BIS'] = phase_unrolling(matrix['MU2_BIS'].values, matrix['S'].values)
+            matrix['MU1'] = self.phase_unrolling(matrix['MU1'].values, matrix['S'].values)
+            matrix['MU2'] = self.phase_unrolling(matrix['MU2'].values, matrix['S'].values)
+            matrix['MU1_BIS'] = self.phase_unrolling(matrix['MU1_BIS'].values, matrix['S'].values)
+            matrix['MU2_BIS'] = self.phase_unrolling(matrix['MU2_BIS'].values, matrix['S'].values)
 
         return matrix
 
@@ -854,30 +832,6 @@ class LebedevTwiss(Parametrization):
 
         return v
 
-    def compute_canonical_transformation_matrix(self, matrix_row: _pd.Series, kin: _Kinematics) -> _pd.Series:
-        b_s = matrix_row['BX'] * _ureg.kG
-        r_s = b_s / kin.brho
-        r_s = r_s.to('1/(m)').magnitude
-        matrix_rs = _np.array([[1, 0, 0, 0], [0, 1, -r_s / 2, 0], [0, 0, 1, 0], [r_s / 2, 0, 0, 1]])
-        matrix_row["matrix_rs"] = matrix_rs
-        matrix_row["RS"] = r_s
-        matrix_row["BS"] = b_s.magnitude
-
-        return matrix_row
-
-    @staticmethod
-    def compute_canonical_transfer_matrices(matrix_row: _pd.Series, matrix_rs1: _np.ndarray) -> _pd.Series:
-        mat = matrix_row[['R11', 'R12', 'R13', 'R14',
-                          'R21', 'R22', 'R23', 'R24',
-                          'R31', 'R32', 'R33', 'R34',
-                          'R41', 'R42', 'R43', 'R44']].apply(float).values.reshape(4, 4)
-
-        matrix_rs = matrix_row['matrix_rs']
-        m_canon = matrix_rs @ mat @ _np.linalg.inv(matrix_rs1)
-        matrix_row['m_canon'] = m_canon
-
-        return matrix_row
-
     @staticmethod
     def compute_turned_normalisation_matrix(matrix_row: _pd.Series, V1: _np.ndarray) -> _pd.Series:
         matt_i = matrix_row['m_canon']
@@ -889,13 +843,6 @@ class LebedevTwiss(Parametrization):
         matrix_row['V2_turned'] = V2_turned
         matrix_row['MU1_BIS'] = phi_v1_2
         matrix_row['MU2_BIS'] = phi_v2_2
-
-        return matrix_row
-
-    @staticmethod
-    def compute_phase_advances_from_V2_turned(matrix_row: _pd.Series, mu1_init: float, mu2_init: float):
-        matrix_row['MU1_BIS'] = (matrix_row['MU1_BIS'] - mu1_init)
-        matrix_row['MU2_BIS'] = (matrix_row['MU2_BIS'] - mu2_init)
 
         return matrix_row
 
@@ -912,21 +859,6 @@ class LebedevTwiss(Parametrization):
         V2_ok = V2_turned @ _np.linalg.inv(S)
         matrix_row['Normalisation_matrix'] = V2_ok
 
-        return matrix_row
-
-    @staticmethod
-    def get_B_rotated(t):
-        frame = _Frame()
-        frame_rotated = frame.rotate([0.0 * _ureg.rad, _np.arctan(t['P']) * _ureg.rad, _np.arctan(-t['T']) * _ureg.rad])
-        element_rotation = frame_rotated.get_rotation_matrix()
-        t['SREF_'] = 1.0
-        return _np.dot(element_rotation, t[['BX', 'BY', 'BZ']].values.T)
-
-    @staticmethod
-    def compute_one_turn_transfer_matrix(matrix_row: _pd.Series, mat_tot: _np.ndarray) -> _pd.Series:
-        m_i = matrix_row['m_canon']
-        m = m_i @ mat_tot @ _np.linalg.inv(m_i)
-        matrix_row['m'] = m
         return matrix_row
 
     @staticmethod
@@ -954,8 +886,9 @@ class LebedevTwiss(Parametrization):
         v1_ = v1_ * _np.sqrt(ratio)
         return v1, v1_
 
-    def compute_orderded_turned_normalized_eigenvectors(self, eigvec: _np.ndarray, lambda1: float, lambda1_0: float):
+    def compute_orderded_turned_normalized_eigenvectors(self, eigvec: _np.ndarray, lambda1_0: float, eigvals: _np.ndarray):
         [v1, v1_, v2, v2_] = eigvec.T
+        lambda1 = eigvals[0]
 
         # On vérifie qu'on a les vecteurs propres sont bien ordonnés en fonction du mode propre
         if _np.round(_np.real(lambda1), 2) != _np.round(_np.real(lambda1_0), 2):
@@ -978,18 +911,6 @@ class LebedevTwiss(Parametrization):
         v2, v2_ = self.compute_normalized_eigenvectors(v2, v2_)
 
         return v1, v1_, v2, v2_
-
-    def compute_eigenvectors(self, matrix_row: _pd.Series, lambda1_0) -> _pd.Series:
-        U = _np.array([[0, 1, 0, 0], [-1, 0, 0, 0], [0, 0, 0, 1], [0, 0, -1, 0]])
-
-        eigvals, eigvec = _np.linalg.eig(matrix_row['m'])
-        lambda1 = eigvals[0]
-        v1, v1_, v2, v2_ = self.compute_orderded_turned_normalized_eigenvectors(eigvec, lambda1_0, lambda1)
-        matrix_row['v1'] = v1
-        matrix_row['v2'] = v2
-        matrix_row['v1_'] = v1_
-        matrix_row['v2_'] = v2_
-        return matrix_row
 
     @staticmethod
     def compute_normalisation_matrix_from_eigenvectors(matrix_row: _pd.Series) -> _pd.Series:
@@ -1093,9 +1014,6 @@ class LebedevTwiss(Parametrization):
                                       t: _pd.DataFrame,
                                       kin: _Kinematics) -> _pd.DataFrame:
         """
-        Uses a step-by-step transfer matrix to compute the generalized Twiss parameters (coupled motions)
-        with the parametrization of V.A. Lebedev and S.A Bogacz. The phase advances are computed as well.
-
         Args:
             matrix: the input step-by-step transfer matrix
             t: tracks_global for the centered particle 'O' of the BeamTwiss
