@@ -6,7 +6,6 @@ import pandas as _pd
 from .. import ureg as _ureg
 from .. import Q_ as _Q
 
-
 class BetaBlockType(type):
     """TODO"""
     pass
@@ -45,6 +44,7 @@ class BetaBlock(metaclass=BetaBlockType):
     NU1: float = 0.0
     NU2: float = 0.0
     U: float = 0.0
+    R: _np.ndarray = _np.identity(4)
 
     def __post_init__(self):
         if self.GAMMA11 is None:
