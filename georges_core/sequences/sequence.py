@@ -45,7 +45,7 @@ class SequenceException(Exception):
     """Exception raised for errors when using zgoubidoo.Sequence"""
 
     def __init__(self, m):
-        self.message = m
+        self.msage = m
 
 
 class SequenceMetadataType(type):
@@ -822,35 +822,72 @@ class SurveySequence(PlacementSequence):
             filename: the name of the physics
             path:
         """
-        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
-        if sequence.get(['AT_ENTRY', 'AT_CENTER', 'AT_EXIT']) is None:
-            if sequence.get(['X', 'Y']) is not None:
-                s = sequence
-                offset = s['ORBIT_LENGTH'][0] / 2.0
-                if pd.isnull(offset):
-                    offset = 0
-                ssequence['AT_CENTER'] = pd.DataFrame(npl.norm([
-                    s['X'].diff().fillna(0.0),
-                    s['Y'].diff().fillna(0.0)
-                ], axis=0) - (
-                        s['LENGTH'].fillna(0.0) / 2.0 - s[
-                    'ORBIT_LENGTH'].fillna(0.0) / 2.0
-                ) + (
-                        s['LENGTH'].shift(1).fillna(0.0) / 2.0 - s[
-                    'ORBIT_LENGTH'].shift(1).fillna(0.0) / 2.0
-                )).cumsum() + offset
 
+        def get_entrance_exit_frame(e):
+            # TODO check if it works in 3D
+            if e['TYPE'] == 'SBEND':
+                Angle = -_np.pi / 2 - e['ANGLE'] / 2 - e['CUMULATIVE_ANGLE']
+                x_c = e['X'] + _np.sign(e['ANGLE']) * e['RADIUS'] * _np.cos(Angle)
+                y_c = e['Y'] + _np.sign(e['ANGLE']) * e['RADIUS'] * _np.sin(Angle)
+                dx = e['X'] - x_c
+                dy = e['Y'] - y_c
+                frame_bend_center = Frame().translate([x_c * _ureg.m, y_c * _ureg.m, 0 * _ureg.m])
+                f1 = copy.deepcopy(Frame(frame_bend_center).translate([dx * _ureg.m, dy * _ureg.m, 0 * _ureg.m]))
+                f2 = copy.deepcopy(Frame(frame_bend_center).translate([dx * _ureg.m, dy * _ureg.m, 0 * _ureg.m]))
+                e['F_ENTRANCE'] = Frame().translate(
+                    [f1.rotate_z(e['ANGLE'] / 2 * _ureg.radians).x, f1.rotate_z(e['ANGLE'] / 2 * _ureg.radians).y,
+                     f1.z])
+                e['F_EXIT'] = Frame().translate(
+                    [f2.rotate_z(-e['ANGLE'] / 2 * _ureg.radians).x, f2.rotate_z(-e['ANGLE'] / 2 * _ureg.radians).y,
+                     f2.z])
+            else:
+                frame_ele_center = Frame().translate([e['X'] * _ureg.m, e['Y'] * _ureg.m, e['Z'] * _ureg.m])
+                e['F_ENTRANCE'] = Frame(frame_ele_center).translate_x([-e['L'] / 2] * _ureg.m).rotate_z(
+                    -e['CUMULATIVE_ANGLE'] * _ureg.radians)
+                e['F_EXIT'] = Frame(frame_ele_center).translate_x([e['L'] / 2] * _ureg.m).rotate_z(
+                    -e['CUMULATIVE_ANGLE'] * _ureg.radians)
+            return e
+
+        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
+        sequence['L'] = sequence['L'].fillna(0).apply(lambda e: e * _ureg.meter)
+        sequence["ANGLE"] = sequence["ANGLE"].fillna(0).apply(lambda e: e * _ureg.radian)
+        sequence["E1"] = sequence["E1"].fillna(0).apply(lambda e: e * _ureg.radian)
+        sequence["E2"] = sequence["E2"].fillna(0).apply(lambda e: e * _ureg.radian)
+        sequence['K1'] = sequence['K1'].fillna(0).apply(lambda e: e * _ureg.m**-2)
+
+        if sequence.get(['AT_ENTRY', 'AT_CENTER', 'AT_EXIT']) is None:
+            if sequence.get(['X', 'Y', 'Z']) is not None:
+                sequence['RADIUS'] = _np.abs(sequence['L'] / sequence['ANGLE'])
+                sequence['CUMULATIVE_ANGLE'] = sequence['ANGLE'].cumsum().shift(1)
+                sequence = sequence.apply(lambda e: get_entrance_exit_frame(e), axis=1)
+
+                # Insert a marker at entrance and exit that have the same frame
+                marker_start = {'TYPE': 'MARKER', 'X': 0, 'Y': 0, 'Z': 0, 'L': 0, 'F_ENTRANCE': Frame(),
+                                'F_EXIT': Frame()}
+                marker_end = {'TYPE': 'MARKER', 'X': sequence.iloc[-1]['X'], 'Y': sequence.iloc[-1]['Y'],
+                              'Z': sequence.iloc[-1]['Z'], 'L': 0, 'F_ENTRANCE': sequence.iloc[-1]['F_EXIT'],
+                              'F_EXIT': sequence.iloc[-1]['F_EXIT']}
+
+                sequence = _pd.concat([_pd.DataFrame(marker_start, index=["$START"]),
+                                       sequence,
+                                       _pd.DataFrame(marker_end, index=["$END"])],
+                                      ignore_index=False)
+
+                sequence['F_EXIT'] = sequence['F_EXIT'].shift(1)
+                sequence.loc["$START", 'F_EXIT'] = Frame()
+                at = 0
+                for i, j in sequence.iterrows():
+                    d = _np.linalg.norm(_np.array([(j['F_ENTRANCE'].x - j['F_EXIT'].x).m_as('m'),
+                                                   (j['F_ENTRANCE'].y - j['F_EXIT'].y).m_as('m'),
+                                                   (j['F_ENTRANCE'].z - j['F_EXIT'].z).m_as('m')]))
+                    at += (d + j['L'] / 2)
+                    sequence.at[i, 'AT_CENTER'] = at
+                    at += j['L'] / 2
 
         # TODO be more generic
-        sequence['LENGTH'] = sequence['LENGTH'].fillna(0)
         sequence['AT_CENTER'] = sequence['AT_CENTER'].apply(lambda e: e * _ureg.meter)
-        sequence['LENGTH'] = sequence['LENGTH'].apply(lambda e: e * _ureg.meter)
-        sequence["AT_ENTRY"] = sequence["AT_CENTER"] - 0.5 * sequence["LENGTH"]
-        sequence["AT_EXIT"] = sequence["AT_CENTER"] + 0.5 * sequence["LENGTH"]
-
-        sequence["ANGLE"] = sequence["ANGLE"].apply(lambda e: e * _ureg.radian)
-        sequence["E1"] = sequence["E1"].apply(lambda e: e * _ureg.radian)
-        sequence["E2"] = sequence["E2"].apply(lambda e: e * _ureg.radian)
+        sequence["AT_ENTRY"] = sequence["AT_CENTER"] - 0.5 * sequence["L"]
+        sequence["AT_EXIT"] = sequence["AT_CENTER"] + 0.5 * sequence["L"]
 
         # TODO can be improved in one line
         def check_apertures(e):
