@@ -694,7 +694,7 @@ class TransportSequence(Sequence):
         self.make_survey()
 
     def make_survey(self): # Make survey of the sequence
-        # TODO : ensure this is a correct way to do
+        # TODO : ensure this is a correct way to do, use method from placement ?
         at_entry = 0 * _ureg.meter
         for element in self._data:
             element['AT_ENTRY'] = at_entry
@@ -712,7 +712,8 @@ class TransportSequence(Sequence):
                 element["K1"] = ((element["B1"] / element["R"])/kin.brho).to("meter**-2")  # For manzoni
                 element["TILT"] = 0*_ureg.radians
             if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
-                element["K1"] = 0*_ureg.meter**-2  # For manzoni
+                element['R'] = (element['L'] / element['ANGLE']).to('m')
+                element["K1"] = -element['N'] / element['R']**2  # For manzoni
                 element["B"] = ((element["ANGLE"] * kin.brho)/element["L"]).to("T")  # For manzoni
                 if previous["CLASS"] == "Face":
                     element["E1"] = previous["E1"]
