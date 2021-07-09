@@ -576,7 +576,6 @@ class TwissSequence(Sequence):
                  filename: str = 'twiss.outx',
                  path: str = '.',
                  *,
-                 particleName: str = 'Proton',
                  kinematics: _Kinematics = None,
                  lines: int = None,
                  with_units: bool = True,
@@ -590,7 +589,6 @@ class TwissSequence(Sequence):
             filename: the name of the Twiss table
             path: path to the Twiss table
             lines: number of lines in the header (default: 47)
-            particleName: Name of the particle (default: proton)
             kinematics: kinematics of the particle. Must be specified for MAD-NG
             with_units:
             from_element:
@@ -604,7 +602,7 @@ class TwissSequence(Sequence):
             p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
             k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
         except KeyError:  # For MAD-NG
-            p = getattr(_particles, particleName)
+            p = kinematics.particule.name
             k = kinematics
 
         super().__init__(name=twiss_headers['NAME'],
