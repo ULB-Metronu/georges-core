@@ -12,8 +12,8 @@ from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, \
-    transport_element_factory
+from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
+                    load_transport_input_file, transport_element_factory
 from .. import ureg as _ureg
 
 if TYPE_CHECKING:
@@ -567,56 +567,6 @@ class PlacementSequence(Sequence):
         pass
 
 
-class MadNGTwissSequence(Sequence):
-    """
-    TODO
-    Merge with Twiss sequence
-    """
-
-    def __init__(self,
-                 filename: str = 'twiss.outx',
-                 path: str = '.',
-                 *,
-                 particleName: str = 'Proton',
-                 kinematics: _Kinematics = None,
-                 columns: List = None,
-                 lines: int = None,
-                 with_units: bool = True,
-                 from_element: str = None,
-                 to_element: str = None,
-                 element_keys: Optional[Mapping[str, str]] = None,
-                 ):
-        """
-
-        Args:
-            filename: the name of the physics
-            path:
-            columns:
-            lines:
-            with_units:
-            from_element:
-            to_element:
-            element_keys:
-        """
-        twiss_headers = load_madng_twiss_headers(filename, path, lines)
-        twiss_table = load_madng_twiss_table(filename, path, columns, lines, with_units).loc[from_element:to_element]
-        twiss_table.columns = map(str.upper, twiss_table.columns)
-        p = getattr(_particles, particleName)
-        super().__init__(name="MAD-NG",
-                         data=twiss_table,
-                         metadata=SequenceMetadata(data=twiss_headers,
-                                                   kinematics=kinematics,
-                                                   particle=p),
-                         element_keys=element_keys
-                         )
-
-    def to_df(self) -> _pd.DataFrame:
-        """TODO"""
-        return self._data
-
-    df = property(to_df)
-
-
 class TwissSequence(Sequence):
     """
     TODO
@@ -626,7 +576,8 @@ class TwissSequence(Sequence):
                  filename: str = 'twiss.outx',
                  path: str = '.',
                  *,
-                 columns: List = None,
+                 particleName: str = 'Proton',
+                 kinematics: _Kinematics = None,
                  lines: int = None,
                  with_units: bool = True,
                  from_element: str = None,
@@ -636,20 +587,26 @@ class TwissSequence(Sequence):
         """
 
         Args:
-            filename: the name of the physics
-            path:
-            columns:
-            lines:
+            filename: the name of the Twiss table
+            path: path to the Twiss table
+            lines: number of lines in the header (default: 47)
+            particleName: Name of the particle (default: proton)
+            kinematics: kinematics of the particle. Must be specified for MAD-NG
             with_units:
             from_element:
             to_element:
             element_keys:
         """
-        twiss_headers = load_madx_twiss_headers(filename, path, lines)
-        twiss_table = load_madx_twiss_table(filename, path, columns, lines, with_units).loc[from_element:to_element]
-        particle_name = twiss_headers['PARTICLE'].capitalize()
-        p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
-        k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
+        twiss_headers = load_mad_twiss_headers(filename, path, lines)
+        twiss_table = load_mad_twiss_table(filename, path, lines, with_units).loc[from_element:to_element]
+        try:  # For MAD-X
+            particle_name = twiss_headers['PARTICLE'].capitalize()
+            p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
+            k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
+        except KeyError:  # For MAD-NG
+            p = getattr(_particles, particleName)
+            k = kinematics
+
         super().__init__(name=twiss_headers['NAME'],
                          data=twiss_table,
                          metadata=SequenceMetadata(data=twiss_headers, kinematics=k, particle=p),
@@ -673,7 +630,7 @@ class TwissSequence(Sequence):
                 EMIT2=self.metadata['EY'],
                 EMIT3=self.metadata['ET'],
             )
-        except KeyError:
+        except KeyError:  # TODO this can be removed I think
             try:
                 return _BetaBlock(
                     BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
@@ -823,7 +780,7 @@ class BDSIMSequence(Sequence):
 
         # Load the beam distribution
         beam_distribution = bdsim_data.event.primary.df.copy()
-        beam_distribution['dpp'] = beam_distribution['p'].apply(lambda e: ((e/kin.momentum.m_as("GeV/c"))-1))
+        beam_distribution['dpp'] = beam_distribution['p'].apply(lambda e: ((e / kin.momentum.m_as("GeV/c")) - 1))
         beam_distribution = beam_distribution[["x", 'y', 'xp', 'yp', 'dpp']]
         beam_distribution.rename(columns={
             "xp": "px",

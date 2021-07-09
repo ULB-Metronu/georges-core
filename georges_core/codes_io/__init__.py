@@ -1,3 +1,2 @@
-from .madx import load_madx_twiss_table, load_madx_twiss_headers, get_twiss_values
-from .madng import load_madng_twiss_table, load_madng_twiss_headers
+from .mad import load_mad_twiss_table, load_mad_twiss_headers, get_twiss_values
 from .transport import load_transport_input_file, transport_element_factory
