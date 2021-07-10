@@ -6,6 +6,10 @@ from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
 from dataclasses import dataclass
 import numpy as _np
 import pandas as _pd
+from itertools import compress
+
+import pandas as pd
+
 from .. import particles as _particles
 from ..particles import Proton as _Proton
 from ..kinematics import Kinematics as _Kinematics
@@ -218,16 +222,23 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_madx_twiss(filename: str = 'twiss.outx',
                         path: str = '.',
-                        columns: List = None,
+                        kinematics: _Kinematics = None,
+                        lines: int = None,
+                        with_units: bool = True,
                         from_element: str = None,
-                        to_element: str = None, ) -> Sequence:
+                        to_element: str = None,
+                        element_keys: Optional[Mapping[str, str]] = None,
+                        ) -> Sequence:
         """
         TODO
 
         Args:
+            element_keys:
+            lines:
+            kinematics:
+            with_units:
             filename: name of the Twiss table file
             path: path to the Twiss table file
-            columns: the list of columns in the Twiss file
             from_element:
             to_element:
 
@@ -238,15 +249,17 @@ class Sequence(metaclass=SequenceType):
         """
         return TwissSequence(filename=filename,
                              path=path,
-                             columns=columns,
+                             kinematics=kinematics,
+                             lines=lines,
+                             with_units=with_units,
                              from_element=from_element,
                              to_element=to_element,
-                             )
+                             element_keys=element_keys)
 
     @staticmethod
     def from_transport(filename: str = 'transport.txt',
                        path: str = '.',
-                       ):
+                       ) -> Sequence:
         """
         TODO
 
@@ -273,7 +286,7 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
                    path: str = '.',
-                   ):
+                   ) -> Sequence:
         """
         TODO
 
@@ -646,9 +659,9 @@ class TwissSequence(Sequence):
             except KeyError:
                 return _BetaBlock()
 
-    def to_df(self) -> _pd.DataFrame:
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
-        return self._data
+        return super().to_df(self._data, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -673,8 +686,9 @@ class TransportSequence(Sequence):
         """
         transport_input = load_transport_input_file(filename, path)
 
-        data = []
         sequence_metadata = SequenceMetadata()
+        data = []
+        at_entry = 0 * _ureg.meter
         for line in transport_input:
             if len(line.strip()) == 0:
                 continue
@@ -685,52 +699,60 @@ class TransportSequence(Sequence):
                 float(d[0])
             except ValueError:
                 continue
-            data.append(transport_element_factory(d, sequence_metadata, flavor)[0])
 
+            transport_element = transport_element_factory(d, sequence_metadata, flavor)[0]
+
+            if transport_element is not None:
+                transport_element = self.process_element(transport_element,
+                                                         sequence_metadata.kinematics.brho,
+                                                         at_entry)
+                data.append(transport_element)
+                at_entry += transport_element['L']
+
+        data = self.process_face_angle(data)
         super().__init__(name='TRANSPORT',
-                         data=[d for d in data if d is not None],
+                         data=data,
                          metadata=sequence_metadata,
                          )
-        self.make_survey()
 
-    def make_survey(self): # Make survey of the sequence
-        # TODO : ensure this is a correct way to do, use method from placement ?
-        at_entry = 0 * _ureg.meter
-        for element in self._data:
-            element['AT_ENTRY'] = at_entry
-            at_entry += element["L"]
-            element["AT_EXIT"] = at_entry
-            element["AT_CENTER"] = 0.5*(element["AT_ENTRY"]+element["AT_EXIT"])
+    @staticmethod
+    def process_element(ele, brho, at_entry):
+        ele['AT_ENTRY'] = at_entry
+        ele['AT_CENTER'] = at_entry + 0.5 * ele['L']
+        ele['AT_EXIT'] = at_entry + ele['L']
+        if ele["CLASS"] == "Quadrupole":
+            ele["K1"] = ((ele["B1"] / ele["R"]) / brho).to("meter**-2")  # For manzoni
+            ele["TILT"] = 0 * _ureg.radians
+        if ele["CLASS"] == "SBend" or ele["CLASS"] == "RBend":
+            ele['R'] = (ele['L'] / ele['ANGLE']).to('m')
+            ele["K1"] = -ele['N'] / ele['R'] ** 2  # For manzoni
+            ele["B"] = ((ele["ANGLE"] * brho) / ele["L"]).to("T")
+        return ele
 
-        for idx in range(len(self._data)-1):
-            element = self._data[idx]
-            previous = self._data[idx-1]
-            after = self._data[idx+1]
-            kin = self.metadata.kinematics
-
-            if element["CLASS"] == "Quadrupole":
-                element["K1"] = ((element["B1"] / element["R"])/kin.brho).to("meter**-2")  # For manzoni
-                element["TILT"] = 0*_ureg.radians
+    @staticmethod
+    def process_face_angle(line):
+        for idx in range(len(line)-1):
+            element = line[idx]
+            previous = line[idx-1]
+            after = line[idx+1]
             if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
-                element['R'] = (element['L'] / element['ANGLE']).to('m')
-                element["K1"] = -element['N'] / element['R']**2  # For manzoni
-                element["B"] = ((element["ANGLE"] * kin.brho)/element["L"]).to("T")  # For manzoni
                 if previous["CLASS"] == "Face":
                     element["E1"] = previous["E1"]
                 if after["CLASS"] == "Face":
                     element["E2"] = after["E1"]
 
-    def to_df(self):
+        # Remove the faces from the list
+        t = [not isinstance(val, _Element.Face) for val in line]
+        return list(compress(line, t))
+
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> pd.DataFrame:
         dicts = list(map(dict, self._data))
         counters = {}
         for d in dicts:
             if d['NAME'] is None:
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        df = _pd.DataFrame(dicts).set_index('NAME')
-        df.query("CLASS != 'Face'", inplace=True)
-        return df
-
+        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
     df = property(to_df)
 
 
@@ -765,14 +787,14 @@ class SurveySequence(PlacementSequence):
                          metadata=sequence_metadata,
                          )
 
-    def to_df(self):
+    def to_df(self, df=None, strip_units=False):
         dicts = list(map(dict, self._data))
         counters = {}
         for d in dicts:
             if d['NAME'] is None:
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return _pd.DataFrame(dicts).set_index('NAME')
+        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
 
     df = property(to_df)
 
