@@ -809,13 +809,15 @@ class BDSIMSequence(Sequence):
                  to_element: str = None,
                  ):
         """
-
         Args:
             filename: the name of the physics
             path:
             from_element:
             to_element:
         """
+        # The pybdsim import is made inside the class init to avoid a pybdsim ( and then ROOT ) dependence when it is not needed.
+        from pybdsim.Analysis import BDSimOutput
+
         # Load the model
         bdsim_data = BDSimOutput(filename=filename, path=path)
         bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
@@ -823,7 +825,7 @@ class BDSIMSequence(Sequence):
 
         # Load the beam properties
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
-        particle_name = bdsim_beam["particle"].values[0].decode('utf-8').capitalize()
+        particle_name = bdsim_beam["particle"].values[0].capitalize()
         particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV
         p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
         kin = _Kinematics(particle_energy, kinetic=False, particle=p)
