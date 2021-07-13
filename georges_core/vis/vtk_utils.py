@@ -1,15 +1,77 @@
 import os
 import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
+import numpy as np
 import uproot
 
+
+def expand_values_for_Paraview(histogram3d):
+
+    nx = histogram3d.xnumbins
+    ny = histogram3d.ynumbins
+    nz = histogram3d.znumbins
+
+    old_values = histogram3d.values
+    new_values = np.ndarray(shape=(nx + 1, ny + 1, nz + 1))
+
+    for x in range(nx+1):
+        for y in range(ny+1):
+            for z in range(nz+1):
+
+                x_old = 0
+                y_old = 0
+                z_old = 0
+
+                t1 = (x == 0 or (x == nx))
+                t2 = (y == 0 or (y == ny))
+                t3 = (z == 0 or (z == nz))
+
+                if t1 and x != 0:
+                    x_old = x - 1
+                if t2 and y != 0:
+                    y_old = y - 1
+                if t3 and z != 0:
+                    z_old = z - 1
+
+                if t1 and t2 and t3:
+                    new_values[x, y, z] = old_values[x_old, y_old, z_old]
+
+                elif t1 and t2 and not t3:
+                    new_values[x, y, z] = (old_values[x_old, y_old, z] + old_values[x_old, y_old, z - 1]) / 2
+
+                elif t1 and not t2 and t3:
+                    new_values[x, y, z] = (old_values[x_old, y, z_old] + old_values[x_old, y - 1, z_old]) / 2
+
+                elif not t1 and t2 and t3:
+                    new_values[x, y, z] = (old_values[x, y_old, z_old] + old_values[x - 1, y_old, z_old]) / 2
+
+                elif t1 and not t2 and not t3:
+                    new_values[x, y, z] = (old_values[x_old, y, z] + old_values[x_old, y, z - 1] + old_values[
+                        x_old, y - 1, z] + old_values[x_old, y - 1, z - 1]) / 4
+
+                elif not t1 and t2 and not t3:
+                    new_values[x, y, z] = (old_values[x, y_old, z] + old_values[x, y_old, z - 1] + old_values[
+                        x - 1, y_old, z] + old_values[x - 1, y_old, z - 1]) / 4
+
+                elif not t1 and not t2 and t3:
+                    new_values[x, y, z] = (old_values[x, y, z_old] + old_values[x, y - 1, z_old] + old_values[
+                        x - 1, y, z_old] + old_values[x - 1, y - 1, z_old]) / 4
+
+                elif not t1 and not t2 and not t3:
+                    new_values[x, y, z] = (old_values[x, y, z] + old_values[x - 1, y, z] + old_values[x, y - 1, z] +
+                                           old_values[x, y, z - 1] + old_values[x - 1, y - 1, z] + old_values[
+                                               x - 1, y, z - 1] + old_values[x, y - 1, z - 1] + old_values[
+                                               x - 1, y - 1, z - 1]) / 8
+
+    return new_values
 
 def histogram3d_to_vtk(histogram3d,
                        filename='histogram.vti',
                        path='.',
                        name='Flux',
                        origin_from_file=True,
-                       origin=[0.0, 0.0, 0.0]
+                       origin=[0.0, 0.0, 0.0],
+                       expand_for_Paraview=False
                        ):
     def copyAndNameArray(data, name):
         if data is not None:
@@ -20,21 +82,33 @@ def histogram3d_to_vtk(histogram3d,
         else:
             return None
 
+    values = histogram3d.values.ravel(order='F')
+    dimensions = [histogram3d.xnumbins, histogram3d.ynumbins, histogram3d.znumbins]
+    spacing = [histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]),
+               histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]),
+               histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0])]
+
     if origin_from_file is True:
         origin = histogram3d.scoring_mesh_translations
+
+    if expand_for_Paraview:
+
+        values = expand_values_for_Paraview(histogram3d).ravel(order='F')
+        dimensions = [histogram3d.xnumbins+1, histogram3d.ynumbins+1, histogram3d.znumbins+1]
+        origin = np.array(origin) - np.array(spacing)/2
 
     imgdat = _vtk.vtkImageData()
     imgdat.GetPointData().SetScalars(
         copyAndNameArray(
             _vtk_np.numpy_to_vtk(
-                num_array=histogram3d.values.ravel(order='F'),
+                num_array=values,
                 deep=True,
                 array_type=_vtk.VTK_FLOAT
             )
             , name
         )
     )
-    imgdat.SetDimensions(histogram3d.xnumbins, histogram3d.ynumbins, histogram3d.znumbins)
+    imgdat.SetDimensions(dimensions[0], dimensions[1], dimensions[2])
     imgdat.SetOrigin(origin[0] - (
             histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2) + (
                              histogram3d.coordinates_normalization * (
@@ -48,11 +122,8 @@ def histogram3d_to_vtk(histogram3d,
                              histogram3d.coordinates_normalization * (
                              histogram3d.edges[2][1] - histogram3d.edges[2][0]) / 2)
                      )
-    imgdat.SetSpacing(
-        histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]),
-        histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]),
-        histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0])
-    )
+    imgdat.SetSpacing(spacing)
+
     writer = _vtk.vtkXMLImageDataWriter()
     writer.SetFileName(os.path.join(path, filename))
     writer.SetInputData(imgdat)
