@@ -961,7 +961,7 @@ scipy = "*"
 type = "git"
 url = "https://github.com/ULB-Metronu/pybdsim.git"
 reference = "feature_uproot"
-resolved_reference = "ba06fc069d7d5d94f9fa810e65a03e715fcdef1a"
+resolved_reference = "0a8518cb067e3aeb238ecd28c6f80a790016c150"
 
 [[package]]
 name = "pybtex"

@@ -821,6 +821,7 @@ class BDSIMSequence(Sequence):
         # Load the model
         bdsim_data = BDSimOutput(filename=filename, path=path)
         bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
+        bdsim_model.rename(columns={"TYPE": "KEYWORD"}, inplace=True)
         self.set_units(bdsim_model)
 
         # Load the beam properties
@@ -860,7 +861,7 @@ class BDSIMSequence(Sequence):
             except ValueError:
                 pass
 
-        model['CLASS'] = model['TYPE'].apply(str.capitalize)
+        model['CLASS'] = model['KEYWORD'].apply(str.capitalize)
         model['CLASS'] = model['CLASS'].apply(lambda e: _BDSIM_TO_MAD_CONVENTION.get(e, e))
 
         model.loc[model["CLASS"] == "RectangularCollimator", "APERTYPE"] = "rectangular"
@@ -868,6 +869,7 @@ class BDSIMSequence(Sequence):
         model.loc[model["CLASS"] == "EllipticalCollimator", "APERTYPE"] = "elliptical"
 
         model['L'] = model['L'].apply(lambda e: e * _ureg.m)
+        model['ANGLE'] = model['ANGLE'].apply(lambda e: e * _ureg.radians)
         model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
         model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
         model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(list, axis=1)
