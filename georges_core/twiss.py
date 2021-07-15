@@ -54,6 +54,7 @@ class Twiss(Parametrization):
 
     def __call__(self,
                  matrix: _pd.DataFrame,
+                 end: Union[int, str] = -1
                  ) -> _pd.DataFrame:
         """
         Uses a step-by-step transfer matrix to compute the Twiss parameters (uncoupled). The phase advance and the
@@ -66,7 +67,7 @@ class Twiss(Parametrization):
             the same DataFrame as the input, but with added columns for the computed quantities.
         """
         if self._twiss_init is None:
-            twiss_init = self.compute_periodic_twiss(matrix)
+            twiss_init = self.compute_periodic_twiss(matrix, end)
         else:
             twiss_init = self._twiss_init
 
@@ -208,10 +209,10 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1']
+            d0 = twiss['DISP1'].m_as('m')
             dp0 = twiss['DISP2']
         else:
-            d0 = twiss['DISP3']
+            d0 = twiss['DISP3'].m_as('m')
             dp0 = twiss['DISP4']
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
@@ -237,10 +238,10 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1']
+            d0 = twiss['DISP1'].m_as('m')
             dp0 = twiss['DISP2']
         else:
-            d0 = twiss['DISP3']
+            d0 = twiss['DISP3'].m_as('m')
             dp0 = twiss['DISP4']
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]

@@ -6,14 +6,18 @@ from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
 from dataclasses import dataclass
 import numpy as _np
 import pandas as _pd
+from itertools import compress
+
+import pandas as pd
+
 from .. import particles as _particles
 from ..particles import Proton as _Proton
 from ..kinematics import Kinematics as _Kinematics
 from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
-from ..codes_io import load_madx_twiss_headers, load_madx_twiss_table, load_transport_input_file, \
-    transport_element_factory
+from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
+                    load_transport_input_file, transport_element_factory
 from .. import ureg as _ureg
 
 if TYPE_CHECKING:
@@ -218,16 +222,23 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_madx_twiss(filename: str = 'twiss.outx',
                         path: str = '.',
-                        columns: List = None,
+                        kinematics: _Kinematics = None,
+                        lines: int = None,
+                        with_units: bool = True,
                         from_element: str = None,
-                        to_element: str = None, ) -> Sequence:
+                        to_element: str = None,
+                        element_keys: Optional[Mapping[str, str]] = None,
+                        ) -> Sequence:
         """
         TODO
 
         Args:
+            element_keys:
+            lines:
+            kinematics:
+            with_units:
             filename: name of the Twiss table file
             path: path to the Twiss table file
-            columns: the list of columns in the Twiss file
             from_element:
             to_element:
 
@@ -238,15 +249,17 @@ class Sequence(metaclass=SequenceType):
         """
         return TwissSequence(filename=filename,
                              path=path,
-                             columns=columns,
+                             kinematics=kinematics,
+                             lines=lines,
+                             with_units=with_units,
                              from_element=from_element,
                              to_element=to_element,
-                             )
+                             element_keys=element_keys)
 
     @staticmethod
     def from_transport(filename: str = 'transport.txt',
                        path: str = '.',
-                       ):
+                       ) -> Sequence:
         """
         TODO
 
@@ -273,7 +286,7 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
                    path: str = '.',
-                   ):
+                   ) -> Sequence:
         """
         TODO
 
@@ -576,7 +589,9 @@ class TwissSequence(Sequence):
                  filename: str = 'twiss.outx',
                  path: str = '.',
                  *,
-                 columns: List = None,
+                 kinematics: _Kinematics = None,
+                 lines: int = None,
+                 with_units: bool = True,
                  from_element: str = None,
                  to_element: str = None,
                  element_keys: Optional[Mapping[str, str]] = None,
@@ -584,18 +599,25 @@ class TwissSequence(Sequence):
         """
 
         Args:
-            filename: the name of the physics
-            path:
-            columns:
+            filename: the name of the Twiss table
+            path: path to the Twiss table
+            lines: number of lines in the header (default: 47)
+            kinematics: kinematics of the particle. Must be specified for MAD-NG
+            with_units:
             from_element:
             to_element:
             element_keys:
         """
-        twiss_headers = load_madx_twiss_headers(filename, path)
-        twiss_table = load_madx_twiss_table(filename, path, columns).loc[from_element:to_element]
-        particle_name = twiss_headers['PARTICLE'].capitalize()
-        p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
-        k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
+        twiss_headers = load_mad_twiss_headers(filename, path, lines)
+        twiss_table = load_mad_twiss_table(filename, path, lines, with_units).loc[from_element:to_element]
+        try:  # For MAD-X
+            particle_name = twiss_headers['PARTICLE'].capitalize()
+            p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
+            k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
+        except KeyError:  # For MAD-NG
+            p = kinematics.particule.name
+            k = kinematics
+
         super().__init__(name=twiss_headers['NAME'],
                          data=twiss_table,
                          metadata=SequenceMetadata(data=twiss_headers, kinematics=k, particle=p),
@@ -619,7 +641,7 @@ class TwissSequence(Sequence):
                 EMIT2=self.metadata['EY'],
                 EMIT3=self.metadata['ET'],
             )
-        except KeyError:
+        except KeyError:  # TODO this can be removed I think
             try:
                 return _BetaBlock(
                     BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
@@ -637,9 +659,9 @@ class TwissSequence(Sequence):
             except KeyError:
                 return _BetaBlock()
 
-    def to_df(self) -> _pd.DataFrame:
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
-        return self._data
+        return super().to_df(self._data, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -664,8 +686,9 @@ class TransportSequence(Sequence):
         """
         transport_input = load_transport_input_file(filename, path)
 
-        data = []
         sequence_metadata = SequenceMetadata()
+        data = []
+        at_entry = 0 * _ureg.meter
         for line in transport_input:
             if len(line.strip()) == 0:
                 continue
@@ -676,22 +699,60 @@ class TransportSequence(Sequence):
                 float(d[0])
             except ValueError:
                 continue
-            data.append(transport_element_factory(d, sequence_metadata, flavor)[0])
 
+            transport_element = transport_element_factory(d, sequence_metadata, flavor)[0]
+
+            if transport_element is not None:
+                transport_element = self.process_element(transport_element,
+                                                         sequence_metadata.kinematics.brho,
+                                                         at_entry)
+                data.append(transport_element)
+                at_entry += transport_element['L']
+
+        data = self.process_face_angle(data)
         super().__init__(name='TRANSPORT',
-                         data=[d for d in data if d is not None],
+                         data=data,
                          metadata=sequence_metadata,
                          )
 
-    def to_df(self):
+    @staticmethod
+    def process_element(ele, brho, at_entry):
+        ele['AT_ENTRY'] = at_entry
+        ele['AT_CENTER'] = at_entry + 0.5 * ele['L']
+        ele['AT_EXIT'] = at_entry + ele['L']
+        if ele["CLASS"] == "Quadrupole":
+            ele["K1"] = ((ele["B1"] / ele["R"]) / brho).to("meter**-2")  # For manzoni
+            ele["TILT"] = 0 * _ureg.radians
+        if ele["CLASS"] == "SBend" or ele["CLASS"] == "RBend":
+            ele['R'] = (ele['L'] / ele['ANGLE']).to('m')
+            ele["K1"] = -ele['N'] / ele['R'] ** 2  # For manzoni
+            ele["B"] = ((ele["ANGLE"] * brho) / ele["L"]).to("T")
+        return ele
+
+    @staticmethod
+    def process_face_angle(line):
+        for idx in range(len(line)-1):
+            element = line[idx]
+            previous = line[idx-1]
+            after = line[idx+1]
+            if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
+                if previous["CLASS"] == "Face":
+                    element["E1"] = previous["E1"]
+                if after["CLASS"] == "Face":
+                    element["E2"] = after["E1"]
+
+        # Remove the faces from the list
+        t = [not isinstance(val, _Element.Face) for val in line]
+        return list(compress(line, t))
+
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> pd.DataFrame:
         dicts = list(map(dict, self._data))
         counters = {}
         for d in dicts:
             if d['NAME'] is None:
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return _pd.DataFrame(dicts).set_index('NAME')
-
+        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
     df = property(to_df)
 
 
@@ -726,14 +787,14 @@ class SurveySequence(PlacementSequence):
                          metadata=sequence_metadata,
                          )
 
-    def to_df(self):
+    def to_df(self, df=None, strip_units=False):
         dicts = list(map(dict, self._data))
         counters = {}
         for d in dicts:
             if d['NAME'] is None:
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return _pd.DataFrame(dicts).set_index('NAME')
+        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
 
     df = property(to_df)
 
@@ -748,28 +809,31 @@ class BDSIMSequence(Sequence):
                  to_element: str = None,
                  ):
         """
-
         Args:
             filename: the name of the physics
             path:
             from_element:
             to_element:
         """
+        # The pybdsim import is made inside the class init to avoid a pybdsim ( and then ROOT ) dependence when it is not needed.
+        from pybdsim.Analysis import BDSimOutput
+
         # Load the model
         bdsim_data = BDSimOutput(filename=filename, path=path)
         bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
+        bdsim_model.rename(columns={"TYPE": "KEYWORD"}, inplace=True)
         self.set_units(bdsim_model)
 
         # Load the beam properties
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
-        particle_name = bdsim_beam["particle"].values[0].decode('utf-8').capitalize()
+        particle_name = bdsim_beam["particle"].values[0].capitalize()
         particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV
         p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
         kin = _Kinematics(particle_energy, kinetic=False, particle=p)
 
         # Load the beam distribution
         beam_distribution = bdsim_data.event.primary.df.copy()
-        beam_distribution['dpp'] = beam_distribution['p'].apply(lambda e: ((e/kin.momentum.m_as("GeV/c"))-1))
+        beam_distribution['dpp'] = beam_distribution['p'].apply(lambda e: ((e / kin.momentum.m_as("GeV/c")) - 1))
         beam_distribution = beam_distribution[["x", 'y', 'xp', 'yp', 'dpp']]
         beam_distribution.rename(columns={
             "xp": "px",
@@ -797,7 +861,7 @@ class BDSIMSequence(Sequence):
             except ValueError:
                 pass
 
-        model['CLASS'] = model['TYPE'].apply(str.capitalize)
+        model['CLASS'] = model['KEYWORD'].apply(str.capitalize)
         model['CLASS'] = model['CLASS'].apply(lambda e: _BDSIM_TO_MAD_CONVENTION.get(e, e))
 
         model.loc[model["CLASS"] == "RectangularCollimator", "APERTYPE"] = "rectangular"
@@ -805,6 +869,7 @@ class BDSIMSequence(Sequence):
         model.loc[model["CLASS"] == "EllipticalCollimator", "APERTYPE"] = "elliptical"
 
         model['L'] = model['L'].apply(lambda e: e * _ureg.m)
+        model['ANGLE'] = model['ANGLE'].apply(lambda e: e * _ureg.radians)
         model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
         model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
         model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(list, axis=1)

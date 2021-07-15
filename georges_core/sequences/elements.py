@@ -105,6 +105,7 @@ Element.make_subclass('Bend')
 Element.make_subclass('RBend',
                       TILT=0.0 * _ureg.radian,
                       )
+Element.make_subclass('Face', L=0.0 * _ureg.meter, E1=0.0 * _ureg.degrees)
 Element.make_subclass('SBend',
                       E1=0.0 * _ureg.radian,
                       E2=0.0 * _ureg.radian,
@@ -120,4 +121,4 @@ Element.make_subclass('VKicker',
                       KICK=0.0 * _ureg.radian,
                       TILT=0.0 * _ureg.radian)
 Element.make_subclass('Cavity')
-Element.make_subclass('Steerer')
+Element.make_subclass('Kicker')

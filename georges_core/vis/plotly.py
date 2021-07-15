@@ -40,15 +40,21 @@ class PlotlyArtist(_Artist):
             'editable': False,
         }
         self._layout: Mapping[Any, Any] = layout or {
+            'font': {'family': "serif", 'size': 18},
+            'plot_bgcolor': 'rgba(0,0,0,0)',
             'xaxis': {
                 'showgrid': True,
                 'linecolor': 'black',
                 'linewidth': 1,
                 'mirror': True,
+                'gridcolor': 'grey',
+                'gridwidth': 0.1
             },
             'yaxis': {
                 'linecolor': 'black',
                 'linewidth': 1,
+                'gridcolor': 'grey',
+                'gridwidth': 0.1,
                 'mirror': True,
                 'exponentformat': 'power',
             },
@@ -315,9 +321,10 @@ class PlotlyArtist(_Artist):
                         accumulator['name'] = i
                         accumulator['polarity'] = e['B']
                         accumulator['at_entry'] = e['AT_ENTRY']
+                        accumulator['at_exit'] = e['AT_EXIT']
                         continue
                     if accumulate is True:
                         accumulator['at_exit'] = e['AT_EXIT']
                         continue
                 else:
-                    do_sbend(e['AT_ENTRY'], e['AT_EXIT'])
+                    do_sbend(e['AT_ENTRY'], e['AT_EXIT'], polarity=1)
