@@ -181,8 +181,8 @@ class Distribution:
     def from_twiss_parameters(self, **kwargs):
         """Initialize a beam with a 5D particle distribution from Twiss parameters."""
         keys = {'n', 'X', 'PX', 'Y', 'PY', 'DPP', 'DPPRMS',
-                'BETAX', 'ALPHAX', 'DISPX',
-                'BETAY', 'ALPHAY', 'DISPY',
+                'BETAX', 'ALPHAX', 'DISPX', 'DISPXP',
+                'BETAY', 'ALPHAY', 'DISPY', 'DISPYP',
                 'EMITX', 'EMITY'}
         if any([k not in keys for k in kwargs.keys()]):
             raise DistributionException("Invalid argument for a twiss distribution.")

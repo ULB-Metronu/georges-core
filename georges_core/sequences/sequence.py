@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
 from dataclasses import dataclass
 import numpy as _np
 import pandas as _pd
+import logging
 from itertools import compress
 
 import pandas as pd
@@ -18,6 +19,7 @@ from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
                     load_transport_input_file, transport_element_factory
+from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
 
 if TYPE_CHECKING:
@@ -594,6 +596,8 @@ class TwissSequence(Sequence):
                  with_units: bool = True,
                  from_element: str = None,
                  to_element: str = None,
+                 with_beam: bool = False,
+                 nparticles: int = 1,
                  element_keys: Optional[Mapping[str, str]] = None,
                  ):
         """
@@ -603,10 +607,13 @@ class TwissSequence(Sequence):
             path: path to the Twiss table
             lines: number of lines in the header (default: 47)
             kinematics: kinematics of the particle. Must be specified for MAD-NG
-            with_units:
-            from_element:
-            to_element:
+            with_units: Set units to columns
+            from_element: Name of the first element
+            to_element: Name of the last element
+            with_beam: Generate a Gaussian beam from Twiss parameters
+            nparticles: Number of particles in the beam (default 1)
             element_keys:
+
         """
         twiss_headers = load_mad_twiss_headers(filename, path, lines)
         twiss_table = load_mad_twiss_table(filename, path, lines, with_units).loc[from_element:to_element]
@@ -623,6 +630,22 @@ class TwissSequence(Sequence):
                          metadata=SequenceMetadata(data=twiss_headers, kinematics=k, particle=p),
                          element_keys=element_keys
                          )
+        if with_beam:
+            twiss_init = self.betablock
+            beam_distribution = _Distribution().from_twiss_parameters(n=nparticles,
+                                                                      BETAX=twiss_init['BETA11'],
+                                                                      ALPHAX=twiss_init['ALPHA11'],
+                                                                      DISPX=twiss_init['DISP1'],
+                                                                      DISPXP=twiss_init['DISP2'],
+                                                                      BETAY=twiss_init['BETA22'],
+                                                                      ALPHAY=twiss_init['ALPHA22'],
+                                                                      DISPY=twiss_init['DISP3'],
+                                                                      DISPYP=twiss_init['DISP4'],
+                                                                      EMITX=twiss_init['EMIT1'],
+                                                                      EMITY=twiss_init['EMIT2'],
+                                                                      DPP=twiss_headers['DELTAP']).distribution
+            beam_distribution['T'] = 0
+            self._metadata = SequenceMetadata(data=beam_distribution, kinematics=k, particle=p)
 
     @property
     def betablock(self) -> _BetaBlock:
@@ -634,14 +657,14 @@ class TwissSequence(Sequence):
                 BETA22=self.df.iloc[0]['BETA22'] * _ureg.m,
                 ALPHA22=self.df.iloc[0]['ALPHA22'],
                 DISP1=self.df.iloc[0]['DISP1'] * _ureg.m,
-                DISP2=self.df.iloc[0]['DISP2'],
+                DISP2=self.df.iloc[0]['DISP2'] * _ureg.radians,
                 DISP3=self.df.iloc[0]['DISP3'] * _ureg.m,
-                DISP4=self.df.iloc[0]['DISP4'],
-                EMIT1=self.metadata['EX'],
-                EMIT2=self.metadata['EY'],
-                EMIT3=self.metadata['ET'],
+                DISP4=self.df.iloc[0]['DISP4'] * _ureg.radians,
+                EMIT1=self.metadata['EMIT1'] * _ureg('m * radians'),
+                EMIT2=self.metadata['EMIT2'] * _ureg('m * radians'),
+                EMIT3=self.metadata['EMIT3'],
             )
-        except KeyError:  # TODO this can be removed I think
+        except KeyError:
             try:
                 return _BetaBlock(
                     BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
@@ -649,14 +672,15 @@ class TwissSequence(Sequence):
                     BETA22=self.df.iloc[0]['BETY'] * _ureg.m,
                     ALPHA22=self.df.iloc[0]['ALFY'],
                     DISP1=self.df.iloc[0]['DX'] * _ureg.m,
-                    DISP2=self.df.iloc[0]['DPX'],
+                    DISP2=self.df.iloc[0]['DPX'] * _ureg.radians,
                     DISP3=self.df.iloc[0]['DY'] * _ureg.m,
-                    DISP4=self.df.iloc[0]['DPY'],
-                    EMIT1=self.metadata['EX'],
-                    EMIT2=self.metadata['EY'],
+                    DISP4=self.df.iloc[0]['DPY'] * _ureg.radians,
+                    EMIT1=self.metadata['EX'] * _ureg('m * radians'),
+                    EMIT2=self.metadata['EY'] * _ureg('m * radians'),
                     EMIT3=self.metadata['ET'],
                 )
             except KeyError:
+                logging.warning('Setting BetaBlock by default')
                 return _BetaBlock()
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
