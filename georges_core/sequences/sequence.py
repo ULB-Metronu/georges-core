@@ -8,9 +8,9 @@ import numpy as _np
 import pandas as _pd
 import logging
 from itertools import compress
-
+import os
+import copy
 import pandas as pd
-
 from .. import particles as _particles
 from ..particles import Proton as _Proton
 from ..kinematics import Kinematics as _Kinematics
@@ -18,9 +18,11 @@ from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
-    load_transport_input_file, transport_element_factory
+                    load_transport_input_file, transport_element_factory, \
+                    csv_element_factory
 from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
+from ..frame import Frame
 
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -45,7 +47,7 @@ class SequenceException(Exception):
     """Exception raised for errors when using zgoubidoo.Sequence"""
 
     def __init__(self, m):
-        self.msage = m
+        self.message = m
 
 
 class SequenceMetadataType(type):
@@ -814,6 +816,8 @@ class SurveySequence(PlacementSequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 kinematics: _Kinematics = None,
+                 particle: _particles = _particles.Proton,
                  metadata: Optional[SequenceMetadata] = None
                  ):
         """
@@ -905,7 +909,8 @@ class SurveySequence(PlacementSequence):
         sequence["TYPE"] = sequence.apply(lambda e: define_collimators(e), axis=1)
 
         data = []
-        sequence_metadata = SequenceMetadata()
+        sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
+                                                         particle=particle)
         for element in sequence.iterrows():
             data.append((csv_element_factory(element),
                          element[1]['AT_ENTRY'],
