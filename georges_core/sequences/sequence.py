@@ -898,7 +898,7 @@ class SurveySequence(PlacementSequence):
             if isinstance(e, float):
                 return [e * _ureg.m]
             else:
-                return [float(i) * _ureg.m for i in e.split(',')]
+                return [float(i) * _ureg.m for i in e.replace('[','').replace(']','').split(';')]
 
         def define_collimators(e):
             if e["TYPE"] == 'COLLIMATOR':
