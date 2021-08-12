@@ -208,10 +208,10 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1']
+            d0 = twiss['DISP1'].m_as('m')
             dp0 = twiss['DISP2']
         else:
-            d0 = twiss['DISP3']
+            d0 = twiss['DISP3'].m_as('m')
             dp0 = twiss['DISP4']
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
@@ -237,10 +237,10 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1']
+            d0 = twiss['DISP1'].m_as('m')
             dp0 = twiss['DISP2']
         else:
-            d0 = twiss['DISP3']
+            d0 = twiss['DISP3'].m_as('m')
             dp0 = twiss['DISP4']
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
