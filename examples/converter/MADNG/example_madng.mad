@@ -5,12 +5,13 @@ local observed in MAD.element.flags
 local beta0 in MAD
 local printf in MAD.utility
 local degrad in MAD.constant
+local melmcol in MAD.gphys
 
 ----------------------------------------
 -- Define some useful parameters
 local nslice = 10
 local doplot = 'pdf' -- false | true | 'pdf'
-local cols = {'name', 's', 'l', 'beta11', 'beta22', 'alfa11', 'alfa22', 'mu1', 'mu2'} -- for Twiss table
+local cols = {'angle', 'e1', 'e2', 'tilt', 'n', 'k1', 'k2', 'k3'} -- for Twiss table
 
 ----------------------------------------
 -- Beam and initial Twiss
@@ -60,15 +61,18 @@ local tws, mfl = twiss { sequence=apo,
                          implicit=true,
                          save='atslice'
 }
-tws:write('twiss_seq')
+local tcols = melmcol(tws, cols)
+tws:write('twiss_madng')
 
-apo:dumpseq()
-
-plot {sequence = apo,
-      table    = tws,
-      x1y1     = {s={'beta11','beta22'}},
-      xlabel   = "s [m]",
-      ylabel   = "\u{03b2}_x [m]",
-      fontsize = 12, legendsize = 10, titlesize = 14, styles = 'lines',
-      output='unmatched.pdf'
-      }
+-- Twiss before matching and plotting
+local tws, mfl = twiss { sequence=apo,
+                         X0=tw_init,
+                         deltap=deltap,
+                         nslice=10,
+                         chrom=true,
+                         method=4,
+                         implicit=true,
+                         save='atslice'
+}
+local tcols = melmcol(tws, cols)
+tws:write('twiss_madng_sliced')
