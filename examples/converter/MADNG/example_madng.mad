@@ -18,7 +18,7 @@ local cols = {'angle', 'e1', 'e2', 'tilt', 'n', 'k1', 'k2', 'k3'} -- for Twiss t
 local beam = beam { particle = 'proton',
                     energy=0.140+0.938} -- 140 MeV a utiliser plus facile
 
-local X0 = {beta11=1, beta22=1, alfa11=0, alfa22=0, disp1=1.0}
+local X0 = {beta11=1, beta22=1, alfa11=0, alfa22=0, dx=0.0}
 local tw_init = beta0(X0)
 
 local deltap = 0  -- to play with deltap

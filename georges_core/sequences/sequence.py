@@ -622,6 +622,7 @@ class TwissSequence(Sequence):
             p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
             k = _Kinematics(float(twiss_headers['PC']) * _ureg.GeV_c, particle=p)
         except KeyError:  # For MAD-NG
+            # TODO check with MAD-NG changes. 
             p = kinematics.particule
             k = kinematics
 
@@ -650,42 +651,35 @@ class TwissSequence(Sequence):
     @property
     def betablock(self) -> _BetaBlock:
         """TODO"""
-        try:
-            if 'EMIT1' in self.metadata and 'EMIT2' in self.metadata and 'EMIT3' in self.metadata:
-                EMIT1=self.metadata['EMIT1'] * _ureg('m * radians'),
-                EMIT2=self.metadata['EMIT2'] * _ureg('m * radians'),
-                EMIT3=self.metadata['EMIT3'],
-            else:
-                EMIT1=1e-9 * _ureg('m * radians'),
-                EMIT2=1e-9 * _ureg('m * radians'),
-                EMIT3=1e-9
+        # Keep in this order
+        try: # For MAD-X
             return _BetaBlock(
-                BETA11=self.df.iloc[0]['BETA11'] * _ureg.m,
-                ALPHA11=self.df.iloc[0]['ALFA11'],
-                BETA22=self.df.iloc[0]['BETA22'] * _ureg.m,
-                ALPHA22=self.df.iloc[0]['ALFA22'],
+                BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
+                ALPHA11=self.df.iloc[0]['ALFX'],
+                BETA22=self.df.iloc[0]['BETY'] * _ureg.m,
+                ALPHA22=self.df.iloc[0]['ALFY'],
                 DISP1=self.df.iloc[0]['DX'] * _ureg.m,
                 DISP2=self.df.iloc[0]['DPX'] * _ureg.radians,
                 DISP3=self.df.iloc[0]['DY'] * _ureg.m,
                 DISP4=self.df.iloc[0]['DPY'] * _ureg.radians,
-                EMIT1=EMIT1,
-                EMIT2=EMIT2,
-                EMIT3=EMIT3
+                EMIT1=self.metadata['EX'] * _ureg('m * radians'),
+                EMIT2=self.metadata['EY'] * _ureg('m * radians'),
+                EMIT3=self.metadata['ET'],
             )
         except KeyError:
-            try:
+            try: # For MAD-NG
                 return _BetaBlock(
-                    BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
-                    ALPHA11=self.df.iloc[0]['ALFX'],
-                    BETA22=self.df.iloc[0]['BETY'] * _ureg.m,
-                    ALPHA22=self.df.iloc[0]['ALFY'],
+                    BETA11=self.df.iloc[0]['BETA11'] * _ureg.m,
+                    ALPHA11=self.df.iloc[0]['ALFA11'],
+                    BETA22=self.df.iloc[0]['BETA22'] * _ureg.m,
+                    ALPHA22=self.df.iloc[0]['ALFA22'],
                     DISP1=self.df.iloc[0]['DX'] * _ureg.m,
                     DISP2=self.df.iloc[0]['DPX'] * _ureg.radians,
                     DISP3=self.df.iloc[0]['DY'] * _ureg.m,
                     DISP4=self.df.iloc[0]['DPY'] * _ureg.radians,
-                    EMIT1=self.metadata['EX'] * _ureg('m * radians'),
-                    EMIT2=self.metadata['EY'] * _ureg('m * radians'),
-                    EMIT3=self.metadata['ET'],
+                    EMIT1=1e-9 * _ureg('m * radians'), #self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
+                    EMIT2=1e-9 * _ureg('m * radians'), #self.metadata['EMIT2'] * _ureg('m * radians'),
+                    EMIT3=1e-9 * _ureg('m * radians'), #self.metadata['EMIT3'] * _ureg('m * radians')
                 )
             except KeyError:
                 logging.warning('Setting BetaBlock by default')
