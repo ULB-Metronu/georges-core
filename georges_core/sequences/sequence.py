@@ -648,6 +648,13 @@ class TwissSequence(Sequence):
         """
         twiss_headers = load_mad_twiss_headers(filename, path, lines)
         twiss_table = load_mad_twiss_table(filename, path, lines, with_units).loc[from_element:to_element]
+
+        # Add some columns
+        twiss_table['CLASS'] = twiss_table['KEYWORD'].apply(str.capitalize)
+        twiss_table['AT_CENTER'] = twiss_table['S']
+        twiss_table["AT_ENTRY"] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
+        twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+
         try:  # For MAD-X
             particle_name = twiss_headers['PARTICLE'].capitalize()
             p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
