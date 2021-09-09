@@ -895,6 +895,9 @@ class BDSIMSequence(Sequence):
         model.loc[model["CLASS"] == "EllipticalCollimator", "APERTYPE"] = "elliptical"
 
         model['L'] = model['L'].apply(lambda e: e * _ureg.m)
+        model['AT_ENTRY'] = model['AT_ENTRY'].apply(lambda e: e * _ureg.m)
+        model['AT_CENTER'] = model['AT_CENTER'].apply(lambda e: e * _ureg.m)
+        model['AT_EXIT'] = model['AT_EXIT'].apply(lambda e: e * _ureg.m)
         model['ANGLE'] = model['ANGLE'].apply(lambda e: e * _ureg.radians)
         model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
         model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
