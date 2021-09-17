@@ -258,55 +258,55 @@ class PlotlyArtist(_Artist):
         accumulate = False
         accumulator = {}
         for i, e in beamline_survey.iterrows():
-            if e['TYPE'].upper() not in ('QUADRUPOLE', 'SBEND', 'ELEMENT', 'RCOL', 'ECOL'):
+            if e['CLASS'].upper() not in ('QUADRUPOLE', 'SBEND', 'ELEMENT', 'RCOL', 'ECOL'):
                 continue
             if i in skip_elements:
                 continue
-            if unsplit_bends and accumulate and (e['TYPE'].upper() not in ('SBEND',) or i != accumulator['name']):
+            if unsplit_bends and accumulate and (e['CLASS'].upper() not in ('SBEND',) or i != accumulator['name']):
                 accumulate = False
                 do_sbend(accumulator['at_entry'], accumulator['at_exit'], accumulator['polarity'])
                 accumulator = {}
-            if e['TYPE'].upper() in ('ELEMENT', 'RCOL', 'ECOL'):
+            if e['CLASS'].upper() in ('ELEMENT', 'RCOL', 'ECOL'):
                 self.shapes.append(
                     {
                         'type': 'rect',
                         'xref': 'x',
                         'yref': 'paper',
-                        'x0': e['AT_ENTRY'],
+                        'x0': e['AT_ENTRY'].m_as('m'),
                         'y0': vertical_position + 0.1,
-                        'x1': e['AT_EXIT'],
+                        'x1': e['AT_EXIT'].m_as('m'),
                         'y1': vertical_position - 0.1,
                         'line': {
                             'width': 0,
                         },
-                        'fillcolor': colors[e['TYPE'].upper()],
+                        'fillcolor': colors[e['CLASS'].upper()],
                     },
                 )
-            if e['TYPE'].upper() == 'QUADRUPOLE':
+            if e['CLASS'].upper() == 'QUADRUPOLE':
                 self.shapes.append(
                     {
                         'type': 'rect',
                         'xref': 'x',
                         'yref': 'paper',
-                        'x0': e['AT_ENTRY'],
-                        'y0': vertical_position if e['K1'] > 0 else vertical_position - 0.1,
-                        'x1': e['AT_EXIT'],
-                        'y1': vertical_position + 0.1 if e['K1'] > 0 else vertical_position,
+                        'x0': e['AT_ENTRY'].m_as('m'),
+                        'y0': vertical_position if e['K1'].magnitude > 0 else vertical_position - 0.1,
+                        'x1': e['AT_EXIT'].m_as('m'),
+                        'y1': vertical_position + 0.1 if e['K1'].magnitude > 0 else vertical_position,
                         'line': {
                             'width': 0,
                         },
                         'fillcolor': '#FF0000',
                     },
                 )
-            if e['TYPE'].upper() == 'HKICKER' or e['TYPE'].upper() == 'VKICKER':
+            if e['CLASS'].upper() == 'HKICKER' or e['CLASS'].upper() == 'VKICKER':
                 self.shapes.append(
                     {
                         'type': 'rect',
                         'xref': 'x',
                         'yref': 'paper',
-                        'x0': e['AT_ENTRY'],
+                        'x0': e['AT_ENTRY'].m_as('m'),
                         'y0': vertical_position,
-                        'x1': e['AT_EXIT'],
+                        'x1': e['AT_EXIT'].m_as('m'),
                         'y1': vertical_position + 0.1,
                         'line': {
                             'width': 0,
@@ -314,17 +314,17 @@ class PlotlyArtist(_Artist):
                         'fillcolor': 'Green',
                     },
                 )
-            if e['TYPE'].upper() == 'SBEND':
+            if e['CLASS'].upper() == 'SBEND':
                 if unsplit_bends:
                     if accumulate is False:
                         accumulate = True
                         accumulator['name'] = i
                         accumulator['polarity'] = e['B']
-                        accumulator['at_entry'] = e['AT_ENTRY']
-                        accumulator['at_exit'] = e['AT_EXIT']
+                        accumulator['at_entry'] = e['AT_ENTRY'].m_as('m')
+                        accumulator['at_exit'] = e['AT_EXIT'].m_as('m')
                         continue
                     if accumulate is True:
-                        accumulator['at_exit'] = e['AT_EXIT']
+                        accumulator['at_exit'] = e['AT_EXIT'].m_as('m')
                         continue
                 else:
-                    do_sbend(e['AT_ENTRY'], e['AT_EXIT'], polarity=1)
+                    do_sbend(e['AT_ENTRY'].m_as('m'), e['AT_EXIT'].m_as('m'), polarity=1)
