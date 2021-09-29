@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
-from scipy.optimize import curve_fit
+from .units import ureg as _ureg
 
 PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
 PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'DT']
@@ -103,13 +103,13 @@ class Distribution:
             self._halo = pd.concat([
                 self.__distribution[dimensions].quantile(0.01),
                 self.__distribution[dimensions].quantile(0.05),
-                self.__distribution[dimensions].quantile(1.0-0.842701),
+                self.__distribution[dimensions].quantile(1.0 - 0.842701),
                 self.__distribution[dimensions].quantile(0.842701),
                 self.__distribution[dimensions].quantile(0.95),
                 self.__distribution[dimensions].quantile(0.99)
             ], axis=1).rename(columns={0.01: '1%',
                                        0.05: '5%',
-                                       1.0-0.842701: '20%',
+                                       1.0 - 0.842701: '20%',
                                        0.842701: '80%',
                                        0.95: '95%',
                                        0.99: '99%'
@@ -162,53 +162,118 @@ class Distribution:
 
     def from_5d_multigaussian_distribution(self, **kwargs):
         """Initialize a beam with a 5D particle distribution."""
-        keys = {'n', 'X', 'PX', 'Y', 'PY', 'DPP', 'XRMS', 'PXRMS', 'YRMS', 'PYRMS', 'DPPRMS'}
         self.from_5d_sigma_matrix(n=kwargs.get('n', DEFAULT_N_PARTICLES),
-                                  X=kwargs.get('X', 0),
-                                  PX=kwargs.get('PX', 0),
-                                  Y=kwargs.get('Y', 0),
-                                  PY=kwargs.get('PY', 0),
-                                  DPP=kwargs.get('DPP', 0),
-                                  DPPRMS=kwargs.get('DPPRMS', 0),
-                                  s11=kwargs.get('XRMS', 0)**2,
+                                  x=kwargs.get('X', 0 * _ureg.m).m_as("m"),
+                                  px=kwargs.get('PX', 0 * _ureg.radians).m_as("radians"),
+                                  y=kwargs.get('Y', 0 * _ureg.m).m_as("m"),
+                                  py=kwargs.get('PY', 0 * _ureg.radians).m_as("radians"),
+                                  dpp=kwargs.get('DPP', 0),
+                                  dpprms=kwargs.get('DPPRMS', 0),
+                                  s11=kwargs.get('XRMS', 0 * _ureg.m).m_as("m") ** 2,
                                   s12=0,
-                                  s22=kwargs.get('PXRMS', 0)**2,
-                                  s33=kwargs.get('YRMS', 0)**2,
+                                  s22=kwargs.get('PXRMS', 0 * _ureg.radians).m_as("radians") ** 2,
+                                  s33=kwargs.get('YRMS', 0 * _ureg.m).m_as("m") ** 2,
                                   s34=0,
-                                  s44=kwargs.get('PYRMS', 0)**2
+                                  s44=kwargs.get('PYRMS', 0 * _ureg.radians).m_as("radians") ** 2
                                   )
         return self
 
     def from_twiss_parameters(self, **kwargs):
         """Initialize a beam with a 5D particle distribution from Twiss parameters."""
-        keys = {'n', 'X', 'PX', 'Y', 'PY', 'DPP', 'DPPRMS', 'BETAX', 'ALPHAX', 'BETAY', 'ALPHAY', 'EMITX', 'EMITY'}
+        keys = {'n', 'X', 'PX', 'Y', 'PY', 'DPP', 'DPPRMS',
+                'BETAX', 'ALPHAX', 'DISPX', 'DISPXP',
+                'BETAY', 'ALPHAY', 'DISPY', 'DISPYP',
+                'EMITX', 'EMITY'}
         if any([k not in keys for k in kwargs.keys()]):
             raise DistributionException("Invalid argument for a twiss distribution.")
-        betax = kwargs.get('BETAX', 1)
+
+        betax = kwargs.get('BETAX', 1 * _ureg.m).m_as('m')
         alphax = kwargs.get('ALPHAX', 0)
-        gammax = (1+alphax**2)/betax
-        betay = kwargs.get('BETAY', 1)
+        gammax = (1 + alphax ** 2) / betax
+        betay = kwargs.get('BETAY', 1 * _ureg.m).m_as('m')
         alphay = kwargs.get('ALPHAY', 0)
         gammay = (1 + alphay ** 2) / betay
+        emitx = kwargs.get('EMITX', 1e-6 * _ureg.m * _ureg.radians).m_as('m rad')
+        emity = kwargs.get('EMITY', 1e-6 * _ureg.m * _ureg.radians).m_as('m rad')
+        dispx = kwargs.get('DISPX', 0 * _ureg.m).m_as('m')
+        dispy = kwargs.get('DISPY', 0 * _ureg.m).m_as('m')
+        dispxp = kwargs.get('DISPXP', 0 * _ureg.radians).m_as('radians')
+        dispyp = kwargs.get('DISPYP', 0 * _ureg.radians).m_as('radians')
+        dpprms = kwargs.get('DPPRMS', 0)
 
         self.from_5d_sigma_matrix(n=kwargs.get('n', DEFAULT_N_PARTICLES),
-                                  X=kwargs.get('X', 0),
-                                  PX=kwargs.get('PX', 0),
-                                  Y=kwargs.get('Y', 0),
-                                  PY=kwargs.get('PY', 0),
-                                  DPP=kwargs.get('DPP', 0),
-                                  DPPRMS=kwargs.get('DPPRMS', 0),
-                                  s11=betax * kwargs['EMITX'],
-                                  s12=-alphax * kwargs['EMITX'],
-                                  s22=gammax * kwargs['EMITX'],
-                                  s33=betay * kwargs['EMITY'],
-                                  s34=-alphay * kwargs['EMITY'],
-                                  s44=gammay * kwargs['EMITY']
+                                  x=kwargs.get('X', 0 * _ureg.m).m_as('m'),
+                                  px=kwargs.get('PX', 0 * _ureg.radians).m_as('radians'),
+                                  y=kwargs.get('Y', 0 * _ureg.m).m_as('m'),
+                                  py=kwargs.get('PY', 0 * _ureg.radians).m_as('radians'),
+                                  dpp=kwargs.get('DPP', 0),
+                                  s11=betax * emitx + (dispx * dpprms) ** 2,
+                                  s12=-alphax * emitx + dispx * dispxp * dpprms ** 2,
+                                  s22=gammax * emitx + (dispxp * dpprms) ** 2,
+                                  s33=betay * emity + (dispy * dpprms) ** 2,
+                                  s34=-alphay * emity + dispy * dispyp * dpprms ** 2,
+                                  s44=gammay * emity + (dispyp * dpprms) ** 2,
+                                  s13=dispx * dispy * dpprms ** 2,
+                                  s23=dispxp * dispy * dpprms ** 2,
+                                  s14=dispx * dispyp * dpprms ** 2,
+                                  s24=dispxp * dispyp * dpprms ** 2,
+                                  s55=dpprms ** 2,
                                   )
         return self
 
     @staticmethod
-    def generate_from_5d_sigma_matrix(**kwargs):
+    def generate_from_5d_sigma_matrix(n: int,
+                                      x: float = 0,
+                                      px: float = 0,
+                                      y: float = 0,
+                                      py: float = 0,
+                                      dpp: float = 0,
+                                      s11: float = 0,
+                                      s12: float = 0,
+                                      s13: float = 0,
+                                      s14: float = 0,
+                                      s15: float = 0,
+                                      s22: float = 0,
+                                      s23: float = 0,
+                                      s24: float = 0,
+                                      s25: float = 0,
+                                      s33: float = 0,
+                                      s34: float = 0,
+                                      s35: float = 0,
+                                      s44: float = 0,
+                                      s45: float = 0,
+                                      s55: float = 0,
+                                      matrix=None,
+                                      ):
+        """
+
+        Args:
+            n:
+            x:
+            px:
+            y:
+            py:
+            dpp:
+            s11:
+            s12:
+            s13:
+            s14:
+            s15:
+            s22:
+            s23:
+            s24:
+            s25:
+            s33:
+            s34:
+            s35:
+            s44:
+            s45:
+            s55:
+            matrix:
+
+        Returns:
+
+        """
         # For performance considerations, see
         # https://software.intel.com/en-us/blogs/2016/06/15/faster-random-number-generation-in-intel-distribution-for-python
         try:
@@ -218,51 +283,39 @@ class Distribution:
             import numpy.random
             generator = numpy.random.multivariate_normal
 
-        s11 = kwargs.get('s11', 0)
-        s12 = kwargs.get('s12', 0)
-        s13 = kwargs.get('s13', 0)
-        s14 = kwargs.get('s14', 0)
-        s15 = kwargs.get('s15', 0)
         s21 = s12
-        s22 = kwargs.get('s22', 0)
-        s23 = kwargs.get('s23', 0)
-        s24 = kwargs.get('s24', 0)
-        s25 = kwargs.get('s25', 0)
         s31 = s13
         s32 = s23
-        s33 = kwargs.get('s33', 0)
-        s34 = kwargs.get('s34', 0)
-        s35 = kwargs.get('s35', 0)
         s41 = s14
         s42 = s24
         s43 = s34
-        s44 = kwargs.get('s44', 0)
-        s45 = kwargs.get('s45', 0)
         s51 = s15
         s52 = s25
         s53 = s35
         s54 = s45
-        s55 = kwargs.get('DPPRMS', 0) ** 2
 
-        return generator(
-            [kwargs.get('X', 0),
-             kwargs.get('PX', 0),
-             kwargs.get('Y', 0),
-             kwargs.get('PY', 0),
-             kwargs.get('DPP', 0)
-             ],
-            np.array([
-                [s11, s12, s13, s14, s15],
-                [s21, s22, s23, s24, s25],
-                [s31, s32, s33, s34, s35],
-                [s41, s42, s43, s44, s45],
-                [s51, s52, s53, s54, s55]
-            ]),
-            int(kwargs.get('n', DEFAULT_N_PARTICLES))
-        )
+        if matrix is not None:
+            assert matrix.shape == (5, 5)
+            return generator(
+                [x, px, y, py, dpp],
+                matrix,
+                int(n)
+            )
+        else:
+            return generator(
+                [x, px, y, py, dpp],
+                np.array([
+                    [s11, s12, s13, s14, s15],
+                    [s21, s22, s23, s24, s25],
+                    [s31, s32, s33, s34, s35],
+                    [s41, s42, s43, s44, s45],
+                    [s51, s52, s53, s54, s55]
+                ]),
+                int(n)
+            )
 
     def from_5d_sigma_matrix(self, **kwargs):
-        """Initialize a beam with a 5D particle distribution from a \Sigma matrix."""
+        """Initialize a beam with a 5D particle distribution from a Sigma matrix."""
         distribution = Distribution.generate_from_5d_sigma_matrix(**kwargs)
         self.__initialize_distribution(pd.DataFrame(distribution))
         self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]

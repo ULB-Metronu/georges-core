@@ -37,7 +37,7 @@ TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, A
         lambda _, __: None),
     1: (lambda _: None,
         _process_beam_code_iba),
-    2: (lambda _: None,
+    2: (lambda _: georges_core.sequences.Element.Face(E1=float(_[1]) * _ureg.degrees),
         lambda _, __: None),
     3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
         lambda _, __: None),
