@@ -8,7 +8,7 @@ on:
     branches: [ develop ]
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       #----------------------------------------------
@@ -41,13 +41,7 @@ jobs:
       # install dependencies if cache does not exist
       #----------------------------------------------
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --no-root
-      #----------------------------------------------
-      # install your root project, if required
-      #----------------------------------------------
-      - name: Install library
-        run: poetry install -E sphinx --no-interaction
+        run: poetry install --no-interaction -E sphinx
       #----------------------------------------------
       #              link with flake8
       #----------------------------------------------
