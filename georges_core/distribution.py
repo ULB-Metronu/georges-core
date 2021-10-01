@@ -197,8 +197,8 @@ class Distribution:
         emity = kwargs.get('EMITY', 1e-6 * _ureg.m * _ureg.radians).m_as('m rad')
         dispx = kwargs.get('DISPX', 0 * _ureg.m).m_as('m')
         dispy = kwargs.get('DISPY', 0 * _ureg.m).m_as('m')
-        dispxp = kwargs.get('DISPXP', 0 * _ureg.radians).m_as('radians')
-        dispyp = kwargs.get('DISPYP', 0 * _ureg.radians).m_as('radians')
+        dispxp = kwargs.get('DISPXP', 0)
+        dispyp = kwargs.get('DISPYP', 0)
         dpprms = kwargs.get('DPPRMS', 0)
 
         self.from_5d_sigma_matrix(n=kwargs.get('n', DEFAULT_N_PARTICLES),

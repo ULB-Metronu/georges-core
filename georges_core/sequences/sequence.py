@@ -659,9 +659,9 @@ class TwissSequence(Sequence):
                 BETA22=self.df.iloc[0]['BETY'] * _ureg.m,
                 ALPHA22=self.df.iloc[0]['ALFY'],
                 DISP1=self.df.iloc[0]['DX'] * _ureg.m,
-                DISP2=self.df.iloc[0]['DPX'] * _ureg.radians,
+                DISP2=self.df.iloc[0]['DPX'],
                 DISP3=self.df.iloc[0]['DY'] * _ureg.m,
-                DISP4=self.df.iloc[0]['DPY'] * _ureg.radians,
+                DISP4=self.df.iloc[0]['DPY'],
                 EMIT1=self.metadata['EX'] * _ureg('m * radians'),
                 EMIT2=self.metadata['EY'] * _ureg('m * radians'),
                 EMIT3=self.metadata['ET'],
@@ -674,9 +674,9 @@ class TwissSequence(Sequence):
                     BETA22=self.df.iloc[0]['BETA22'] * _ureg.m,
                     ALPHA22=self.df.iloc[0]['ALFA22'],
                     DISP1=self.df.iloc[0]['DX'] * _ureg.m,
-                    DISP2=self.df.iloc[0]['DPX'] * _ureg.radians,
+                    DISP2=self.df.iloc[0]['DPX'],
                     DISP3=self.df.iloc[0]['DY'] * _ureg.m,
-                    DISP4=self.df.iloc[0]['DPY'] * _ureg.radians,
+                    DISP4=self.df.iloc[0]['DPY'],
                     EMIT1=1e-9 * _ureg('m * radians'), #self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
                     EMIT2=1e-9 * _ureg('m * radians'), #self.metadata['EMIT2'] * _ureg('m * radians'),
                     EMIT3=1e-9 * _ureg('m * radians'), #self.metadata['EMIT3'] * _ureg('m * radians')
