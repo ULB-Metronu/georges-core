@@ -764,8 +764,6 @@ class TwissSequence(Sequence):
         """TODO"""
         return super().to_df(self._data, strip_units=strip_units)
 
-    df = property(to_df)
-
 
 class TransportSequence(Sequence):
     """
