@@ -18,7 +18,7 @@ from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
-                    load_transport_input_file, transport_element_factory
+    load_transport_input_file, transport_element_factory
 from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
 
@@ -394,8 +394,6 @@ class PlacementSequence(Sequence):
             df.set_index('NAME', inplace=True)
         return super().to_df(df, strip_units=strip_units)
 
-    df = property(to_df)
-
     def add(self,
             element_or_sequence: Union[_Element, Sequence]):
         """
@@ -662,18 +660,18 @@ class TwissSequence(Sequence):
                          )
         if with_beam:
             twiss_init = self.betablock
-            beam_distribution = _Distribution().from_twiss_parameters(n=nparticles,
-                                                                      BETAX=twiss_init['BETA11'],
-                                                                      ALPHAX=twiss_init['ALPHA11'],
-                                                                      DISPX=twiss_init['DISP1'],
-                                                                      DISPXP=twiss_init['DISP2'],
-                                                                      BETAY=twiss_init['BETA22'],
-                                                                      ALPHAY=twiss_init['ALPHA22'],
-                                                                      DISPY=twiss_init['DISP3'],
-                                                                      DISPYP=twiss_init['DISP4'],
-                                                                      EMITX=twiss_init['EMIT1'],
-                                                                      EMITY=twiss_init['EMIT2'],
-                                                                      DPP=twiss_headers['DELTAP']).distribution
+            beam_distribution = _Distribution.from_twiss_parameters(n=nparticles,
+                                                                    betax=twiss_init['BETA11'],
+                                                                    alphax=twiss_init['ALPHA11'],
+                                                                    dispx=twiss_init['DISP1'],
+                                                                    dispxp=twiss_init['DISP2'],
+                                                                    betay=twiss_init['BETA22'],
+                                                                    alphay=twiss_init['ALPHA22'],
+                                                                    dispy=twiss_init['DISP3'],
+                                                                    dispyp=twiss_init['DISP4'],
+                                                                    emitx=twiss_init['EMIT1'],
+                                                                    emity=twiss_init['EMIT2'],
+                                                                    dpp=twiss_headers['DELTAP']).distribution
             beam_distribution['T'] = 0
             self._metadata = SequenceMetadata(data=beam_distribution, kinematics=k, particle=p)
 
@@ -681,7 +679,7 @@ class TwissSequence(Sequence):
     def betablock(self) -> _BetaBlock:
         """TODO"""
         # Keep in this order
-        try: # For MAD-X
+        try:  # For MAD-X
             return _BetaBlock(
                 BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
                 ALPHA11=self.df.iloc[0]['ALFX'],
@@ -696,7 +694,7 @@ class TwissSequence(Sequence):
                 EMIT3=self.metadata['ET'],
             )
         except KeyError:
-            try: # For MAD-NG
+            try:  # For MAD-NG
                 return _BetaBlock(
                     BETA11=self.df.iloc[0]['BETA11'] * _ureg.m,
                     ALPHA11=self.df.iloc[0]['ALFA11'],
@@ -706,9 +704,9 @@ class TwissSequence(Sequence):
                     DISP2=self.df.iloc[0]['DPX'],
                     DISP3=self.df.iloc[0]['DY'] * _ureg.m,
                     DISP4=self.df.iloc[0]['DPY'],
-                    EMIT1=1e-9 * _ureg('m * radians'), #self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
-                    EMIT2=1e-9 * _ureg('m * radians'), #self.metadata['EMIT2'] * _ureg('m * radians'),
-                    EMIT3=1e-9 * _ureg('m * radians'), #self.metadata['EMIT3'] * _ureg('m * radians')
+                    EMIT1=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
+                    EMIT2=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT2'] * _ureg('m * radians'),
+                    EMIT3=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT3'] * _ureg('m * radians')
                 )
             except KeyError:
                 logging.warning('Setting BetaBlock by default')
@@ -717,8 +715,6 @@ class TwissSequence(Sequence):
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
         return super().to_df(self._data, strip_units=strip_units)
-
-    df = property(to_df)
 
 
 class TransportSequence(Sequence):
@@ -786,10 +782,10 @@ class TransportSequence(Sequence):
 
     @staticmethod
     def process_face_angle(line):
-        for idx in range(len(line)-1):
+        for idx in range(len(line) - 1):
             element = line[idx]
-            previous = line[idx-1]
-            after = line[idx+1]
+            previous = line[idx - 1]
+            after = line[idx + 1]
             if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
                 if previous["CLASS"] == "Face":
                     element["E1"] = previous["E1"]
@@ -808,6 +804,7 @@ class TransportSequence(Sequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
+
     df = property(to_df)
 
 
@@ -850,8 +847,6 @@ class SurveySequence(PlacementSequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
-
-    df = property(to_df)
 
 
 # TODO use with pybdsim
@@ -942,5 +937,3 @@ class BDSIMSequence(Sequence):
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         return self._data
-
-    df = property(to_df)
