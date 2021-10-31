@@ -1,4 +1,4 @@
-"""Zgoubidoo relativistic physics module.
+"""Georges-core relativistic physics module.
 
 This module provides a collection of functions and classes to deal with relativistic physics computations. This mainly
 concerns conversions between kinematic quantities. Full support for units (via ``pint``) is provided. Additionnally, a

@@ -14,9 +14,13 @@
 #
 import os
 import sys
+import shutil
 import georges_core
 
 sys.path.insert(0, os.path.abspath('..'))
+
+# Copy all examples in the docs repository
+shutil.copytree(src="../examples", dst='./examples', dirs_exist_ok=True)
 
 # -- Project information -----------------------------------------------------
 
@@ -32,6 +36,7 @@ release = georges_core.__version__
 
 
 # -- General configuration ---------------------------------------------------
+nbsphinx_allow_errors = True
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
@@ -51,7 +56,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
+    'nbsphinx'
 ]
+
 numpydoc_show_class_members = False  # https://sphinx-automodapi.readthedocs.io/en/latest/
 
 # Add any paths that contain templates here, relative to this directory.
@@ -86,7 +93,9 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
+# html_theme = "sphinx_book_theme"
+# html_theme = 'sphinx_material'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

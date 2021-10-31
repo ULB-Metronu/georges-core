@@ -64,6 +64,7 @@ sphinx = [
     "sphinx-copybutton",
     "sphinx-autobuild",
     "sphinx-rtd-theme",
+    "sphinx_book_theme",
     "m2r2",
     "pandoc",
     "nbsphinx",

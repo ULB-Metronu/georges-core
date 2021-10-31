@@ -1,0 +1,78 @@
+-- loading elements
+local beam, sequence, survey, twiss, match, plot in MAD
+local sequence, drift, quadrupole, sbend, hkicker, sextupole, marker in MAD.element
+local observed in MAD.element.flags
+local beta0 in MAD
+local printf in MAD.utility
+local degrad in MAD.constant
+local melmcol in MAD.gphys
+
+----------------------------------------
+-- Define some useful parameters
+local nslice = 10
+local doplot = 'pdf' -- false | true | 'pdf'
+local cols = {'angle', 'e1', 'e2', 'tilt', 'n', 'k1', 'k2', 'k3'} -- for Twiss table
+
+----------------------------------------
+-- Beam and initial Twiss
+local beam = beam { particle = 'proton',
+                    energy=0.140+0.938} -- 140 MeV a utiliser plus facile
+
+local X0 = {beta11=1, beta22=1, alfa11=0, alfa22=0, dx=0.0}
+local tw_init = beta0(X0)
+
+local deltap = 0  -- to play with deltap
+
+-- define generic elements
+local mq = quadrupole {l=0.5}
+-- local ms = sextupole {l=0.25}
+
+-- sequence
+local line_length = 19.16
+
+local mq_k0 =  4.11660
+local mq_k1 = -6.15145
+local mq_k2 =  2.31981
+local mq_k3 = -1.11609
+local mq_k4 = -mq_k3
+local mq_k5 = -mq_k2
+local mq_k6 = -mq_k1
+local mq_k7 = -mq_k0
+
+local apo = sequence 'apo' {
+    beam=beam, l=line_length, refer='entry',
+    mq 'q_0' {at = 1, l=0.3, k1=mq_k0},
+    mq 'q_1' {at = 1.3, l=0.4, k1=mq_k1},
+    mq 'q_2' {at = 1.7, l=0.6, k1=mq_k2},
+    mq 'q_3' {at = 8.7, l=0.5, k1=mq_k3},
+    mq 'q_4' {at = 9.96, l=0.5, k1=mq_k4},
+    mq 'q_5' {at = 16.86, l=0.6, k1=mq_k5},
+    mq 'q_6' {at = 17.46, l=0.4, k1=mq_k6},
+    mq 'q_7' {at = 17.86, l=0.3, k1=mq_k7},
+  }
+
+-- Twiss before matching and plotting
+local tws, mfl = twiss { sequence=apo,
+                         X0=tw_init,
+                         deltap=deltap,
+                         nslice=1,
+                         chrom=true,
+                         method=4,
+                         implicit=true,
+                         save='atslice'
+}
+local tcols = melmcol(tws, cols)
+tws:write('twiss_madng')
+
+-- Twiss before matching and plotting
+local tws, mfl = twiss { sequence=apo,
+                         X0=tw_init,
+                         deltap=deltap,
+                         nslice=10,
+                         chrom=true,
+                         method=4,
+                         implicit=true,
+                         save='atslice'
+}
+local tcols = melmcol(tws, cols)
+tws:write('twiss_madng_sliced')
