@@ -4,9 +4,9 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = Georges
+SPHINXPROJ    = Georges-core
 SOURCEDIR     = .
-BUILDDIR      = ../../georges-docs/
+BUILDDIR      = ../../georges-core-docs/
 PDFBUILDDIR   = /tmp
 PDF           = ../manual.pdf
 # Put it first so that "make" without argument is like "make help".

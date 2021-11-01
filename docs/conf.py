@@ -37,6 +37,7 @@ release = georges_core.__version__
 
 # -- General configuration ---------------------------------------------------
 nbsphinx_allow_errors = True
+nbsphinx_execute = 'never'
 
 # If your documentation needs a minimal Sphinx version, state it here.
 #
