@@ -9,8 +9,6 @@ MANZONI_FLAVOR = {"Srotation": "SRotation",
                   "Vkicker": "VKicker",
                   }
 
-
-
 CSV_TO_SEQUENCE = {
     "MARKER": (lambda _: georges_core.sequences.Element.Marker(_[0], APERTYPE=None)),
     "QUADRUPOLE": (lambda _: georges_core.sequences.Element.Quadrupole(_[0],
@@ -31,9 +29,9 @@ CSV_TO_SEQUENCE = {
                                                                                        APERTURE=_[1]['APERTURE'],
                                                                                        APERTYPE="CIRCULAR")),
     "RECTANGULARCOLLIMATOR": (lambda _: georges_core.sequences.Element.RectangularCollimator(_[0],
-                                                                                          L=_[1]['L'],
-                                                                                          APERTURE=_[1]['APERTURE'],
-                                                                                          APERTYPE="RECTANGULAR")),
+                                                                                             L=_[1]['L'],
+                                                                                             APERTURE=_[1]['APERTURE'],
+                                                                                             APERTYPE="RECTANGULAR")),
     "ELLIPTICALCOLLIMATOR": (lambda _: georges_core.sequences.Element.EllipticalCollimator(_[0],
                                                                                            L=_[1]['L'],
                                                                                            APERTURE=_[1]['APERTURE'],
@@ -41,15 +39,15 @@ CSV_TO_SEQUENCE = {
     "SCATTERER": (lambda _: georges_core.sequences.Element.Scatterer(_[0],
                                                                      L=_[1]["L"],
                                                                      MATERIAL=_[1]["MATERIAL"],
-                                                                     KINETIC_ENERGY=0*_ureg.MeV,
+                                                                     KINETIC_ENERGY=0 * _ureg.MeV,
                                                                      APERTYPE=None)),
 
     "DEGRADER": (lambda _: georges_core.sequences.Element.Degrader(_[0],
-                                                                   KINETIC_ENERGY=0*_ureg.MeV,
+                                                                   KINETIC_ENERGY=0 * _ureg.MeV,
                                                                    APERTYPE=None)),
 
     "SROTATION": (lambda _: georges_core.sequences.Element.SRotation(_[0],
-                                                                     ANGLE=0 *_ureg.radians,
+                                                                     ANGLE=0 * _ureg.radians,
                                                                      APERTYPE=None)),
 
     "HKICKER": (lambda _: georges_core.sequences.Element.HKicker(_[0],

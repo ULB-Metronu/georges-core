@@ -319,7 +319,7 @@ class PlotlyArtist(_Artist):
                     if accumulate is False:
                         accumulate = True
                         accumulator['name'] = i
-                        accumulator['polarity'] = e['B']
+                        accumulator['polarity'] = _np.sign(e['ANGLE'])
                         accumulator['at_entry'] = e['AT_ENTRY'].m_as('m')
                         accumulator['at_exit'] = e['AT_EXIT'].m_as('m')
                         continue
@@ -327,4 +327,4 @@ class PlotlyArtist(_Artist):
                         accumulator['at_exit'] = e['AT_EXIT'].m_as('m')
                         continue
                 else:
-                    do_sbend(e['AT_ENTRY'].m_as('m'), e['AT_EXIT'].m_as('m'), polarity=1)
+                    do_sbend(e['AT_ENTRY'].m_as('m'), e['AT_EXIT'].m_as('m'), polarity=_np.sign(e['ANGLE']))

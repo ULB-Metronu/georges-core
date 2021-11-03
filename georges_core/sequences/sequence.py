@@ -18,8 +18,8 @@ from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
-                    load_transport_input_file, transport_element_factory, \
-                    csv_element_factory
+    load_transport_input_file, transport_element_factory, \
+    csv_element_factory
 from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
 from ..frame import Frame
@@ -376,28 +376,6 @@ class PlacementSequence(Sequence):
     def betablock(self, betablock: _BetaBlock):
         self._betablock = betablock
 
-    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
-        """
-
-        Args:
-            df:
-            strip_units:
-
-        Returns:
-
-        """
-        if len(self._data) == 0:
-            return _pd.DataFrame()
-        if df is None:
-            df = _pd.DataFrame([{**e[0].data, **{
-                'AT_ENTRY': e[1],
-                'AT_CENTER': e[2],
-                'AT_EXIT': e[3]
-            }} for e in self._data])
-            df.name = self.name
-            df.set_index('NAME', inplace=True)
-        return super().to_df(df, strip_units=strip_units)
-
     def add(self,
             element_or_sequence: Union[_Element, Sequence]):
         """
@@ -612,6 +590,29 @@ class PlacementSequence(Sequence):
     def join(self, other):
         pass
 
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
+        """
+
+        Args:
+            df:
+            strip_units:
+
+        Returns:
+
+        """
+        if len(self._data) == 0:
+            return _pd.DataFrame()
+        df = _pd.DataFrame([{**e[0].data, **{
+            'AT_ENTRY': e[1],
+            'AT_CENTER': e[2],
+            'AT_EXIT': e[3]
+        }} for e in self._data])
+        df.name = self.name
+        df.set_index('NAME', inplace=True)
+        return super().to_df(df=df, strip_units=strip_units)
+
+    df = property(to_df)
+
 
 class TwissSequence(Sequence):
     """
@@ -727,6 +728,8 @@ class TwissSequence(Sequence):
         """TODO"""
         return super().to_df(self._data, strip_units=strip_units)
 
+    df = property(to_df)
+
 
 class TransportSequence(Sequence):
     """
@@ -819,19 +822,20 @@ class TransportSequence(Sequence):
     df = property(to_df)
 
 
-class SurveySequence(PlacementSequence):
+class SurveySequence(Sequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
                  kinematics: _Kinematics = None,
-                 particle: _particles = _particles.Proton,
                  metadata: Optional[SequenceMetadata] = None
                  ):
         """
 
         Args:
-            filename: the name of the physics
-            path:
+            filename: Name of the file, must be a csv.
+            path: Path to the file
+            kinematics: Kinematics of the particle
+            metadata: metadata of the sequence
         """
 
         def get_entrance_exit_frame(e):
@@ -862,11 +866,9 @@ class SurveySequence(PlacementSequence):
         sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
         sequence['L'] = sequence['L'].fillna(0).apply(lambda e: e * _ureg.meter)
         sequence["ANGLE"] = sequence["ANGLE"].fillna(0).apply(lambda e: e * _ureg.radian)
-        sequence["E1"] = sequence["E1"].fillna(0).apply(lambda e: e * _ureg.radian)
-        sequence["E2"] = sequence["E2"].fillna(0).apply(lambda e: e * _ureg.radian)
-        sequence['K1'] = sequence['K1'].fillna(0).apply(lambda e: e * _ureg.m**-2)
 
-        if sequence.get(['AT_ENTRY', 'AT_CENTER', 'AT_EXIT']) is None:
+        # check if the survey is (AT_CENTER, L) or (X, Y, Z)
+        if sequence.get(['AT_CENTER']) is None:
             if sequence.get(['X', 'Y', 'Z']) is not None:
                 sequence['RADIUS'] = _np.abs(sequence['L'] / sequence['ANGLE'])
                 sequence['CUMULATIVE_ANGLE'] = sequence['ANGLE'].cumsum().shift(1)
@@ -895,29 +897,41 @@ class SurveySequence(PlacementSequence):
                     sequence.at[i, 'AT_CENTER'] = at
                     at += j['L'] / 2
 
-        # TODO be more generic
+            else:
+                raise SequenceException("Sequence must be (AT_CENTER, L) or (X,Y,Z)")
+
         sequence['AT_CENTER'] = sequence['AT_CENTER'].apply(lambda e: e * _ureg.meter)
         sequence["AT_ENTRY"] = sequence["AT_CENTER"] - 0.5 * sequence["L"]
         sequence["AT_EXIT"] = sequence["AT_CENTER"] + 0.5 * sequence["L"]
 
-        # TODO can be improved in one line
+        # Set units to columns
+        try:
+            sequence['K1'] = sequence['K1'].fillna(0).apply(lambda e: e * _ureg.m ** -2)
+        except KeyError:
+            sequence['K1'] = [0 * _ureg.m ** -2] * len(sequence)
+        try:
+            sequence['E1'] = sequence['E1'].fillna(0).apply(lambda e: e * _ureg.radians)
+        except KeyError:
+            sequence['E1'] = [0 * _ureg.radians] * len(sequence)
+        try:
+            sequence['E2'] = sequence['E2'].fillna(0).apply(lambda e: e * _ureg.radians)
+        except KeyError:
+            sequence['E2'] = [0 * _ureg.radians] * len(sequence)
+
+        idx = sequence.query("TYPE == 'COLLIMATOR'").index
+        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE']}COLLIMATOR" for i in idx]
+
         def check_apertures(e):
             if isinstance(e, float):
                 return [e * _ureg.m]
             else:
-                return [float(i) * _ureg.m for i in e.replace('[','').replace(']','').split(';')]
-
-        def define_collimators(e):
-            if e["TYPE"] == 'COLLIMATOR':
-                e["TYPE"] = f"{e['APERTYPE']}COLLIMATOR"
-            return e["TYPE"]
+                return [float(k) * _ureg.m for k in e.replace('[', '').replace(']', '').split(';')]
 
         sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
-        sequence["TYPE"] = sequence.apply(lambda e: define_collimators(e), axis=1)
 
         data = []
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
-                                                         particle=particle)
+                                                         particle=kinematics.particule)
         for element in sequence.iterrows():
             data.append((csv_element_factory(element),
                          element[1]['AT_ENTRY'],
@@ -928,14 +942,17 @@ class SurveySequence(PlacementSequence):
                          data=data,
                          metadata=sequence_metadata)
 
-    def to_df(self, df=None, strip_units=False):
-        dicts = list(map(dict, self._data))
-        counters = {}
-        for d in dicts:
-            if d['NAME'] is None:
-                counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
-                d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units=False):
+        df = _pd.DataFrame([{**e[0].data, **{
+            'AT_ENTRY': e[1],
+            'AT_CENTER': e[2],
+            'AT_EXIT': e[3]
+        }} for e in self._data])
+        df.name = self.name
+        df.set_index('NAME', inplace=True)
+        return super().to_df(df=df, strip_units=strip_units)
+
+    df = property(to_df)
 
 
 # TODO use with pybdsim
@@ -954,7 +971,8 @@ class BDSIMSequence(Sequence):
             from_element:
             to_element:
         """
-        # The pybdsim import is made inside the class init to avoid a pybdsim ( and then ROOT ) dependence when it is not needed.
+        # The pybdsim import is made inside the class init to avoid a pybdsim (and then ROOT)
+        # dependence when it is not needed.
         from pybdsim.Analysis import BDSimOutput
 
         # Load the model
