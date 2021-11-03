@@ -5,6 +5,12 @@ Welcome to Georges-core's documentation!
 
 Introduction
 ------------
+Georges_core is a Python3 library that provides a lot of basic functionalities for other libraries such as Zgoubidoo or Georges. Among the different modules, we have :
+
+* The Twiss computation
+* The plotting module
+* The sequence converter
+
 The documentation is part of the Georges-core repository itself and is made available *via* `_Readthedocs_ <https://readthedocs.org>`_ .
 It is hosted at `georges.readthedocs.io <http://georges.readthedocs.io>`_
 
