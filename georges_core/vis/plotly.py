@@ -283,15 +283,20 @@ class PlotlyArtist(_Artist):
                     },
                 )
             if e['CLASS'].upper() == 'QUADRUPOLE':
+                try:
+                    field_magnitude = e['K1'].magnitude
+                except KeyError:
+                    field_magnitude = e['K1L'].magnitude
+
                 self.shapes.append(
                     {
                         'type': 'rect',
                         'xref': 'x',
                         'yref': 'paper',
                         'x0': e['AT_ENTRY'].m_as('m'),
-                        'y0': vertical_position if e['K1'].magnitude > 0 else vertical_position - 0.1,
+                        'y0': vertical_position if field_magnitude > 0 else vertical_position - 0.1,
                         'x1': e['AT_EXIT'].m_as('m'),
-                        'y1': vertical_position + 0.1 if e['K1'].magnitude > 0 else vertical_position,
+                        'y1': vertical_position + 0.1 if field_magnitude > 0 else vertical_position,
                         'line': {
                             'width': 0,
                         },
