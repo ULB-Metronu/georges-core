@@ -166,29 +166,30 @@ class MatplotlibArtist(_Artist):
             logging.warning("No APERTURE defined in the beamline")
             return
 
-        bl.loc[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
+        bl.at[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
         bl = bl.query("CLASS != 'MARKER' and CLASS != 'DRIFT'")  # Marker doesn't have aperture
         planes = kwargs.get('plane', 'X')
 
         # Set the y aperture for circular apertype
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
-            bl.loc[idx, 'APERTURE'] = _np.array([bl.loc[idx, 'APERTURE'][0],
-                                                 bl.loc[idx, 'APERTURE'][0]],
-                                                dtype=object)
+            bl.at[idx, 'APERTURE'] = _np.array([bl.at[idx, 'APERTURE'][0],
+                                                bl.at[idx, 'APERTURE'][0]],
+                                               dtype=object)
 
         if planes == 'X':
             index = 0
         elif planes == 'Y':
             index = 1
 
-        bl.loc[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
-        bl.loc[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
+        # TODO warning here with pandas.loc
+        bl.at[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
+        bl.at[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
 
         if 'CHAMBER' not in bl:
-            bl.loc[:, 'CHAMBER'] = [0 * _ureg.mm]
+            bl.at[:, 'CHAMBER'] = [0 * _ureg.mm] * len(bl)
 
-        bl.loc[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
-        bl.loc[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
+        bl.at[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
+        bl.at[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
 
         bl.query("CLASS == 'QUADRUPOLE'").apply(lambda e: self.draw_quad(e), axis=1)
         bl.query("CLASS == 'SBEND'").apply(lambda e: self.draw_bend(e), axis=1)
