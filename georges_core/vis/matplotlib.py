@@ -165,7 +165,8 @@ class MatplotlibArtist(_Artist):
             logging.warning("No APERTURE defined in the beamline")
             return
 
-        bl = bl.query("KEYWORD != 'MARKER' and KEYWORD != 'DRIFT'")  # Marker doesn't have aperture
+        bl.loc[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
+        bl = bl.query("CLASS != 'MARKER' and CLASS != 'DRIFT'")  # Marker doesn't have aperture
         planes = kwargs.get('plane', 'X')
 
         # Set the y aperture for circular apertype
@@ -188,7 +189,7 @@ class MatplotlibArtist(_Artist):
         bl.loc[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a)
         bl.loc[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a)
 
-        bl.loc[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
+
         bl.query("CLASS == 'QUADRUPOLE'").apply(lambda e: self.draw_quad(e), axis=1)
         bl.query("CLASS == 'SBEND'").apply(lambda e: self.draw_bend(e), axis=1)
         bl.query("CLASS == 'RBEND'").apply(lambda e: self.draw_bend(e), axis=1)
