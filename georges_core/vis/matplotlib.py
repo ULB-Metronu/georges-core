@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.colors
 from matplotlib.ticker import FixedLocator, MultipleLocator, FixedFormatter
+from ..units import ureg as _ureg
 from .artist import Artist as _Artist
 from .artist import PALETTE
 
@@ -29,8 +30,8 @@ palette['QUADRUPOLE'] = palette['red']
 palette['SEXTUPOLE'] = palette['yellow']
 palette['OCTUPOLE'] = palette['violet']
 palette['MULTIPOLE'] = palette['green']
-palette['RECTANGULARCOLLIMATOR'] = palette['goldenrod']
 palette['DEGRADER'] = palette['base02']
+palette['RECTANGULARCOLLIMATOR'] = palette['goldenrod']
 palette['CIRCULARCOLLIMATOR'] = palette['orange']
 palette['COLLIMATOR'] = 'gold'
 
@@ -171,8 +172,8 @@ class MatplotlibArtist(_Artist):
 
         # Set the y aperture for circular apertype
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
-            bl.loc[idx, 'APERTURE'] = _np.array([(bl.loc[idx, 'APERTURE'][0]).m_as('mm'),
-                                                 (bl.loc[idx, 'APERTURE'][0]).m_as('mm')],
+            bl.loc[idx, 'APERTURE'] = _np.array([bl.loc[idx, 'APERTURE'][0],
+                                                 bl.loc[idx, 'APERTURE'][0]],
                                                 dtype=object)
 
         if planes == 'X':
@@ -180,15 +181,14 @@ class MatplotlibArtist(_Artist):
         elif planes == 'Y':
             index = 1
 
-        bl.loc[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index])
-        bl.loc[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index])
+        bl.loc[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
+        bl.loc[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
 
         if 'CHAMBER' not in bl:
-            bl.loc[:, 'CHAMBER'] = 0
+            bl.loc[:, 'CHAMBER'] = [0 * _ureg.mm]
 
-        bl.loc[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a)
-        bl.loc[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a)
-
+        bl.loc[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
+        bl.loc[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
 
         bl.query("CLASS == 'QUADRUPOLE'").apply(lambda e: self.draw_quad(e), axis=1)
         bl.query("CLASS == 'SBEND'").apply(lambda e: self.draw_bend(e), axis=1)
@@ -324,8 +324,8 @@ class MatplotlibArtist(_Artist):
                         e['L'].m_as('m'),
                         .1,
                         hatch='',
-                        facecolor=e['CLASS'].upper(),
-                        ec=e['CLASS'].upper(),
+                        facecolor=palette[e['CLASS'].upper()],
+                        ec=palette[e['CLASS'].upper()],
                         clip_on=False,
                     )
                 )
