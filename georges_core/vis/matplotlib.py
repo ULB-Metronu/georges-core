@@ -11,6 +11,7 @@ import matplotlib.colors
 from matplotlib.ticker import FixedLocator, MultipleLocator, FixedFormatter
 from ..units import ureg as _ureg
 from .artist import Artist as _Artist
+from .artist import ArtistException as _ArtistException
 from .artist import PALETTE
 
 FLUKA_COLORS = [(1.0, 1.0, 1.0), (0.9, 0.6, 0.9), (1.0, 0.4, 1.0), (0.9, 0.0, 1.0),
@@ -149,7 +150,7 @@ class MatplotlibArtist(_Artist):
             self.draw_cartouche(beamline)
 
         if with_aperture:
-            self.draw_aperture(beamline)
+            self.draw_aperture(beamline, **kwargs)
 
         if print_label:
             self._ax2.axis('on')
@@ -175,15 +176,18 @@ class MatplotlibArtist(_Artist):
             bl.at[idx, 'APERTURE'] = _np.array([bl.at[idx, 'APERTURE'][0],
                                                 bl.at[idx, 'APERTURE'][0]],
                                                dtype=object)
-
         if planes == 'X':
-            index = 0
+            index = [0, 0]
         elif planes == 'Y':
-            index = 1
+            index = [1, 1]
+        elif planes == 'both':
+            index = [0, 1]
+        else:
+            raise _ArtistException("Plane must be 'X', 'Y' or 'both'.")
 
         # TODO warning here with pandas.loc
-        bl.at[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
-        bl.at[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index].m_as('mm'))
+        bl.at[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
+        bl.at[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
 
         if 'CHAMBER' not in bl:
             bl.at[:, 'CHAMBER'] = [0 * _ureg.mm] * len(bl)

@@ -29,6 +29,13 @@ PALETTE = {
 PALETTE['solarized']['gray'] = PALETTE['solarized']['base03']
 
 
+class ArtistException(Exception):
+    """Exception raised for errors in the beam plotting module."""
+
+    def __init__(self, m):
+        self.message = m
+
+
 class Artist:
     """
     TODO
