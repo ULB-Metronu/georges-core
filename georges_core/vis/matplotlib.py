@@ -29,12 +29,16 @@ palette = PALETTE['solarized']
 palette['BEND'] = palette['blue']
 palette['QUADRUPOLE'] = palette['red']
 palette['SEXTUPOLE'] = palette['yellow']
-palette['OCTUPOLE'] = palette['violet']
-palette['MULTIPOLE'] = palette['green']
+palette['OCTUPOLE'] = palette['green']
+palette['MULTIPOLE'] = palette['gray']
 palette['DEGRADER'] = palette['base02']
 palette['RECTANGULARCOLLIMATOR'] = palette['goldenrod']
 palette['CIRCULARCOLLIMATOR'] = palette['orange']
 palette['COLLIMATOR'] = 'gold'
+palette['HKICKER'] = palette['magenta']
+palette['VKICKER'] = palette['violet']
+palette['SCATTERER'] = palette['base02']
+palette['MATRIX'] = palette['cyan']
 
 
 class MatplotlibArtist(_Artist):
@@ -309,20 +313,8 @@ class MatplotlibArtist(_Artist):
                     )
                 )
 
-            elif e['CLASS'].upper() in ['SEXTUPOLE', 'QUADRUPOLE', 'MULTIPOLE']:
-                self._ax2.add_patch(
-                    patches.Rectangle(
-                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
-                        e['L'].m_as('m'),
-                        .1,
-                        hatch='',
-                        facecolor=palette[e['CLASS'].upper()],
-                        ec=palette[e['CLASS'].upper()],
-                        clip_on=False,
-                    )
-                )
-
-            elif e['CLASS'].upper() in ['RECTANGULARCOLLIMATOR', 'DEGRADER', 'CIRCULARCOLLIMATOR']:
+            elif e['CLASS'].upper() in ['SEXTUPOLE', 'QUADRUPOLE', 'MULTIPOLE', 'HKICKER', 'RECTANGULARCOLLIMATOR',
+                                        'VKICKER', 'DEGRADER', 'CIRCULARCOLLIMATOR', 'MATRIX', 'SCATTERER']:
                 self._ax2.add_patch(
                     patches.Rectangle(
                         (e['AT_ENTRY'].m_as('m'), offset - 0.05),
