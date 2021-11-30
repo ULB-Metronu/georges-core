@@ -181,7 +181,7 @@ class MatplotlibArtist(_Artist):
         elif planes == 'Y':
             index = [1, 1]
         elif planes == 'both':
-            index = [0, 1]
+            index = [1, 0]
         else:
             raise _ArtistException("Plane must be 'X', 'Y' or 'both'.")
 
