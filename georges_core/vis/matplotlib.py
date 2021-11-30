@@ -135,7 +135,7 @@ class MatplotlibArtist(_Artist):
         ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
         ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
         self._ax.tick_params(axis='both', which='major')
-        self._ax.tick_params(axis='x', labelsize=8)
+        self._ax.tick_params(axis='x')
         self._ax.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
 
         self._ax.set_xlim([bl_short.iloc[0]['AT_ENTRY'].m_as('m'), bl_short.iloc[-1]['AT_EXIT'].m_as('m')])
@@ -156,7 +156,7 @@ class MatplotlibArtist(_Artist):
             self._ax2.axis('on')
             self._ax2.get_xaxis().set_tick_params(direction='out')
             self._ax2.tick_params(axis='both', which='major')
-            self._ax2.tick_params(axis='x', labelsize=8)
+            self._ax2.tick_params(axis='x')
             plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
             self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
             self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
