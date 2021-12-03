@@ -11,7 +11,9 @@ MANZONI_FLAVOR = {"Srotation": "SRotation",
 
 CSV_TO_SEQUENCE = {
     "MARKER": (lambda _: georges_core.sequences.Element.Marker(_[0], APERTYPE=None)),
-    "DRIFT": (lambda _: georges_core.sequences.Element.Drift(_[0], L=_[1]['L'], APERTYPE=None)),
+    "DRIFT": (lambda _: georges_core.sequences.Element.Drift(_[0], L=_[1]['L'],
+                                                             APERTYPE=_[1]['APERTYPE'],
+                                                             APERTURE=_[1]['APERTURE'])),
     "QUADRUPOLE": (lambda _: georges_core.sequences.Element.Quadrupole(_[0],
                                                                        L=_[1]['L'],
                                                                        K1=_[1]['K1'],
