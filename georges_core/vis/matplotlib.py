@@ -63,6 +63,7 @@ class MatplotlibArtist(_Artist):
             self.init_plot(**kwargs)
         else:
             self._ax = ax
+            self._fig = ax.figure
         self._ax2 = self._ax.twinx()
         self._ax2.set_ylim([0, 1])
         self._ax2.axis('off')
