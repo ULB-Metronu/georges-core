@@ -654,6 +654,7 @@ class TwissSequence(Sequence):
                  to_element: str = None,
                  with_beam: bool = False,
                  nparticles: int = 1,
+                 refer: str = 'center',
                  element_keys: Optional[Mapping[str, str]] = None,
                  ):
         """
@@ -668,6 +669,7 @@ class TwissSequence(Sequence):
             to_element: Name of the last element
             with_beam: Generate a Gaussian beam from Twiss parameters
             nparticles: Number of particles in the beam (default 1)
+            refer: corresponding placement in MAD-X (entry, center, exit)
             element_keys:
 
         """
@@ -676,9 +678,20 @@ class TwissSequence(Sequence):
 
         # Add some columns
         twiss_table['CLASS'] = twiss_table['KEYWORD'].apply(str.capitalize)
-        twiss_table['AT_CENTER'] = twiss_table['S']
-        twiss_table["AT_ENTRY"] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
-        twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+        if refer == "entry":
+            twiss_table["AT_ENTRY"] = twiss_table["S"]
+            twiss_table['AT_CENTER'] = twiss_table["AT_ENTRY"] + 0.5 * twiss_table["L"]
+            twiss_table["AT_EXIT"] = twiss_table["AT_ENTRY"] + twiss_table["L"]
+
+        if refer == 'center':
+            twiss_table["AT_CENTER"] = twiss_table["S"]
+            twiss_table['AT_ENTRY'] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
+            twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+
+        if refer == 'exit':
+            twiss_table["AT_EXIT"] = twiss_table["S"]
+            twiss_table['AT_CENTER'] = twiss_table["AT_EXIT"] - 0.5 * twiss_table["L"]
+            twiss_table["AT_ENTRY"] = twiss_table["AT_EXIT"] - twiss_table["L"]
 
         try:  # For MAD-X
             particle_name = twiss_headers['PARTICLE'].capitalize()

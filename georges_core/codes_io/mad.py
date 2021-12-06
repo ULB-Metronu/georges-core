@@ -74,6 +74,19 @@ def load_mad_twiss_table(filename: str = 'twiss.outx',
         except ValueError:
             pass
 
+    # Compute strength of magnetics elements K1, K2, K3
+    ele = ['MARKER', 'DRIFT']
+    idx = _.query("KEYWORD not in @ele").index
+    if 'K1' not in _.columns:
+        _['K1'] = 0
+        _.loc[idx, 'K1'] = _.loc[idx, 'K1L'].values / _.loc[idx, 'L'].values
+    if 'K2' not in _.columns:
+        _['K2'] = 0
+        _.loc[idx, 'K2'] = _.loc[idx, 'K2L'].values / _.loc[idx, 'L'].values
+    if 'K3' not in _.columns:
+        _['K3'] = 0
+        _.loc[idx, 'K3'] = _.loc[idx, 'K3L'].values / _.loc[idx, 'L'].values
+
     if with_units:
         def set_unit(df, column, unit):
             try:
@@ -96,6 +109,7 @@ def load_mad_twiss_table(filename: str = 'twiss.outx',
         _ = set_unit(_, 'K3L', _ureg.m ** -3)
         _ = set_unit(_, 'K4L', _ureg.m ** -4)
         _ = set_unit(_, 'TILT', _ureg.radians)
+        _ = set_unit(_, 'HGAP', _ureg.m)
 
     _.rename(columns={'KIND': 'KEYWORD'}, inplace=True)
     return _.set_index('NAME')
