@@ -1,6 +1,8 @@
 import pandas as _pd
 import numpy as _np
 import os
+from numba import njit
+from typing import Dict
 from .units import ureg as _ureg
 from .units import Q_ as _Q
 
@@ -169,9 +171,10 @@ class Distribution:
     @property
     def emit(self):
         """Return the emittance of the beam in both planes"""
+        tw = self.compute_twiss(self.__distribution.values)
         return {
-            'X': _np.sqrt(_np.linalg.det(self.__distribution.head(len(self.__distribution))[['X', 'PX']].cov())),
-            'Y': _np.sqrt(_np.linalg.det(self.__distribution.head(len(self.__distribution))[['Y', 'PY']].cov()))
+            'X': tw['emit_x'],
+            'Y': tw['emit_y']
         }
 
     @property
@@ -184,20 +187,17 @@ class Distribution:
     @property
     def twiss(self):
         """Return the Twiss parameters of the beam"""
-        s11 = self.sigma['X']['X']
-        s12 = self.sigma['X']['PX']
-        s22 = self.sigma['PX']['PX']
-        s33 = self.sigma['Y']['Y']
-        s34 = self.sigma['Y']['PY']
-        s44 = self.sigma['PY']['PY']
-        return {
-            'beta_x': s11 / self.emit['X'],
-            'alpha_x': -s12 / self.emit['X'],
-            'gamma_x': s22 / self.emit['X'],
-            'beta_y': s33 / self.emit['Y'],
-            'alpha_y': -s34 / self.emit['Y'],
-            'gamma_y': s44 / self.emit['Y'],
-        }
+        tw = self.compute_twiss(self.__distribution.values)
+        return {'emit_x': tw[0],
+                'beta_x': tw[1],
+                'alpha_x': tw[2],
+                'disp_x': tw[3],
+                'disp_xp': tw[4],
+                'emit_y': tw[5],
+                'beta_y': tw[6],
+                'alpha_y': tw[7],
+                'disp_y': tw[8],
+                'disp_yp': tw[9]}
 
     @property
     def halo(self, dimensions=None):
@@ -250,7 +250,69 @@ class Distribution:
         self.__dims = self.__distribution.shape[1]
         if self.__dims < 2 or self.__dims > 6:
             raise DistributionException("Trying to initialize a beam distribution with invalid dimensions.")
-        self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
+
+    @staticmethod
+    @njit
+    def compute_twiss(beam: _np.ndarray) -> _np.array:
+
+        s11 = _np.var(beam[:, 0])
+        s22 = _np.var(beam[:, 1])
+
+        s33 = _np.var(beam[:, 2])
+        s44 = _np.var(beam[:, 3])
+
+        s55 = _np.var(beam[:, 4])
+
+        a_xxp = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 1] - _np.mean(beam[:, 1])))
+        a_xd = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+        a_xpd = _np.mean((beam[:, 1] - _np.mean(beam[:, 1])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+
+        a_yyp = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 3] - _np.mean(beam[:, 3])))
+        a_yd = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+        a_ypd = _np.mean((beam[:, 3] - _np.mean(beam[:, 3])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+
+        if s55 > 0:
+            disp_x = a_xd / s55
+            disp_xp = a_xpd / s55
+
+            ebeta_x = (s11 - a_xd ** 2 / s55)
+            egamma_x = (s22 - a_xpd**2 / s55)
+            ealpha_x = (-a_xxp + a_xpd * a_xd / s55)
+
+            emit_x = _np.sqrt(ebeta_x * egamma_x - ealpha_x ** 2)
+            beta_x = ebeta_x / emit_x
+            alpha_x = ealpha_x / emit_x
+
+            disp_y = a_yd / s55
+            disp_yp = a_ypd / s55
+
+            ebeta_y = (s33 - a_yd ** 2 / s55)
+            egamma_y = (s44 - a_ypd ** 2 / s55)
+            ealpha_y = (-a_yyp + a_ypd * a_yd / s55)
+
+            emit_y = _np.sqrt(ebeta_y * egamma_y - ealpha_y ** 2)
+            beta_y = ebeta_y / emit_y
+            alpha_y = ealpha_y / emit_y
+
+        else:
+            s12 = _np.cov(beam[:, 0], beam[:, 1])[0, 1]
+            s34 = _np.cov(beam[:, 2], beam[:, 3])[0, 1]
+
+            emit_x = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 0], beam[:, 1])))
+            emit_y = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 2], beam[:, 3])))
+
+            beta_x = s11 / emit_x
+            alpha_x = -s12 / emit_x
+            disp_x = 0
+            disp_xp = 0
+
+            beta_y = s33 / emit_y
+            alpha_y = -s34 / emit_y
+            disp_y = 0
+            disp_yp = 0
+
+        return _np.array([emit_x, beta_x, alpha_x, disp_x, disp_xp,
+                          emit_y, beta_y, alpha_y, disp_y, disp_yp])
 
     @classmethod
     def from_csv(cls, path: str = '', filename: str = ''):
@@ -371,6 +433,10 @@ class Distribution:
         s23 = dispxp * dispy.m_as('m') * dpprms ** 2
         s14 = dispx.m_as('m') * dispyp * dpprms ** 2
         s24 = dispxp * dispyp * dpprms ** 2
+        s15 = dispx.m_as('m') * dpprms ** 2
+        s25 = dispxp * dpprms ** 2
+        s35 = dispy.m_as('m') * dpprms ** 2
+        s45 = dispyp * dpprms ** 2
         s55 = dpprms ** 2
 
         return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
@@ -381,10 +447,14 @@ class Distribution:
                                                                             dpp=dpp,
                                                                             s11=s11,
                                                                             s12=s12,
+                                                                            s15=s15,
+                                                                            s25=s25,
                                                                             s22=s22,
                                                                             s33=s33,
                                                                             s34=s34,
+                                                                            s35=s35,
                                                                             s44=s44,
+                                                                            s45=s45,
                                                                             s13=s13,
                                                                             s23=s23,
                                                                             s14=s14,
