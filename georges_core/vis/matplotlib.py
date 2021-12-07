@@ -3,7 +3,6 @@ TODO
 """
 import logging
 
-import numpy as _np
 import pandas as _pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -64,9 +63,6 @@ class MatplotlibArtist(_Artist):
         else:
             self._ax = ax
             self._fig = ax.figure
-        self._ax2 = self._ax.twinx()
-        self._ax2.set_ylim([0, 1])
-        self._ax2.axis('off')
 
     @property
     def ax(self):
@@ -117,8 +113,6 @@ class MatplotlibArtist(_Artist):
         """
         self._ax.plot(*args, **kwargs)
 
-        # THIS IS THE OLD common.py
-
     @staticmethod
     def beamline_get_ticks_locations(o):
         return list(o['AT_CENTER'].apply(lambda e: e.m_as('m')).values)
@@ -152,19 +146,10 @@ class MatplotlibArtist(_Artist):
         self._ax.grid(True, alpha=0.25)
 
         if with_cartouche:
-            self.draw_cartouche(beamline)
+            self.draw_cartouche(beamline, print_label, ticks_locations_short, ticks_labels_short)
 
         if with_aperture:
             self.draw_aperture(beamline, **kwargs)
-
-        if print_label:
-            self._ax2.axis('on')
-            self._ax2.get_xaxis().set_tick_params(direction='out')
-            self._ax2.tick_params(axis='both', which='major')
-            self._ax2.tick_params(axis='x')
-            plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
-            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
-            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     def draw_aperture(self, bl, **kwargs):
 
@@ -291,7 +276,11 @@ class MatplotlibArtist(_Artist):
             )
         )
 
-    def draw_cartouche(self, bl):
+    def draw_cartouche(self, bl, print_label, ticks_locations_short, ticks_labels_short):
+
+        self._ax2 = self._ax.twinx()
+        self._ax2.set_ylim([0, 1])
+        self._ax2.axis('off')
 
         offset = 1.15
         self._ax2.axis('on')
@@ -330,6 +319,14 @@ class MatplotlibArtist(_Artist):
 
             else:
                 logging.warning(f"colors are not implemented for {e['CLASS']}")
+
+        if print_label:
+            self._ax2.get_xaxis().set_tick_params(direction='out')
+            self._ax2.tick_params(axis='both', which='major')
+            self._ax2.tick_params(axis='x')
+            plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
+            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
+            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     # Old method to convert for matplotlib
 
@@ -384,5 +381,4 @@ class MatplotlibArtist(_Artist):
     # def scattering(self, ax, bl, **kwargs):
     #     bl.line.query("TYPE == 'slab'").apply(lambda e: self.draw_slab(ax, e), axis=1)
     #     bl.line.query("TYPE == 'mp'").apply(lambda e: self.draw_measuring_plane(ax, e), axis=1)
-
 
