@@ -330,3 +330,59 @@ class MatplotlibArtist(_Artist):
 
             else:
                 logging.warning(f"colors are not implemented for {e['CLASS']}")
+
+    # Old method to convert for matplotlib
+
+    # @staticmethod
+    # def draw_bpm_size(ax, s, x):
+    #     ax.add_patch(
+    #         patches.Rectangle(
+    #             (s - 0.05, -x),
+    #             0.1,
+    #             2 * x,
+    #         )
+    #     )
+    #
+    # def bpm(self, ax, bl, **kwargs):
+    #     """TODO."""
+    #     if kwargs.get('plane') is None:
+    #         raise Exception("'plane' argument must be provided.")
+    #     bl.line[bl.line[f"BPM_STD_{kwargs.get('plane')}"].notnull()].apply(
+    #         lambda x: self.draw_bpm_size(ax, x['AT_CENTER'], x[f"BPM_STD_{kwargs.get('plane')}"]),
+    #         axis=1
+    #     )
+    #
+    # # THIS IS THE OLD scattering.py
+    # @staticmethod
+    # def draw_slab(ax, e):
+    #     materials_colors = {
+    #         'graphite': 'g',
+    #         'beryllium': 'r',
+    #         'water': 'b',
+    #         'lexan': 'y',
+    #     }
+    #     ax.add_patch(
+    #         patches.Rectangle(
+    #             (e['AT_ENTRY'], -1),  # (x,y)
+    #             e['LENGTH'],  # width
+    #             2,  # height
+    #             hatch='', facecolor=materials_colors.get(e['MATERIAL'], 'k')
+    #         )
+    #     )
+    #
+    # @staticmethod
+    # def draw_measuring_plane(ax, e):
+    #     ax.add_patch(
+    #         patches.Rectangle(
+    #             (e['AT_ENTRY'] - 0.005, -1),  # (x,y)
+    #             0.01,  # width
+    #             2,  # height
+    #             hatch='', facecolor='k'
+    #         )
+    #     )
+    #
+    # def scattering(self, ax, bl, **kwargs):
+    #     bl.line.query("TYPE == 'slab'").apply(lambda e: self.draw_slab(ax, e), axis=1)
+    #     bl.line.query("TYPE == 'mp'").apply(lambda e: self.draw_measuring_plane(ax, e), axis=1)
+
+
