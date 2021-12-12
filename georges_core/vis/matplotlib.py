@@ -63,6 +63,7 @@ class MatplotlibArtist(_Artist):
         else:
             self._ax = ax
             self._fig = ax.figure
+        self._ax2 = None
 
     @property
     def ax(self):
@@ -121,35 +122,109 @@ class MatplotlibArtist(_Artist):
     def beamline_get_ticks_labels(o):
         return list(o.index)
 
+    def plot_cartouche(self, beamline: _pd.DataFrame = None, print_label: bool = False):
+        """
+        Args:
+            beamline:
+            print_label:
+
+        Returns:
+
+        """
+
+        self._ax2 = self._ax.twinx()
+        self._ax2.set_ylim([0, 1])
+        self._ax2.axis('off')
+
+        offset = 1.15
+        self._ax2.axis('on')
+        self._ax2.set_yticks([])
+        self._ax2.set_ylim([0, 1])
+        self._ax2.hlines(offset, 0, beamline.iloc[-1]['AT_EXIT'].m_as('m'), clip_on=False, colors='black', lw=1)
+        for i, e in beamline.iterrows():
+            if e['CLASS'].upper() in ['DRIFT', 'MARKER']:
+                continue
+
+            if e['CLASS'].upper() in ['SBEND', 'RBEND']:
+                self._ax2.add_patch(
+                    patches.Rectangle(
+                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
+                        e['L'].m_as('m'),
+                        .1,
+                        hatch='',
+                        facecolor=palette['BEND'],
+                        clip_on=False,
+                    )
+                )
+
+            elif e['CLASS'].upper() in ['SEXTUPOLE', 'QUADRUPOLE', 'MULTIPOLE', 'HKICKER', 'RECTANGULARCOLLIMATOR',
+                                        'VKICKER', 'DEGRADER', 'CIRCULARCOLLIMATOR', 'MATRIX', 'SCATTERER']:
+                self._ax2.add_patch(
+                    patches.Rectangle(
+                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
+                        e['L'].m_as('m'),
+                        .1,
+                        hatch='',
+                        facecolor=palette[e['CLASS'].upper()],
+                        ec=palette[e['CLASS'].upper()],
+                        clip_on=False,
+                    )
+                )
+
+            else:
+                logging.warning(f"colors are not implemented for {e['CLASS']}")
+
+        if print_label:  # For beamline losses or Twiss
+            bl_short = beamline.reset_index()
+            bl_short = bl_short.query("CLASS != 'Drift'")
+            bl_short = bl_short.set_index("NAME")
+
+            ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
+            ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
+
+            self._ax2.get_xaxis().set_tick_params(direction='out')
+            self._ax2.tick_params(axis='both', which='major')
+            self._ax2.tick_params(axis='x')
+            plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
+            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
+            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
+
     def plot_beamline(self, beamline: _pd.DataFrame = None,
                       print_label: bool = False,
-                      with_cartouche: bool = True,
                       with_aperture: bool = True,
                       **kwargs):
+        """
+        Args:
+            beamline ():
+            print_label ():
+            with_aperture ():
+            **kwargs ():
+
+        Returns:
+
+        """
 
         bl_short = beamline.reset_index()
         bl_short = bl_short[[not a for a in bl_short['NAME'].str.contains("DRIFT")]]
         bl_short = bl_short.set_index("NAME")
-
         ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
         ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
         self._ax.tick_params(axis='both', which='major')
         self._ax.tick_params(axis='x')
-        self._ax.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
-
+        plt.setp(self._ax.xaxis.get_majorticklabels(), rotation=-45)
         self._ax.set_xlim([bl_short.iloc[0]['AT_ENTRY'].m_as('m'), bl_short.iloc[-1]['AT_EXIT'].m_as('m')])
         self._ax.get_xaxis().set_tick_params(direction='out')
-        plt.setp(self._ax.xaxis.get_majorticklabels(), rotation=-45)
         self._ax.yaxis.set_major_locator(MultipleLocator(10))
         self._ax.yaxis.set_minor_locator(MultipleLocator(5))
         self._ax.set_ylim(kwargs.get('ylim', [-60, 60]))
         self._ax.grid(True, alpha=0.25)
 
-        if with_cartouche:
-            self.draw_cartouche(beamline, print_label, ticks_locations_short, ticks_labels_short)
-
         if with_aperture:
             self.draw_aperture(beamline, **kwargs)
+
+        if print_label:
+            self._ax.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
+            self._ax.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     def draw_aperture(self, bl, **kwargs):
 
@@ -175,17 +250,16 @@ class MatplotlibArtist(_Artist):
         else:
             raise _ArtistException("Plane must be 'X', 'Y' or 'both'.")
 
-        # TODO warning here with pandas.loc
         bl['APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
         bl['APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
 
-        # Draw the collimators as they have no chamber.
+        # Draw the collimator as they have no chamber.
         bl.query("CLASS == 'RECTANGULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
         bl.query("CLASS == 'CIRCULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
-
         bl.query("CLASS != 'RECTANGULARCOLLIMATOR' and CLASS !='CIRCULARCOLLIMATOR'", inplace=True)
         if 'CHAMBER' not in bl:
-            bl['CHAMBER'] = [0 * _ureg.mm] * len(bl)
+            bl['CHAMBER'] = 0
+            bl['CHAMBER'] = bl['CHAMBER'].apply(lambda a: a * _ureg.mm)
 
         bl['CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
         bl['CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
@@ -276,58 +350,6 @@ class MatplotlibArtist(_Artist):
             )
         )
 
-    def draw_cartouche(self, bl, print_label, ticks_locations_short, ticks_labels_short):
-
-        self._ax2 = self._ax.twinx()
-        self._ax2.set_ylim([0, 1])
-        self._ax2.axis('off')
-
-        offset = 1.15
-        self._ax2.axis('on')
-        self._ax2.set_yticks([])
-        self._ax2.set_ylim([0, 1])
-        self._ax2.hlines(offset, 0, bl.iloc[-1]['AT_EXIT'].m_as('m'), clip_on=False, colors='black', lw=1)
-        for i, e in bl.iterrows():
-            if e['CLASS'].upper() in ['DRIFT', 'MARKER']:
-                continue
-
-            if e['CLASS'].upper() in ['SBEND', 'RBEND']:
-                self._ax2.add_patch(
-                    patches.Rectangle(
-                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
-                        e['L'].m_as('m'),
-                        .1,
-                        hatch='',
-                        facecolor=palette['BEND'],
-                        clip_on=False,
-                    )
-                )
-
-            elif e['CLASS'].upper() in ['SEXTUPOLE', 'QUADRUPOLE', 'MULTIPOLE', 'HKICKER', 'RECTANGULARCOLLIMATOR',
-                                        'VKICKER', 'DEGRADER', 'CIRCULARCOLLIMATOR', 'MATRIX', 'SCATTERER']:
-                self._ax2.add_patch(
-                    patches.Rectangle(
-                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
-                        e['L'].m_as('m'),
-                        .1,
-                        hatch='',
-                        facecolor=palette[e['CLASS'].upper()],
-                        ec=palette[e['CLASS'].upper()],
-                        clip_on=False,
-                    )
-                )
-
-            else:
-                logging.warning(f"colors are not implemented for {e['CLASS']}")
-
-        if print_label:
-            self._ax2.get_xaxis().set_tick_params(direction='out')
-            self._ax2.tick_params(axis='both', which='major')
-            self._ax2.tick_params(axis='x')
-            plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
-            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
-            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
-
     # Old method to convert for matplotlib
 
     # @staticmethod
@@ -381,4 +403,3 @@ class MatplotlibArtist(_Artist):
     # def scattering(self, ax, bl, **kwargs):
     #     bl.line.query("TYPE == 'slab'").apply(lambda e: self.draw_slab(ax, e), axis=1)
     #     bl.line.query("TYPE == 'mp'").apply(lambda e: self.draw_measuring_plane(ax, e), axis=1)
-
