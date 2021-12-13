@@ -906,17 +906,21 @@ class SurveySequence(Sequence):
 
         # Set units to columns
         try:
-            sequence['K1'] = sequence['K1'].fillna(0).apply(lambda e: e * _ureg.m ** -2)
+            sequence['K1'] = sequence['K1'].fillna(0)
         except KeyError:
-            sequence['K1'] = [0 * _ureg.m ** -2] * len(sequence)
+            sequence['K1'] = 0
         try:
-            sequence['E1'] = sequence['E1'].fillna(0).apply(lambda e: e * _ureg.radians)
+            sequence['E1'] = sequence['E1'].fillna(0)
         except KeyError:
-            sequence['E1'] = [0 * _ureg.radians] * len(sequence)
+            sequence['E1'] = 0
         try:
-            sequence['E2'] = sequence['E2'].fillna(0).apply(lambda e: e * _ureg.radians)
+            sequence['E2'] = sequence['E2'].fillna(0)
         except KeyError:
-            sequence['E2'] = [0 * _ureg.radians] * len(sequence)
+            sequence['E2'] = 0
+
+        sequence['K1'] = sequence['K1'].apply(lambda e: e*_ureg.m**-2)
+        sequence['E1'] = sequence['E1'].apply(lambda e: e*_ureg.radians)
+        sequence['E2'] = sequence['E2'].apply(lambda e: e*_ureg.radians)
 
         idx = sequence.query("TYPE == 'COLLIMATOR'").index
         sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE']}COLLIMATOR" for i in idx]
