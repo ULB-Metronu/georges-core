@@ -157,6 +157,35 @@ class Sequence(metaclass=SequenceType):
         """TODO"""
         return _BetaBlock()
 
+    def set_parameters(self, element: str, parameters: Dict):
+        for el in self._data:
+            if el[0]['NAME'] == element:
+                for param in parameters.keys():
+                    el[0][param] = parameters[param]
+
+    def set_position(self, elements: str, value: _Q):
+        """
+        Set a new position of the center for an element. The parameter at_entry and at_exit are re-computed.
+        Args:
+            elements:
+            value:
+
+        Returns:
+
+        """
+        for k, el in enumerate(self._data):
+            if el[0]['NAME'] == elements:
+                at = list(el[0:4])
+                at[2] = value
+                at[1] = at[2] - 0.5 * at[0]['L']
+                at[3] = at[2] + 0.5 * at[0]['L']
+                self._data[k] = tuple(at)
+
+    def get_parameters(self, element: str, parameters: List):
+        for el in self._data:
+            if el[0]['NAME'] == element:
+                return dict(zip(parameters, list(map(el[0].get, parameters))))
+
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
         if self._data is None and df is None:
