@@ -316,6 +316,7 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_survey(filename: str = 'survey.csv',
                     path: str = '.',
+                    kinematics: _Kinematics = None
                     ):
         """
         TODO
@@ -323,7 +324,7 @@ class Sequence(metaclass=SequenceType):
         Returns:
 
         """
-        return SurveySequence(filename=filename, path=path)
+        return SurveySequence(filename=filename, path=path, kinematics=kinematics)
 
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
@@ -944,18 +945,27 @@ class SurveySequence(Sequence):
         data = []
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
                                                          particle=kinematics.particule)
+
+        extra_columns = list(set(sequence.columns.values) - {'APERTYPE', 'CLASS', 'L', 'KEYWORD', 'AT_ENTRY',
+                                                             'AT_CENTER', 'AT_EXIT', 'K1', 'APERTURE', 'K1L', 'E1',
+                                                             'E2', 'TILT', 'MATERIAL', 'KINETIC_ENERGY', 'ANGLE',
+                                                             'KICK'})
         for element in sequence.iterrows():
-            data.append((csv_element_factory(element),
+            if extra_columns:
+                ele = {**csv_element_factory(element), **element[1][extra_columns]}
+            else:
+                ele = {**csv_element_factory(element)}
+            data.append((ele,
                          element[1]['AT_ENTRY'],
                          element[1]['AT_CENTER'],
-                         element[1]['AT_EXIT']))
-
+                         element[1]['AT_EXIT']
+                         ))
         super().__init__(name='SURVEY',
                          data=data,
                          metadata=sequence_metadata)
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units=False):
-        df = _pd.DataFrame([{**e[0].data, **{
+        df = _pd.DataFrame([{**e[0], **{
             'AT_ENTRY': e[1],
             'AT_CENTER': e[2],
             'AT_EXIT': e[3]
