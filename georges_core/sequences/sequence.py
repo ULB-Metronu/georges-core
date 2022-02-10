@@ -2,7 +2,7 @@
 
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
+from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union, Dict
 from dataclasses import dataclass
 import numpy as _np
 import pandas as _pd
@@ -22,6 +22,7 @@ from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
     csv_element_factory
 from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
+from .. import Q_ as _Q
 from ..frame import Frame
 
 if TYPE_CHECKING:
@@ -160,10 +161,13 @@ class Sequence(metaclass=SequenceType):
         return _BetaBlock()
 
     def set_parameters(self, element: str, parameters: Dict):
-        for el in self._data:
-            if el[0]['NAME'] == element:
-                for param in parameters.keys():
-                    el[0][param] = parameters[param]
+        if isinstance(self._data, _pd.DataFrame):
+            self._data.loc[element, parameters.keys()] = parameters.values()
+        else:
+            for el in self._data:
+                if el[0]['NAME'] == element:
+                    for param in parameters.keys():
+                        el[0][param] = parameters[param]
 
     def set_position(self, elements: str, value: _Q):
         """
@@ -184,9 +188,12 @@ class Sequence(metaclass=SequenceType):
                 self._data[k] = tuple(at)
 
     def get_parameters(self, element: str, parameters: List):
-        for el in self._data:
-            if el[0]['NAME'] == element:
-                return dict(zip(parameters, list(map(el[0].get, parameters))))
+        if isinstance(self._data, _pd.DataFrame):
+            return dict(self._data.loc[element, parameters])
+        else:
+            for el in self._data:
+                if el[0]['NAME'] == element:
+                    return dict(zip(parameters, list(map(el[0].get, parameters))))
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
