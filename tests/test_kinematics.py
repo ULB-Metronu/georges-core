@@ -1,6 +1,6 @@
 import pytest
 from georges_core import ureg
-from georges_core.kinematics import Kinematics, KinematicsException
+from georges_core.kinematics import Kinematics
 from georges_core.particles import *
 
 

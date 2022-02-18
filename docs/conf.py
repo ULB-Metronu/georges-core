@@ -34,7 +34,6 @@ version = georges_core.__version__
 # The full version, including alpha/beta/rc tags
 release = georges_core.__version__
 
-
 # -- General configuration ---------------------------------------------------
 nbsphinx_allow_errors = True
 nbsphinx_execute = 'never'
@@ -88,7 +87,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
 
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -125,7 +123,6 @@ html_static_path = ['_static']
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'georges_coredoc'
 
-
 # -- Options for LaTeX output ------------------------------------------------
 
 latex_elements = {
@@ -154,7 +151,6 @@ latex_documents = [
      u'Cédric Hernalsteens (cedric.hernalsteens@ulb.be)', 'manual'),
 ]
 
-
 # -- Options for manual page output ------------------------------------------
 
 # One entry per manual page. List of tuples
@@ -163,7 +159,6 @@ man_pages = [
     (master_doc, 'georges-core', 'Georges-core Documentation',
      [author], 1)
 ]
-
 
 # -- Options for Texinfo output ----------------------------------------------
 
@@ -175,7 +170,6 @@ texinfo_documents = [
      author, 'Georges-core', 'One line description of project.',
      'Miscellaneous'),
 ]
-
 
 # -- Options for Epub output -------------------------------------------------
 
@@ -193,7 +187,6 @@ epub_title = project
 
 # A list of files that should not be packed into the epub file.
 epub_exclude_files = ['search.html']
-
 
 # -- Extension configuration -------------------------------------------------
 
@@ -219,13 +212,13 @@ napoleon_use_rtype = True
 autoclass_content = 'both'
 autodoc_inherit_docstrings = True
 autodoc_default_options = {
-    #'members': None,
+    # 'members': None,
     'member-order': 'bysource',
-    #'undoc-members': None,
+    # 'undoc-members': None,
     'private_members': None,
     'special_members': None,
-    #'inherited-members': None,
-    #'show-inheritance': None,
-    #'ignore-module-all': None,
-    #'exclude-members': 'KEYWORD, PARAMETERS',
+    # 'inherited-members': None,
+    # 'show-inheritance': None,
+    # 'ignore-module-all': None,
+    # 'exclude-members': 'KEYWORD, PARAMETERS',
 }
