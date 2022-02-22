@@ -996,7 +996,7 @@ def beta_to_pv(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     return ekin_to_pv(beta_to_ekin(beta), particle=particle)
 
 
-def beta_to_gamma(beta: float) -> float:
+def beta_to_gamma(beta: float, **_) -> float:
     """
     Converts relativistic beta to relativistic gamma.
 
@@ -1118,7 +1118,7 @@ def gamma_to_pv(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
     return ekin_to_pv(gamma_to_ekin(gamma, particle), particle)
 
 
-def gamma_to_beta(gamma: float) -> float:
+def gamma_to_beta(gamma: float, **_) -> float:
     """
     Converts relativistic gamma to relativistic beta.
 
