@@ -25,8 +25,10 @@ shutil.copytree(src="../examples", dst='./examples', dirs_exist_ok=True)
 # -- Project information -----------------------------------------------------
 
 project = 'Georges-core'
-copyright = u'2018-2021, Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), Eustache Gnacadja (eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be)'
-author = u'Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), Eustache Gnacadja (eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be)'
+copyright = u'2018-2021, Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), ' \
+            u'Eustache Gnacadja (eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be) '
+author = u'Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), Eustache Gnacadja (' \
+         u'eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be) '
 
 # The short X.Y version
 version = georges_core.__version__
