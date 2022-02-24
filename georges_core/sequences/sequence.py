@@ -906,6 +906,8 @@ class SurveySequence(Sequence):
         # check if the survey is (AT_CENTER, L) or (X, Y, Z)
         if sequence.get(['AT_CENTER']) is None and sequence.get(['X', 'Y', 'Z']) is not None:
             compute_at_position()
+        elif sequence.get(['AT_CENTER']) is not None and sequence.get(['X', 'Y', 'Z']) is None:
+            pass
         else:
             raise SequenceException("Sequence must be (AT_CENTER, L) or (X,Y,Z)")
 
