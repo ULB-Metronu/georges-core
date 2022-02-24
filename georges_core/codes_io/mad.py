@@ -73,6 +73,9 @@ def load_mad_twiss_table(filename: str = 'twiss.outx',
             _[c] = _pd.to_numeric(_[c])
         except ValueError:
             pass
+    if 'KIND' in _.columns:
+        _.rename(columns={'KIND': 'KEYWORD'}, inplace=True)
+    _['KEYWORD'] = _['KEYWORD'].apply(lambda e: e.upper())
 
     # Compute strength of magnetics elements K1, K2, K3
     ele = ['MARKER', 'DRIFT']

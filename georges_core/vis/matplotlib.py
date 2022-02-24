@@ -232,7 +232,7 @@ class MatplotlibArtist(_Artist):
             logging.warning("No APERTURE defined in the beamline")
             return
 
-        bl.at[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
+        bl['CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
         _elements = ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']
         bl.query("CLASS in @_elements", inplace=True)
         planes = kwargs.get('plane', 'X')
