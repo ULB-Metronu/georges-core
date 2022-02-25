@@ -14,9 +14,9 @@ DEFAULT_N_PARTICLES = 1e5
 # Define all methods to generate the beam
 def load_from_file(path: str = '', filename='', file_format='csv') -> _pd.DataFrame:
     if file_format == 'csv':
-        return _pd.read_csv(os.path.join(path, filename))[['X', 'PX', 'Y', 'PY', 'DPP']]
+        return _pd.read_csv(os.path.join(path, filename))
     elif file_format == 'parquet':
-        return _pd.read_parquet(os.path.join(path, filename))[['X', 'PX', 'Y', 'PY', 'DPP']]
+        return _pd.read_parquet(os.path.join(path, filename))
     else:
         raise DistributionException(f"{file_format} is not a valid format. Please use csv or parquet instead")
 
