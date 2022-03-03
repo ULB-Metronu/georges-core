@@ -11,6 +11,7 @@ MANZONI_FLAVOR = {"Srotation": "SRotation",
 
 CSV_TO_SEQUENCE = {
     "MARKER": (lambda _: georges_core.sequences.Element.Marker(_[0], APERTYPE=None)),
+    "DRIFT": (lambda _: georges_core.sequences.Element.Drift(_[0], L=_[1]['L'], APERTYPE=None)),
     "QUADRUPOLE": (lambda _: georges_core.sequences.Element.Quadrupole(_[0],
                                                                        L=_[1]['L'],
                                                                        K1=_[1]['K1'],
@@ -38,12 +39,13 @@ CSV_TO_SEQUENCE = {
                                                                                            APERTYPE="ELLIPTICAL")),
     "SCATTERER": (lambda _: georges_core.sequences.Element.Scatterer(_[0],
                                                                      L=_[1]["L"],
-                                                                     MATERIAL=_[1]["MATERIAL"],
+                                                                     MATERIAL=_[1]["MATERIAL"] if isinstance(_[1]["MATERIAL"], str) else "Air",
                                                                      KINETIC_ENERGY=0 * _ureg.MeV,
                                                                      APERTYPE=None)),
 
     "DEGRADER": (lambda _: georges_core.sequences.Element.Degrader(_[0],
                                                                    KINETIC_ENERGY=0 * _ureg.MeV,
+                                                                   MATERIAL=_[1]["MATERIAL"] if isinstance(_[1]["MATERIAL"], str) else "Beryllium",
                                                                    APERTYPE=None)),
 
     "SROTATION": (lambda _: georges_core.sequences.Element.SRotation(_[0],

@@ -195,6 +195,11 @@ class Sequence(metaclass=SequenceType):
                 if el[0]['NAME'] == element:
                     return dict(zip(parameters, list(map(el[0].get, parameters))))
 
+    def get_value(self, elements: List[str]):
+        for el in self._data:
+            if el[0]['NAME'] in elements:
+                return el
+
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
         if self._data is None and df is None:
@@ -834,6 +839,8 @@ class SurveySequence(Sequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 from_element: str = None,
+                 to_element: str = None,
                  kinematics: _Kinematics = None,
                  metadata: Optional[SequenceMetadata] = None
                  ):
@@ -920,7 +927,7 @@ class SurveySequence(Sequence):
         sequence['E2'] = sequence['E2'].apply(lambda e: e*_ureg.radians)
 
         idx = sequence.query("TYPE == 'COLLIMATOR'").index
-        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE']}COLLIMATOR" for i in idx]
+        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE'].upper()}COLLIMATOR" for i in idx]
 
         def check_apertures(e):
             if isinstance(e, float):

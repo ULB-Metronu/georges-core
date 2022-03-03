@@ -172,14 +172,14 @@ class MatplotlibArtist(_Artist):
             return
 
         bl.at[:, 'CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
-        bl = bl.query("CLASS != 'MARKER' and CLASS != 'DRIFT'")  # Marker doesn't have aperture
+        _elements = ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']
+        bl.query("CLASS in @_elements", inplace=True)
         planes = kwargs.get('plane', 'X')
 
         # Set the y aperture for circular apertype
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
-            bl.at[idx, 'APERTURE'] = _np.array([bl.at[idx, 'APERTURE'][0],
-                                                bl.at[idx, 'APERTURE'][0]],
-                                               dtype=object)
+            bl.at[idx, 'APERTURE'] = [bl.at[idx, 'APERTURE'][0], bl.at[idx, 'APERTURE'][0]]
+
         if planes == 'X':
             index = [0, 0]
         elif planes == 'Y':
@@ -190,8 +190,8 @@ class MatplotlibArtist(_Artist):
             raise _ArtistException("Plane must be 'X', 'Y' or 'both'.")
 
         # TODO warning here with pandas.loc
-        bl.at[:, 'APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
-        bl.at[:, 'APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
+        bl['APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
+        bl['APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
 
         if 'CHAMBER' not in bl:
             bl.at[:, 'CHAMBER'] = [0 * _ureg.mm] * len(bl)
@@ -296,15 +296,9 @@ class MatplotlibArtist(_Artist):
                 continue
 
             if e['CLASS'].upper() in ['SBEND', 'RBEND']:
-                if e['K1'].magnitude > 0:
-                    focusing = 1.0
-                elif e['K1'].magnitude < 0:
-                    focusing = -1.0
-                else:
-                    focusing = 0.0
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e['AT_ENTRY'].m_as('m'), offset - 0.05 + focusing * 0.02),
+                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
                         e['L'].m_as('m'),
                         .1,
                         hatch='',
