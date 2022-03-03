@@ -332,7 +332,8 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_survey(filename: str = 'survey.csv',
                     path: str = '.',
-                    kinematics: _Kinematics = None
+                    kinematics: _Kinematics = None,
+                    **kwargs
                     ):
         """
         TODO
@@ -340,7 +341,7 @@ class Sequence(metaclass=SequenceType):
         Returns:
 
         """
-        return SurveySequence(filename=filename, path=path, kinematics=kinematics)
+        return SurveySequence(filename=filename, path=path, kinematics=kinematics, **kwargs)
 
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
