@@ -59,7 +59,22 @@ CSV_TO_SEQUENCE = {
                                                                  L=_[1]['L'],
                                                                  KICK=0,
                                                                  APERTURE=_[1]['APERTURE'],
-                                                                 APERTYPE=_[1]['APERTYPE'])),
+                                                                 APERTYPE=_[1]['APERTYPE'],
+                                                                 CHAMBER=_[1]['CHAMBER'])),
+    "FRINGEIN": (lambda _: georges_core.sequences.Element.Fringein(_[0],
+                                                                   L=_[1]['L'],
+                                                                   KICK=0,
+                                                                   ANGLE=_[1]['ANGLE'],
+                                                                   APERTURE=_[1]['APERTURE'],
+                                                                   APERTYPE=_[1]['APERTYPE'],
+                                                                   CHAMBER=_[1]['CHAMBER'])),
+    "FRINGEOUT": (lambda _: georges_core.sequences.Element.Fringeout(_[0],
+                                                                     L=_[1]['L'],
+                                                                     KICK=0,
+                                                                     ANGLE=_[1]['ANGLE'],
+                                                                     APERTURE=_[1]['APERTURE'],
+                                                                     APERTYPE=_[1]['APERTYPE'],
+                                                                     CHAMBER=_[1]['CHAMBER'])),
 }
 
 
