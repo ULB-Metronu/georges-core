@@ -1027,7 +1027,7 @@ class BDSIMSequence(Sequence):
         self.set_units(bdsim_model)
 
         # Load the beam properties
-        # FIXME Change the method to access beam base. Do not change in pybdsim
+        # FIXME Change the method to access beam base. Check in pybdsim
 
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
         particle_name = bdsim_beam["particle"].values[0].capitalize()
@@ -1079,7 +1079,7 @@ class BDSIMSequence(Sequence):
         model['ANGLE'] = model['ANGLE'].apply(lambda e: e * _ureg.radians)
         model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
         model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
-        model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(list, axis=1)
+        model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(lambda e: e.values.tolist(), axis=1)
         model['K1'] = model['K1'].apply(lambda e: e * _ureg.m ** -2)
         model['K1S'] = model['K1S'].apply(lambda e: e * _ureg.m ** -2)
         model['K2'] = model['K2'].apply(lambda e: e * _ureg.m ** -3)
