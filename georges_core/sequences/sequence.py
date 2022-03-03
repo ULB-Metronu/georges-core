@@ -195,6 +195,22 @@ class Sequence(metaclass=SequenceType):
                 if el[0]['NAME'] == element:
                     return dict(zip(parameters, list(map(el[0].get, parameters))))
 
+    def set_position(self, elements: str, value: _Q):
+        element_index = 0
+        new_el = ()
+        for k, el in enumerate(self._data):
+            if el[0]['NAME'] == elements:
+                at = list(el[0:4])
+                at[2] = value
+                at[1] = at[2] - 0.5 * at[0]['L']
+                at[3] = at[2] + 0.5 * at[0]['L']
+                self._data[k] = tuple(at)
+
+    def get_value(self, elements: List[str]):
+        for el in self._data:
+            if el[0]['NAME'] in elements:
+                return el
+
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
         if self._data is None and df is None:
@@ -316,7 +332,8 @@ class Sequence(metaclass=SequenceType):
     @staticmethod
     def from_survey(filename: str = 'survey.csv',
                     path: str = '.',
-                    kinematics: _Kinematics = None
+                    kinematics: _Kinematics = None,
+                    **kwargs
                     ):
         """
         TODO
@@ -324,7 +341,7 @@ class Sequence(metaclass=SequenceType):
         Returns:
 
         """
-        return SurveySequence(filename=filename, path=path, kinematics=kinematics)
+        return SurveySequence(filename=filename, path=path, kinematics=kinematics, **kwargs)
 
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
@@ -638,6 +655,7 @@ class TwissSequence(Sequence):
                  to_element: str = None,
                  with_beam: bool = False,
                  nparticles: int = 1,
+                 refer: str = 'center',
                  element_keys: Optional[Mapping[str, str]] = None,
                  ):
         """
@@ -652,6 +670,7 @@ class TwissSequence(Sequence):
             to_element: Name of the last element
             with_beam: Generate a Gaussian beam from Twiss parameters
             nparticles: Number of particles in the beam (default 1)
+            refer: corresponding placement in MAD-X (entry, center, exit)
             element_keys:
 
         """
@@ -660,9 +679,20 @@ class TwissSequence(Sequence):
 
         # Add some columns
         twiss_table['CLASS'] = twiss_table['KEYWORD'].apply(str.capitalize)
-        twiss_table['AT_CENTER'] = twiss_table['S']
-        twiss_table["AT_ENTRY"] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
-        twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+        if refer == "entry":
+            twiss_table["AT_ENTRY"] = twiss_table["S"]
+            twiss_table['AT_CENTER'] = twiss_table["AT_ENTRY"] + 0.5 * twiss_table["L"]
+            twiss_table["AT_EXIT"] = twiss_table["AT_ENTRY"] + twiss_table["L"]
+
+        if refer == 'center':
+            twiss_table["AT_CENTER"] = twiss_table["S"]
+            twiss_table['AT_ENTRY'] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
+            twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+
+        if refer == 'exit':
+            twiss_table["AT_EXIT"] = twiss_table["S"]
+            twiss_table['AT_CENTER'] = twiss_table["AT_EXIT"] - 0.5 * twiss_table["L"]
+            twiss_table["AT_ENTRY"] = twiss_table["AT_EXIT"] - twiss_table["L"]
 
         try:  # For MAD-X
             particle_name = twiss_headers['PARTICLE'].capitalize()
@@ -834,6 +864,8 @@ class SurveySequence(Sequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 from_element: str = None,
+                 to_element: str = None,
                  kinematics: _Kinematics = None,
                  metadata: Optional[SequenceMetadata] = None
                  ):
@@ -914,13 +946,22 @@ class SurveySequence(Sequence):
             sequence['E2'] = sequence['E2'].fillna(0)
         except KeyError:
             sequence['E2'] = 0
+        try:
+            sequence['TILT'] = sequence['TILT'].fillna(0)
+        except KeyError:
+            sequence['TILT'] = 0
+        try:
+            sequence['CHAMBER'] = sequence['CHAMBER'].fillna(0).apply(lambda e: e * _ureg.m)
+        except KeyError:
+            sequence['CHAMBER'] = [0 * _ureg.m] * len(sequence)
 
         sequence['K1'] = sequence['K1'].apply(lambda e: e*_ureg.m**-2)
         sequence['E1'] = sequence['E1'].apply(lambda e: e*_ureg.radians)
         sequence['E2'] = sequence['E2'].apply(lambda e: e*_ureg.radians)
+        sequence['TILT'] = sequence['TILT'].apply(lambda e: e*_ureg.radians)
 
         idx = sequence.query("TYPE == 'COLLIMATOR'").index
-        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE']}COLLIMATOR" for i in idx]
+        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE'].upper()}COLLIMATOR" for i in idx]
 
         def check_apertures(e):
             if isinstance(e, float):
@@ -929,7 +970,6 @@ class SurveySequence(Sequence):
                 return [float(k) * _ureg.m for k in e.replace('[', '').replace(']', '').split(';')]
 
         sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
-
         data = []
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
                                                          particle=kinematics.particule)
@@ -940,7 +980,7 @@ class SurveySequence(Sequence):
                                                              'KICK'})
         for element in sequence.iterrows():
             if extra_columns:
-                ele = {**csv_element_factory(element), **element[1][extra_columns]}
+                ele = {**csv_element_factory(element), **element[1][sequence.columns.values]}
             else:
                 ele = {**csv_element_factory(element)}
             data.append((ele,
@@ -992,7 +1032,7 @@ class BDSIMSequence(Sequence):
         self.set_units(bdsim_model)
 
         # Load the beam properties
-        # FIXME Change the method to access beam base. Do not change in pybdsim
+        # FIXME Change the method to access beam base. Check in pybdsim
 
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
         particle_name = bdsim_beam["particle"].values[0].capitalize()
@@ -1044,7 +1084,7 @@ class BDSIMSequence(Sequence):
         model['ANGLE'] = model['ANGLE'].apply(lambda e: e * _ureg.radians)
         model['APERTURE1'] = model['APERTURE1'].apply(lambda e: e * _ureg.m)
         model['APERTURE2'] = model['APERTURE2'].apply(lambda e: e * _ureg.m)
-        model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(list, axis=1)
+        model['APERTURE'] = model[['APERTURE1', 'APERTURE2']].apply(lambda e: e.values.tolist(), axis=1)
         model['K1'] = model['K1'].apply(lambda e: e * _ureg.m ** -2)
         model['K1S'] = model['K1S'].apply(lambda e: e * _ureg.m ** -2)
         model['K2'] = model['K2'].apply(lambda e: e * _ureg.m ** -3)

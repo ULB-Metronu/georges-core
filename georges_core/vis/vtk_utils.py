@@ -104,23 +104,20 @@ def histogram3d_to_vtk(histogram3d,
                 num_array=values,
                 deep=True,
                 array_type=_vtk.VTK_FLOAT
-            )
-            , name
+            ),
+            name
         )
     )
     imgdat.SetDimensions(dimensions[0], dimensions[1], dimensions[2])
     imgdat.SetOrigin(origin[0] - (
             histogram3d.coordinates_normalization * (histogram3d.edges[0][-1] - histogram3d.edges[0][0]) / 2) + (
-                             histogram3d.coordinates_normalization * (
-                             histogram3d.edges[0][1] - histogram3d.edges[0][0]) / 2),
-                     origin[1] - (histogram3d.coordinates_normalization * (
-                             histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2) + (
-                             histogram3d.coordinates_normalization * (
-                             histogram3d.edges[1][1] - histogram3d.edges[1][0]) / 2),
-                     origin[2] - (histogram3d.coordinates_normalization * (
-                             histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2) + (
-                             histogram3d.coordinates_normalization * (
-                             histogram3d.edges[2][1] - histogram3d.edges[2][0]) / 2)
+            histogram3d.coordinates_normalization * (histogram3d.edges[0][1] - histogram3d.edges[0][0]) / 2),
+                     origin[1] - (
+            histogram3d.coordinates_normalization * (histogram3d.edges[1][-1] - histogram3d.edges[1][0]) / 2) + (
+            histogram3d.coordinates_normalization * (histogram3d.edges[1][1] - histogram3d.edges[1][0]) / 2),
+                     origin[2] - (
+            histogram3d.coordinates_normalization * (histogram3d.edges[2][-1] - histogram3d.edges[2][0]) / 2) + (
+            histogram3d.coordinates_normalization * (histogram3d.edges[2][1] - histogram3d.edges[2][0]) / 2)
                      )
     imgdat.SetSpacing(spacing)
 
@@ -131,7 +128,7 @@ def histogram3d_to_vtk(histogram3d,
     writer.Write()
 
 
-def beam_to_vtk(filename, output='beam', option_ISO=False, option_NOT_ISO=False, option_primaries=False,
+def beam_to_vtk(filename, output='beam', option_iso=False, option_not_iso=False, option_primaries=False,
                 option_secondaries=False):
     file = uproot.open(filename)
     evt = file.get('Event')
@@ -147,7 +144,6 @@ def beam_to_vtk(filename, output='beam', option_ISO=False, option_NOT_ISO=False,
     colors.SetNumberOfComponents(3)
     colors.SetName("Colors")
 
-    red = [255, 0, 0]
     green = [0, 255, 0]
     blue = [0, 0, 255]
 
@@ -159,9 +155,9 @@ def beam_to_vtk(filename, output='beam', option_ISO=False, option_NOT_ISO=False,
 
             run = False
 
-            if option_ISO and j == 0 and s_tracks[i].tolist()[j][-1] > 15.42:
+            if option_iso and j == 0 and s_tracks[i].tolist()[j][-1] > 15.42:
                 run = True
-            if option_NOT_ISO and j == 0 and s_tracks[i].tolist()[j][-1] < 15.42:
+            if option_not_iso and j == 0 and s_tracks[i].tolist()[j][-1] < 15.42:
                 run = True
             if option_primaries and j == 0:
                 run = True

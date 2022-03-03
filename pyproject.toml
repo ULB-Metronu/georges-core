@@ -28,7 +28,7 @@ awkward = "^1.4.0"
 pyarrow = "^5.0.0"
 fastparquet = "^0.7.1"
 
-pybdsim = { git = "https://bitbucket.org/jairhul/pybdsim", branch = "master" }
+pybdsim = { git = "https://bitbucket.org/jairhul/pybdsim", branch = "feature_uproot" }
 
 sphinx = { version = "^4.0.2", optional = true }
 sphinx-material = { version = "^0.0.34", optional = true }
