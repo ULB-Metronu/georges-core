@@ -199,14 +199,12 @@ class Sequence(metaclass=SequenceType):
         element_index = 0
         new_el = ()
         for k, el in enumerate(self._data):
-            if el[0]['NAME'] in elements:
-                element_index = k
+            if el[0]['NAME'] == elements:
                 at = list(el[0:4])
                 at[2] = value
                 at[1] = at[2] - 0.5 * at[0]['L']
                 at[3] = at[2] + 0.5 * at[0]['L']
-                new_el = tuple(at)
-        self._data[element_index] = new_el
+                self._data[k] = tuple(at)
 
     def get_value(self, elements: List[str]):
         for el in self._data:
@@ -934,6 +932,10 @@ class SurveySequence(Sequence):
             sequence['E2'] = sequence['E2'].fillna(0)
         except KeyError:
             sequence['E2'] = 0
+        try:
+            sequence['CHAMBER'] = sequence['CHAMBER'].fillna(0).apply(lambda e: e * _ureg.m)
+        except KeyError:
+            sequence['CHAMBER'] = [0 * _ureg.m] * len(sequence)
 
         sequence['K1'] = sequence['K1'].apply(lambda e: e*_ureg.m**-2)
         sequence['E1'] = sequence['E1'].apply(lambda e: e*_ureg.radians)
@@ -949,7 +951,6 @@ class SurveySequence(Sequence):
                 return [float(k) * _ureg.m for k in e.replace('[', '').replace(']', '').split(';')]
 
         sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
-
         data = []
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
                                                          particle=kinematics.particule)

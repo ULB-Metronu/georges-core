@@ -193,17 +193,20 @@ class MatplotlibArtist(_Artist):
         bl['APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
         bl['APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
 
-        if 'CHAMBER' not in bl:
-            bl.at[:, 'CHAMBER'] = [0 * _ureg.mm] * len(bl)
+        # Draw the collimators as they have no chamber.
+        bl.query("CLASS == 'RECTANGULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
+        bl.query("CLASS == 'CIRCULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
 
-        bl.at[:, 'CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
-        bl.at[:, 'CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
+        bl.query("CLASS != 'RECTANGULARCOLLIMATOR' and CLASS !='CIRCULARCOLLIMATOR'", inplace=True)
+        if 'CHAMBER' not in bl:
+            bl['CHAMBER'] = [0 * _ureg.mm] * len(bl)
+
+        bl['CHAMBER_UP'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
+        bl['CHAMBER_DOWN'] = bl['CHAMBER'].apply(lambda a: a.m_as('mm'))
 
         bl.query("CLASS == 'QUADRUPOLE'").apply(lambda e: self.draw_quad(e), axis=1)
         bl.query("CLASS == 'SBEND'").apply(lambda e: self.draw_bend(e), axis=1)
         bl.query("CLASS == 'RBEND'").apply(lambda e: self.draw_bend(e), axis=1)
-        bl.query("CLASS == 'RECTANGULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
-        bl.query("CLASS == 'CIRCULARCOLLIMATOR'").apply(lambda e: self.draw_coll(e), axis=1)
 
     def draw_quad(self, e):
         self._ax.add_patch(
@@ -217,7 +220,7 @@ class MatplotlibArtist(_Artist):
 
         self._ax.add_patch(
             patches.Rectangle(
-                (e['AT_ENTRY'].m_as('m'), -e['APERTURE_DOWN'] - e['CHAMBER_UP']),  # (x,y)
+                (e['AT_ENTRY'].m_as('m'), -e['APERTURE_DOWN'] - e['CHAMBER_DOWN']),  # (x,y)
                 e['L'].m_as('m'),  # width
                 -100,
                 facecolor=palette['QUADRUPOLE']
@@ -246,6 +249,9 @@ class MatplotlibArtist(_Artist):
 
     def draw_bend(self, e):
         tmp = e['APERTURE_UP'] + e['CHAMBER_UP']
+        if tmp < 55:
+            logging.warning(f"Aperture are bigger than 55 mm for {e.name}.")
+
         self._ax.add_patch(
             patches.Rectangle(
                 (e['AT_ENTRY'].m_as('m'), tmp if tmp < 55 else 55),  # (x,y)
@@ -271,7 +277,7 @@ class MatplotlibArtist(_Artist):
             patches.Rectangle(
                 (e['AT_ENTRY'].m_as('m'), (e['APERTURE_UP'])),  # (x,y)
                 e['L'].m_as('m'),  # width
-                1000 * e['CHAMBER_UP'],  # height
+                e['CHAMBER_UP'],  # height
                 hatch='', facecolor=palette['base01']
             )
         )
@@ -279,7 +285,7 @@ class MatplotlibArtist(_Artist):
             patches.Rectangle(
                 (e['AT_ENTRY'].m_as('m'), -e['APERTURE_DOWN']),  # (x,y)
                 e['L'].m_as('m'),  # width
-                -1000 * e['CHAMBER_UP'],  # height
+                -e['CHAMBER_UP'],  # height
                 hatch='', facecolor=palette['base01']
             )
         )
