@@ -2,15 +2,15 @@
 
 """
 from __future__ import annotations
-from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union
+from typing import TYPE_CHECKING, Optional, Any, List, Tuple, Mapping, Union, Dict
 from dataclasses import dataclass
 import numpy as _np
 import pandas as _pd
 import logging
 from itertools import compress
-
+import os
+import copy
 import pandas as pd
-
 from .. import particles as _particles
 from ..particles import Proton as _Proton
 from ..kinematics import Kinematics as _Kinematics
@@ -18,9 +18,12 @@ from .elements import Element as _Element
 from .elements import ElementClass as _ElementClass
 from .betablock import BetaBlock as _BetaBlock
 from ..codes_io import load_mad_twiss_table, load_mad_twiss_headers, \
-                    load_transport_input_file, transport_element_factory
+    load_transport_input_file, transport_element_factory, \
+    csv_element_factory
 from ..distribution import Distribution as _Distribution
 from .. import ureg as _ureg
+from .. import Q_ as _Q
+from ..frame import Frame
 
 if TYPE_CHECKING:
     from ..particles import ParticuleType as _ParticuleType
@@ -158,10 +161,13 @@ class Sequence(metaclass=SequenceType):
         return _BetaBlock()
 
     def set_parameters(self, element: str, parameters: Dict):
-        for el in self._data:
-            if el[0]['NAME'] == element:
-                for param in parameters.keys():
-                    el[0][param] = parameters[param]
+        if isinstance(self._data, _pd.DataFrame):
+            self._data.loc[element, parameters.keys()] = parameters.values()
+        else:
+            for el in self._data:
+                if el[0]['NAME'] == element:
+                    for param in parameters.keys():
+                        el[0][param] = parameters[param]
 
     def set_position(self, elements: str, value: _Q):
         """
@@ -182,9 +188,12 @@ class Sequence(metaclass=SequenceType):
                 self._data[k] = tuple(at)
 
     def get_parameters(self, element: str, parameters: List):
-        for el in self._data:
-            if el[0]['NAME'] == element:
-                return dict(zip(parameters, list(map(el[0].get, parameters))))
+        if isinstance(self._data, _pd.DataFrame):
+            return dict(self._data.loc[element, parameters])
+        else:
+            for el in self._data:
+                if el[0]['NAME'] == element:
+                    return dict(zip(parameters, list(map(el[0].get, parameters))))
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         """TODO"""
@@ -305,14 +314,17 @@ class Sequence(metaclass=SequenceType):
                                  path=path)
 
     @staticmethod
-    def from_survey():
+    def from_survey(filename: str = 'survey.csv',
+                    path: str = '.',
+                    kinematics: _Kinematics = None
+                    ):
         """
         TODO
 
         Returns:
 
         """
-        return SurveySequence()
+        return SurveySequence(filename=filename, path=path, kinematics=kinematics)
 
     @staticmethod
     def from_bdsim(filename: str = 'output.root',
@@ -371,30 +383,6 @@ class PlacementSequence(Sequence):
     @betablock.setter
     def betablock(self, betablock: _BetaBlock):
         self._betablock = betablock
-
-    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
-        """
-
-        Args:
-            df:
-            strip_units:
-
-        Returns:
-
-        """
-        if len(self._data) == 0:
-            return _pd.DataFrame()
-        if df is None:
-            df = _pd.DataFrame([{**e[0].data, **{
-                'AT_ENTRY': e[1],
-                'AT_CENTER': e[2],
-                'AT_EXIT': e[3]
-            }} for e in self._data])
-            df.name = self.name
-            df.set_index('NAME', inplace=True)
-        return super().to_df(df, strip_units=strip_units)
-
-    df = property(to_df)
 
     def add(self,
             element_or_sequence: Union[_Element, Sequence]):
@@ -570,7 +558,7 @@ class PlacementSequence(Sequence):
         for e in self._data:
             length = (e[1] - at).m_as('m')
             if length > 1e-6:
-                expanded.append((drift_element(f"D_{e[0].NAME}", L=length * _ureg.m),
+                expanded.append((drift_element(f"D_{e[0].NAME}", L=length * _ureg.m, APERTYPE=None),
                                  at,
                                  at + length * _ureg.m / 2,
                                  at + length * _ureg.m,
@@ -610,6 +598,29 @@ class PlacementSequence(Sequence):
     def join(self, other):
         pass
 
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
+        """
+
+        Args:
+            df:
+            strip_units:
+
+        Returns:
+
+        """
+        if len(self._data) == 0:
+            return _pd.DataFrame()
+        df = _pd.DataFrame([{**e[0].data, **{
+            'AT_ENTRY': e[1],
+            'AT_CENTER': e[2],
+            'AT_EXIT': e[3]
+        }} for e in self._data])
+        df.name = self.name
+        df.set_index('NAME', inplace=True)
+        return super().to_df(df=df, strip_units=strip_units)
+
+    df = property(to_df)
+
 
 class TwissSequence(Sequence):
     """
@@ -646,6 +657,13 @@ class TwissSequence(Sequence):
         """
         twiss_headers = load_mad_twiss_headers(filename, path, lines)
         twiss_table = load_mad_twiss_table(filename, path, lines, with_units).loc[from_element:to_element]
+
+        # Add some columns
+        twiss_table['CLASS'] = twiss_table['KEYWORD'].apply(str.capitalize)
+        twiss_table['AT_CENTER'] = twiss_table['S']
+        twiss_table["AT_ENTRY"] = twiss_table["AT_CENTER"] - 0.5 * twiss_table["L"]
+        twiss_table["AT_EXIT"] = twiss_table["AT_CENTER"] + 0.5 * twiss_table["L"]
+
         try:  # For MAD-X
             particle_name = twiss_headers['PARTICLE'].capitalize()
             p = getattr(_particles, particle_name if particle_name != 'Default' else 'Proton')
@@ -662,18 +680,18 @@ class TwissSequence(Sequence):
                          )
         if with_beam:
             twiss_init = self.betablock
-            beam_distribution = _Distribution().from_twiss_parameters(n=nparticles,
-                                                                      BETAX=twiss_init['BETA11'],
-                                                                      ALPHAX=twiss_init['ALPHA11'],
-                                                                      DISPX=twiss_init['DISP1'],
-                                                                      DISPXP=twiss_init['DISP2'],
-                                                                      BETAY=twiss_init['BETA22'],
-                                                                      ALPHAY=twiss_init['ALPHA22'],
-                                                                      DISPY=twiss_init['DISP3'],
-                                                                      DISPYP=twiss_init['DISP4'],
-                                                                      EMITX=twiss_init['EMIT1'],
-                                                                      EMITY=twiss_init['EMIT2'],
-                                                                      DPP=twiss_headers['DELTAP']).distribution
+            beam_distribution = _Distribution.from_twiss_parameters(n=nparticles,
+                                                                    betax=twiss_init['BETA11'],
+                                                                    alphax=twiss_init['ALPHA11'],
+                                                                    dispx=twiss_init['DISP1'],
+                                                                    dispxp=twiss_init['DISP2'],
+                                                                    betay=twiss_init['BETA22'],
+                                                                    alphay=twiss_init['ALPHA22'],
+                                                                    dispy=twiss_init['DISP3'],
+                                                                    dispyp=twiss_init['DISP4'],
+                                                                    emitx=twiss_init['EMIT1'],
+                                                                    emity=twiss_init['EMIT2'],
+                                                                    dpp=twiss_headers['DELTAP']).distribution
             beam_distribution['T'] = 0
             self._metadata = SequenceMetadata(data=beam_distribution, kinematics=k, particle=p)
 
@@ -681,7 +699,7 @@ class TwissSequence(Sequence):
     def betablock(self) -> _BetaBlock:
         """TODO"""
         # Keep in this order
-        try: # For MAD-X
+        try:  # For MAD-X
             return _BetaBlock(
                 BETA11=self.df.iloc[0]['BETX'] * _ureg.m,
                 ALPHA11=self.df.iloc[0]['ALFX'],
@@ -696,7 +714,7 @@ class TwissSequence(Sequence):
                 EMIT3=self.metadata['ET'],
             )
         except KeyError:
-            try: # For MAD-NG
+            try:  # For MAD-NG
                 return _BetaBlock(
                     BETA11=self.df.iloc[0]['BETA11'] * _ureg.m,
                     ALPHA11=self.df.iloc[0]['ALFA11'],
@@ -706,9 +724,9 @@ class TwissSequence(Sequence):
                     DISP2=self.df.iloc[0]['DPX'],
                     DISP3=self.df.iloc[0]['DY'] * _ureg.m,
                     DISP4=self.df.iloc[0]['DPY'],
-                    EMIT1=1e-9 * _ureg('m * radians'), #self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
-                    EMIT2=1e-9 * _ureg('m * radians'), #self.metadata['EMIT2'] * _ureg('m * radians'),
-                    EMIT3=1e-9 * _ureg('m * radians'), #self.metadata['EMIT3'] * _ureg('m * radians')
+                    EMIT1=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
+                    EMIT2=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT2'] * _ureg('m * radians'),
+                    EMIT3=1e-9 * _ureg('m * radians'),  # self.metadata['EMIT3'] * _ureg('m * radians')
                 )
             except KeyError:
                 logging.warning('Setting BetaBlock by default')
@@ -786,10 +804,10 @@ class TransportSequence(Sequence):
 
     @staticmethod
     def process_face_angle(line):
-        for idx in range(len(line)-1):
+        for idx in range(len(line) - 1):
             element = line[idx]
-            previous = line[idx-1]
-            after = line[idx+1]
+            previous = line[idx - 1]
+            after = line[idx + 1]
             if element["CLASS"] == "SBend" or element["CLASS"] == "RBend":
                 if previous["CLASS"] == "Face":
                     element["E1"] = previous["E1"]
@@ -808,48 +826,141 @@ class TransportSequence(Sequence):
                 counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
                 d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
+
     df = property(to_df)
 
 
-class SurveySequence(PlacementSequence):
+class SurveySequence(Sequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
+                 kinematics: _Kinematics = None,
+                 metadata: Optional[SequenceMetadata] = None
                  ):
         """
 
         Args:
-            filename: the name of the physics
-            path:
+            filename: Name of the file, must be a csv.
+            path: Path to the file
+            kinematics: Kinematics of the particle
+            metadata: metadata of the sequence
         """
-        transport_input = load_transport_input_file(filename, path)
+
+        def get_entrance_exit_frame(e):
+            center_frame = Frame().translate([e['X'] * _ureg.meter, e['Y'] * _ureg.meter, e['Z'] * _ureg.meter])
+            if e['TYPE'] == 'SBEND':
+                # TODO This is not working in 3D and avoid copy.
+                Angle = -_np.pi / 2 - e['ANGLE'] / 2 - e['CUMULATIVE_ANGLE']
+                radius = _np.abs(e['L'] / e['ANGLE'])
+                x_c = e['X'] + _np.sign(e['ANGLE'].m_as('radians')) * radius.m_as('m') * _np.cos(Angle.m_as('radians'))
+                y_c = e['Y'] + _np.sign(e['ANGLE'].m_as('radians')) * radius.m_as('m') * _np.sin(Angle.m_as('radians'))
+                dx = e['X'] - x_c
+                dy = e['Y'] - y_c
+                frame_bend_center = Frame().translate([x_c * _ureg.m, y_c * _ureg.m, 0 * _ureg.m])
+                f1 = copy.deepcopy(Frame(frame_bend_center).translate([dx * _ureg.m, dy * _ureg.m, 0 * _ureg.m]))
+                f2 = copy.deepcopy(Frame(frame_bend_center).translate([dx * _ureg.m, dy * _ureg.m, 0 * _ureg.m]))
+
+                frame_entrance = Frame().translate(
+                    [f1.rotate_z(e['ANGLE'] / 2 * _ureg.radians).x, f1.rotate_z(e['ANGLE'] / 2 * _ureg.radians).y,
+                     f1.z])
+                frame_exit = Frame().translate(
+                    [f2.rotate_z(-e['ANGLE'] / 2 * _ureg.radians).x, f2.rotate_z(-e['ANGLE'] / 2 * _ureg.radians).y,
+                     f2.z])
+            else:
+                frame_entrance = Frame(center_frame).translate_x(-e['L'] / 2).rotate_z(
+                    -e['CUMULATIVE_ANGLE'])
+                frame_exit = Frame(center_frame).translate_x(e['L'] / 2).rotate_z(
+                    -e['CUMULATIVE_ANGLE'])
+            return frame_entrance, frame_exit
+
+        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
+        sequence['L'] = sequence['L'].fillna(0).apply(lambda e: e * _ureg.meter)
+        sequence["ANGLE"] = sequence["ANGLE"].fillna(0).apply(lambda e: e * _ureg.radian)
+
+        # check if the survey is (AT_CENTER, L) or (X, Y, Z)
+        if sequence.get(['AT_CENTER']) is None and sequence.get(['X', 'Y', 'Z']) is not None:
+            sequence['CUMULATIVE_ANGLE'] = sequence['ANGLE'].cumsum().shift(1)
+            sequence.loc[sequence.iloc[0].name, 'CUMULATIVE_ANGLE'] = [0.0] * _ureg.radians
+            sequence[['F_ENTRANCE', 'F_EXIT']] = sequence.apply(lambda e: get_entrance_exit_frame(e), axis=1,
+                                                                result_type='expand')
+            at = 0
+            for i, j in sequence.iterrows():
+                d = _np.linalg.norm(_np.array([(j['F_ENTRANCE'].x - j['F_EXIT'].x).m_as('m'),
+                                               (j['F_ENTRANCE'].y - j['F_EXIT'].y).m_as('m'),
+                                               (j['F_ENTRANCE'].z - j['F_EXIT'].z).m_as('m')]))
+                at += (d + j['L'].m_as('m') / 2)
+                sequence.at[i, 'AT_CENTER'] = at
+                at += j['L'].m_as('m') / 2
+
+        elif sequence.get(['AT_CENTER']) is not None and sequence.get(['X', 'Y', 'Z']) is None:
+            pass
+        else:
+            raise SequenceException("Sequence must be (AT_CENTER, L) or (X,Y,Z)")
+
+        sequence['AT_CENTER'] = sequence['AT_CENTER'].apply(lambda e: e * _ureg.meter)
+        sequence["AT_ENTRY"] = sequence["AT_CENTER"] - 0.5 * sequence["L"]
+        sequence["AT_EXIT"] = sequence["AT_CENTER"] + 0.5 * sequence["L"]
+
+        # Set units to columns
+        try:
+            sequence['K1'] = sequence['K1'].fillna(0)
+        except KeyError:
+            sequence['K1'] = 0
+        try:
+            sequence['E1'] = sequence['E1'].fillna(0)
+        except KeyError:
+            sequence['E1'] = 0
+        try:
+            sequence['E2'] = sequence['E2'].fillna(0)
+        except KeyError:
+            sequence['E2'] = 0
+
+        sequence['K1'] = sequence['K1'].apply(lambda e: e*_ureg.m**-2)
+        sequence['E1'] = sequence['E1'].apply(lambda e: e*_ureg.radians)
+        sequence['E2'] = sequence['E2'].apply(lambda e: e*_ureg.radians)
+
+        idx = sequence.query("TYPE == 'COLLIMATOR'").index
+        sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE']}COLLIMATOR" for i in idx]
+
+        def check_apertures(e):
+            if isinstance(e, float):
+                return [e * _ureg.m]
+            else:
+                return [float(k) * _ureg.m for k in e.replace('[', '').replace(']', '').split(';')]
+
+        sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
 
         data = []
-        sequence_metadata = SequenceMetadata()
-        for line in transport_input:
-            if len(line.strip()) == 0:
-                continue
-            d = line.split()
-            if d[0].startswith('-'):
-                continue
-            data.append(transport_element_factory(d, sequence_metadata)[0])
+        sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
+                                                         particle=kinematics.particule)
 
-        if sequence_metadata.kinematics is None:
-            raise SequenceException("Invalid kinematics - Beam not found in input")
+        extra_columns = list(set(sequence.columns.values) - {'APERTYPE', 'CLASS', 'L', 'KEYWORD', 'AT_ENTRY',
+                                                             'AT_CENTER', 'AT_EXIT', 'K1', 'APERTURE', 'K1L', 'E1',
+                                                             'E2', 'TILT', 'MATERIAL', 'KINETIC_ENERGY', 'ANGLE',
+                                                             'KICK'})
+        for element in sequence.iterrows():
+            if extra_columns:
+                ele = {**csv_element_factory(element), **element[1][extra_columns]}
+            else:
+                ele = {**csv_element_factory(element)}
+            data.append((ele,
+                         element[1]['AT_ENTRY'],
+                         element[1]['AT_CENTER'],
+                         element[1]['AT_EXIT']
+                         ))
+        super().__init__(name='SURVEY',
+                         data=data,
+                         metadata=sequence_metadata)
 
-        super().__init__(name='TRANSPORT',
-                         data=[d for d in data if d is not None],
-                         metadata=sequence_metadata,
-                         )
-
-    def to_df(self, df=None, strip_units=False):
-        dicts = list(map(dict, self._data))
-        counters = {}
-        for d in dicts:
-            if d['NAME'] is None:
-                counters[d['KEYWORD']] = counters.get(d['KEYWORD'], 0) + 1
-                d['NAME'] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
-        return super().to_df(_pd.DataFrame(dicts).set_index('NAME'), strip_units=strip_units)
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units=False):
+        df = _pd.DataFrame([{**e[0], **{
+            'AT_ENTRY': e[1],
+            'AT_CENTER': e[2],
+            'AT_EXIT': e[3]
+        }} for e in self._data])
+        df.name = self.name
+        df.set_index('NAME', inplace=True)
+        return super().to_df(df=df, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -870,7 +981,8 @@ class BDSIMSequence(Sequence):
             from_element:
             to_element:
         """
-        # The pybdsim import is made inside the class init to avoid a pybdsim ( and then ROOT ) dependence when it is not needed.
+        # The pybdsim import is made inside the class init to avoid a pybdsim (and then ROOT)
+        # dependence when it is not needed.
         from pybdsim.Analysis import BDSimOutput
 
         # Load the model
@@ -880,6 +992,8 @@ class BDSIMSequence(Sequence):
         self.set_units(bdsim_model)
 
         # Load the beam properties
+        # FIXME Change the method to access beam base. Do not change in pybdsim
+
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
         particle_name = bdsim_beam["particle"].values[0].capitalize()
         particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV
@@ -942,5 +1056,3 @@ class BDSIMSequence(Sequence):
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         return self._data
-
-    df = property(to_df)

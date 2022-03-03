@@ -12,6 +12,7 @@ class ElementClass(ABCMeta):
     """
     TODO
     """
+
     def __new__(mcs,
                 name: str,
                 bases: Optional[Union[type, Tuple[type]]] = None,
@@ -90,8 +91,8 @@ Element.make_subclass('Marker')
 Element.make_subclass("Instrument")
 Element.make_subclass('Drift')
 Element.make_subclass('Quadrupole',
-                      K1=0.0 * _ureg.m**-2,
-                      K1L=0.0 * _ureg.m**-1,
+                      K1=0.0 * _ureg.m ** -2,
+                      K1L=0.0 * _ureg.m ** -1,
                       E1=0.0 * _ureg.radian,
                       E2=0.0 * _ureg.radian,
                       TILT=0.0 * _ureg.radian,
@@ -121,4 +122,12 @@ Element.make_subclass('VKicker',
                       KICK=0.0 * _ureg.radian,
                       TILT=0.0 * _ureg.radian)
 Element.make_subclass('Cavity')
-Element.make_subclass('Kicker')
+Element.make_subclass('Steerer')
+Element.make_subclass('CircularCollimator')
+Element.make_subclass('RectangularCollimator')
+Element.make_subclass('EllipticalCollimator')
+Element.make_subclass('Scatterer')
+Element.make_subclass('Degrader')
+Element.make_subclass('SRotation')
+Element.make_subclass('Fringein', TILT=0.0 * _ureg.radian)
+Element.make_subclass('Fringeout', TILT=0.0 * _ureg.radian)

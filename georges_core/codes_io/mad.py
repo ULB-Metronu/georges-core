@@ -81,6 +81,7 @@ def load_mad_twiss_table(filename: str = 'twiss.outx',
             finally:
                 return df
 
+        _ = set_unit(_, 'S', _ureg.m)
         _ = set_unit(_, 'L', _ureg.m)
         _ = set_unit(_, 'E1', _ureg.radians)
         _ = set_unit(_, 'E2', _ureg.radians)

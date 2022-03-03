@@ -210,10 +210,10 @@ class Twiss(Parametrization):
         p = 1 if plane == 1 else 3
         if p == 1:
             d0 = twiss['DISP1'].m_as('m')
-            dp0 = twiss['DISP2']
+            dp0 = twiss['DISP2'].m_as('radians')
         else:
             d0 = twiss['DISP3'].m_as('m')
-            dp0 = twiss['DISP4']
+            dp0 = twiss['DISP4'].m_as('radians')
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
         r15: _pd.Series = m[f"R{p}5"]
@@ -239,10 +239,10 @@ class Twiss(Parametrization):
         p = 1 if plane == 1 else 3
         if p == 1:
             d0 = twiss['DISP1'].m_as('m')
-            dp0 = twiss['DISP2']
+            dp0 = twiss['DISP2'].m_as('radians')
         else:
             d0 = twiss['DISP3'].m_as('m')
-            dp0 = twiss['DISP4']
+            dp0 = twiss['DISP4'].m_as('radians')
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
         r25: _pd.Series = m[f"R{p + 1}5"]
@@ -298,9 +298,9 @@ class Twiss(Parametrization):
         r6 = m[['R15', 'R25', 'R35', 'R45']].apply(float).values.reshape(4, 1)
         disp = _np.dot(_np.linalg.inv(_np.identity(4) - m44), r6).reshape(4)
         twiss['DY'] = disp[0] * _ureg.m
-        twiss['DYP'] = disp[1]
+        twiss['DYP'] = disp[1] * _ureg.radians
         twiss['DZ'] = disp[2] * _ureg.m
-        twiss['DZP'] = disp[3]
+        twiss['DZP'] = disp[3] * _ureg.radians
         twiss['DISP1'] = twiss['DY']
         twiss['DISP2'] = twiss['DYP']
         twiss['DISP3'] = twiss['DZ']
