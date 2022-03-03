@@ -947,6 +947,10 @@ class SurveySequence(Sequence):
         except KeyError:
             sequence['E2'] = 0
         try:
+            sequence['TILT'] = sequence['TILT'].fillna(0)
+        except KeyError:
+            sequence['TILT'] = 0
+        try:
             sequence['CHAMBER'] = sequence['CHAMBER'].fillna(0).apply(lambda e: e * _ureg.m)
         except KeyError:
             sequence['CHAMBER'] = [0 * _ureg.m] * len(sequence)
@@ -954,6 +958,7 @@ class SurveySequence(Sequence):
         sequence['K1'] = sequence['K1'].apply(lambda e: e*_ureg.m**-2)
         sequence['E1'] = sequence['E1'].apply(lambda e: e*_ureg.radians)
         sequence['E2'] = sequence['E2'].apply(lambda e: e*_ureg.radians)
+        sequence['TILT'] = sequence['TILT'].apply(lambda e: e*_ureg.radians)
 
         idx = sequence.query("TYPE == 'COLLIMATOR'").index
         sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE'].upper()}COLLIMATOR" for i in idx]
@@ -975,7 +980,7 @@ class SurveySequence(Sequence):
                                                              'KICK'})
         for element in sequence.iterrows():
             if extra_columns:
-                ele = {**csv_element_factory(element), **element[1][extra_columns]}
+                ele = {**csv_element_factory(element), **element[1][sequence.columns.values]}
             else:
                 ele = {**csv_element_factory(element)}
             data.append((ele,
