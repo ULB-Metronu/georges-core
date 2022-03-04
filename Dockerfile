@@ -34,10 +34,15 @@ ENV GIT_SSL_NO_VERIFY=1
 RUN git clone --recurse-submodules --branch develop https://github.com/ULB-Metronu/georges-core.git
 RUN poetry config virtualenvs.in-project true
 WORKDIR /home/app/georges-core
-RUN poetry install
+RUN poetry install -E sphinx
+
+ENV PATH="/home/app/georges-core/.venv/bin:$PATH"
+
+# Run test
+RUN pytest tests/
+
 WORKDIR /home/app
 RUN mkdir reps
 WORKDIR /home/app/reps
-ENV PATH="/home/app/georges-core/.venv/bin:$PATH"
 
 RUN pip install jupyterlab
