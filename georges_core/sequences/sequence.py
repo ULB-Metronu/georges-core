@@ -195,17 +195,6 @@ class Sequence(metaclass=SequenceType):
                 if el[0]['NAME'] == element:
                     return dict(zip(parameters, list(map(el[0].get, parameters))))
 
-    def set_position(self, elements: str, value: _Q):
-        element_index = 0
-        new_el = ()
-        for k, el in enumerate(self._data):
-            if el[0]['NAME'] == elements:
-                at = list(el[0:4])
-                at[2] = value
-                at[1] = at[2] - 0.5 * at[0]['L']
-                at[3] = at[2] + 0.5 * at[0]['L']
-                self._data[k] = tuple(at)
-
     def get_value(self, elements: List[str]):
         for el in self._data:
             if el[0]['NAME'] in elements:
@@ -247,11 +236,19 @@ class Sequence(metaclass=SequenceType):
                 except KeyError:
                     pass
                 try:
+                    df['K3'] = df['K3'].apply(safe_convert('1/m**4'))
+                except KeyError:
+                    pass
+                try:
                     df['E1'] = df['E1'].apply(safe_convert('radian'))
                 except KeyError:
                     pass
                 try:
                     df['E2'] = df['E2'].apply(safe_convert('radian'))
+                except KeyError:
+                    pass
+                try:
+                    df['HGAP'] = df['HGAP'].apply(safe_convert('m'))
                 except KeyError:
                     pass
                 try:
