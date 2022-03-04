@@ -233,6 +233,7 @@ class MatplotlibArtist(_Artist):
             return
 
         bl['CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
+        bl['APERTYPE'] = bl['APERTYPE'].apply(lambda e: e.upper())
         _elements = ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']
         bl.query("CLASS in @_elements", inplace=True)
         planes = kwargs.get('plane', 'X')
@@ -249,7 +250,6 @@ class MatplotlibArtist(_Artist):
             index = [1, 0]
         else:
             raise _ArtistException("Plane must be 'X', 'Y' or 'both'.")
-
         bl['APERTURE_UP'] = bl['APERTURE'].apply(lambda a: a[index[0]].m_as('mm'))
         bl['APERTURE_DOWN'] = bl['APERTURE'].apply(lambda a: a[index[1]].m_as('mm'))
 

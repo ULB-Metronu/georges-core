@@ -905,9 +905,10 @@ class SurveySequence(Sequence):
                     -e['CUMULATIVE_ANGLE'])
             return frame_entrance, frame_exit
 
-        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',')
+        sequence = _pd.read_csv(os.path.join(path, filename), index_col='NAME', sep=',').loc[from_element:to_element]
         sequence['L'] = sequence['L'].fillna(0).apply(lambda e: e * _ureg.meter)
         sequence["ANGLE"] = sequence["ANGLE"].fillna(0).apply(lambda e: e * _ureg.radian)
+        sequence["TYPE"] = sequence["TYPE"].apply(lambda e: e.upper())
 
         # check if the survey is (AT_CENTER, L) or (X, Y, Z)
         if sequence.get(['AT_CENTER']) is None and sequence.get(['X', 'Y', 'Z']) is not None:
