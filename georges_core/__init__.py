@@ -5,6 +5,7 @@ from .kinematics import Kinematics, KinematicsException
 from .frame import Frame, FrameFrenet, FrameException
 from .patchable import Patchable
 from .vis import Artist, GnuplotArtist, PlotlyArtist, vtk_utils
+from .geometry import Trajectories, ReferenceTrajectory, project_on_reference, Points
 from .geometry import Intersections
 from .distribution import Distribution, DistributionException
 from .twiss import Twiss, TengEdwardsTwiss, RipkenTwiss, WolskiTwiss
