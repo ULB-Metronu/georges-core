@@ -1,5 +1,6 @@
+*******
 Authors
-=======
+*******
 
 Alphabetical list of past and present authors:
 

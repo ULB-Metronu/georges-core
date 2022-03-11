@@ -48,7 +48,6 @@ pytest-bdd = { version = "^6.1.1", optional = true }
 ipykernel = "^6.17.1"
 cpymad = "^1.9.3"
 
-
 [tool.poetry.dev-dependencies]
 yapf = "^0.32.0"
 flake8 = "^5.0.4"
@@ -73,6 +72,7 @@ sphinx = [
 
 test = [
     "pytest",
+    "ipython_genutils",
     "pytest-bdd",
     "tox",
     "tox-poetry-installer"
