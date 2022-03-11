@@ -1,6 +1,9 @@
 import pandas as _pd
 import numpy as _np
 import os
+import logging
+
+import pandas as pd
 from numba import njit
 from typing import Dict
 from .units import ureg as _ureg
@@ -127,54 +130,55 @@ class Distribution:
     The internal representation is essentially a `pandas` `DataFrame`.
     """
 
-    def __init__(self, distribution=None, *args, **kwargs):
+    def __init__(self, distribution=None):
         """
         Initialize a beam object from various sources of particle beam distribution.
         Args:
             distribution: distribution of particles to initialize the beam with. Should be pandas.DataFrame() friendly.
-            *args: optional parameters.
-            **kwargs: optional keyword parameters.
         """
         try:
-            self.__initialize_distribution(distribution, *args, **kwargs)
+            self.__initialize_distribution(distribution)
         except DistributionException:
-            self.__dims = 5
-            self.__distribution = _pd.DataFrame(_np.zeros((1, 5)))
+            self.__dims = 6
+            self.__distribution = _pd.DataFrame(_np.zeros((1, 6)))
             self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
+        self.__n_particles = self.__distribution.shape[0]
+        if self.__n_particles <= 0:
+            raise DistributionException("Error, no particles in the beam.")
         self._halo = None  # To force the first computation of the halo
 
     @property
-    def distribution(self):
+    def distribution(self) -> pd.DataFrame:
         """Return a dataframe containing the beam's particles distribution."""
         return self.__distribution
 
     @property
-    def dims(self):
+    def dims(self) -> int:
         """Return the dimensions of the beam's phase-space."""
         return self.__dims
 
     @property
-    def n_particles(self):
+    def n_particles(self) -> int:
         """Return the number of particles in the beam's distribution."""
         return self.__n_particles
 
     @property
     def mean(self):
-        """Return a dataframe containing the first order moments of each dimensions."""
+        """Return a dataframe containing the first order moments of each dimension."""
         return self.__distribution.mean()
 
     @property
     def std(self):
-        """Return a dataframe containing the second order moments of each dimensions."""
+        """Return a dataframe containing the second order moments of each dimension."""
         return self.__distribution.std()
 
     @property
-    def emit(self):
+    def emit(self) -> Dict:
         """Return the emittance of the beam in both planes"""
         tw = self.compute_twiss(self.__distribution.values)
         return {
-            'X': tw['emit_x'],
-            'Y': tw['emit_y']
+            'X': tw[0],
+            'Y': tw[5]
         }
 
     @property
@@ -185,7 +189,7 @@ class Distribution:
     covariance = sigma
 
     @property
-    def twiss(self):
+    def twiss(self) -> Dict:
         """Return the Twiss parameters of the beam"""
         tw = self.compute_twiss(self.__distribution.values)
         return {'emit_x': tw[0],
@@ -200,7 +204,7 @@ class Distribution:
                 'disp_yp': tw[9]}
 
     @property
-    def halo(self, dimensions=None):
+    def halo(self, dimensions=None) -> pd.DataFrame:
         """Return a dataframe containing the 1st, 5th, 95th and 99th percentiles of each dimensions."""
         if dimensions is None:
             dimensions = ['X', 'Y', 'PX', 'PY']
@@ -232,24 +236,21 @@ class Distribution:
             raise DistributionException("Trying to access an invalid data from a beam.")
         return self.__distribution[item]
 
-    def __initialize_distribution(self, distribution=None, *args, **kwargs):
+    def __initialize_distribution(self, distribution=None):
         """Try setting the internal pandas.DataFrame with a distribution."""
         if distribution is not None:
+            distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(distribution.columns.values))] = 0
             self.__distribution = distribution
         else:
-            try:
-                self.__distribution = _pd.DataFrame(args[0])
-            except (IndexError, ValueError):
-                if kwargs.get("filename") is not None:
-                    self.__distribution = Distribution.from_file(kwargs.get('filename'), path=kwargs.get('path', ''))
-                else:
-                    return
-        self.__n_particles = self.__distribution.shape[0]
-        if self.__n_particles <= 0:
-            raise DistributionException("Trying to initialize a beam distribution with invalid number of particles.")
+            logging.warning(f"Distribution is None: generate a default beam")
+            raise DistributionException('')
         self.__dims = self.__distribution.shape[1]
-        if self.__dims < 2 or self.__dims > 6:
-            raise DistributionException("Trying to initialize a beam distribution with invalid dimensions.")
+        print(self.__distribution)
+        if self.__dims < 4 or self.__dims > 6:
+            missing_key = list({'X', 'Y', 'PX', 'PY'} - set(distribution.columns.values))
+            logging.warning(f"Trying to initialize a beam distribution with invalid dimensions. "
+                            f"{missing_key} are missing. Generate a default beam")
+            raise DistributionException('')
 
     @staticmethod
     @njit
@@ -276,7 +277,7 @@ class Distribution:
             disp_xp = a_xpd / s55
 
             ebeta_x = (s11 - a_xd ** 2 / s55)
-            egamma_x = (s22 - a_xpd**2 / s55)
+            egamma_x = (s22 - a_xpd ** 2 / s55)
             ealpha_x = (-a_xxp + a_xpd * a_xd / s55)
 
             emit_x = _np.sqrt(ebeta_x * egamma_x - ealpha_x ** 2)
@@ -316,10 +317,28 @@ class Distribution:
 
     @classmethod
     def from_csv(cls, path: str = '', filename: str = ''):
+        """
+
+        Args:
+            path (str): Path to the csv file
+            filename (str): filename
+
+        Returns:
+            An instance of the class with the distribution
+        """
         return cls(distribution=load_from_file(path, filename, file_format='csv'))
 
     @classmethod
     def from_parquet(cls, path: str = '', filename: str = ''):
+        """
+
+        Args:
+            path (str): path to the parquet file
+            filename (str): filename
+
+        Returns:
+            An instance of the class with the distribution
+        """
         return cls(distribution=load_from_file(path, filename, file_format='parquet'))
 
     @classmethod
@@ -329,28 +348,60 @@ class Distribution:
                              px: float = 0,
                              y: float = 0,
                              py: float = 0,
+                             x: _Q = 0 * _ureg.m,
+                             px: float = 0,
+                             y: _Q = 0 * _ureg.m,
+                             py: float = 0,
                              dpp: float = 0,
                              s11: _Q = 0 * _ureg.m ** 2,
                              s12: float = 0,
                              s13: float = 0,
                              s14: float = 0,
                              s15: float = 0,
-                             s22: _Q = 0 * _ureg.radians ** 2,
+                             s22: float = 0,
                              s23: float = 0,
                              s24: float = 0,
                              s25: float = 0,
                              s33: _Q = 0 * _ureg.m ** 2,
                              s34: float = 0,
                              s35: float = 0,
-                             s44: _Q = 0 * _ureg.radians ** 2,
+                             s44: float = 0,
                              s45: float = 0,
                              s55: float = 0,
                              matrix=None):
+        """
+        Initialize a beam with a 5D particle distribution from a Sigma matrix.
+        Args:
+            n (int): number of particles
+            x (_Q): Horizontal position [m]
+            px (float): Horizontal component momentum of unit vector
+            y (_Q): Vertical position [m]
+            py (float): Vertical component momentum of unit vector
+            dpp (float): Momentum spread
+            s11 ():
+            s12 ():
+            s13 ():
+            s14 ():
+            s15 ():
+            s22 ():
+            s23 ():
+            s24 ():
+            s25 ():
+            s33 ():
+            s34 ():
+            s35 ():
+            s44 ():
+            s45 ():
+            s55 ():
+            matrix ():
 
+        Returns:
+            An instance of the class with the distribution
+        """
         return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
-                                                                            x=x,
+                                                                            x=x.m_as('m'),
                                                                             px=px,
-                                                                            y=y,
+                                                                            y=y.m_as("m"),
                                                                             py=py,
                                                                             dpp=dpp,
                                                                             s11=s11.m_as('m**2'),
@@ -358,44 +409,64 @@ class Distribution:
                                                                             s13=s13,
                                                                             s14=s14,
                                                                             s15=s15,
-                                                                            s22=s22.m_as('radians**2'),
+                                                                            s22=s22,
                                                                             s23=s23,
                                                                             s24=s24,
                                                                             s25=s25,
                                                                             s33=s33.m_as('m**2'),
                                                                             s34=s34,
                                                                             s35=s35,
-                                                                            s44=s44.m_as('radians**2'),
+                                                                            s44=s44,
                                                                             s45=s45,
                                                                             s55=s55,
-                                                                            matrix=matrix)))
+                                                                            matrix=matrix),
+                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
 
     @classmethod
     def from_5d_multigaussian_distribution(cls,
                                            n: int = DEFAULT_N_PARTICLES,
                                            x: _Q = 0 * _ureg.m,
-                                           px: _Q = 0 * _ureg.radians,
+                                           px: float = 0,
                                            y: _Q = 0 * _ureg.m,
-                                           py: _Q = 0 * _ureg.radians,
-                                           dpp: _Q = 0,
+                                           py: float = 0,
+                                           dpp: float = 0,
                                            xrms: _Q = 0 * _ureg.m,
-                                           pxrms: _Q = 0 * _ureg.radians,
+                                           pxrms: float = 0,
                                            yrms: _Q = 0 * _ureg.m,
-                                           pyrms: _Q = 0 * _ureg.radians,
+                                           pyrms: float = 0,
                                            dpprms=0):
+        """
+        Initialize a beam with a 5D particle distribution from rms quantities.
+        Args:
+            n (int): number of particles
+            x (_Q): Horizontal position [m]
+            px (): Horizontal component momentum of unit vector
+            y (_Q): Vertical position [m]
+            py (float): Vertical component momentum of unit vector
+            dpp (float): Momentum spread
+            xrms (_Q): Horizontal Gaussian sigma [m]
+            pxrms (float): Sigma of the horizontal component of unit momentum
+            yrms (_Q): Vertical Gaussian sigma [m]
+            pyrms (float): Sigma of the vertical component of unit momentum
+            dpprms (float): Relative momentum spread
+
+        Returns:
+            An instance of the class with the distribution
+        """
         return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
                                                                             x=x.m_as('m'),
-                                                                            px=px.m_as("radians"),
+                                                                            px=px,
                                                                             y=y.m_as("m"),
-                                                                            py=py.m_as("radians"),
+                                                                            py=py,
                                                                             dpp=dpp,
                                                                             s11=xrms.m_as("m") ** 2,
                                                                             s12=0,
-                                                                            s22=pxrms.m_as("radians") ** 2,
+                                                                            s22=pxrms ** 2,
                                                                             s33=yrms.m_as("m") ** 2,
                                                                             s34=0,
-                                                                            s44=pyrms.m_as("radians") ** 2,
-                                                                            s55=dpprms ** 2)))
+                                                                            s44=pyrms ** 2,
+                                                                            s55=dpprms ** 2),
+                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
 
     @classmethod
     def from_twiss_parameters(cls,
@@ -413,12 +484,34 @@ class Distribution:
                               emity: _Q = 1e-6 * _ureg.m * _ureg.radians,
                               dispx: _Q = 0 * _ureg.m,
                               dispy: _Q = 0 * _ureg.m,
-                              dispxp: _Q = 0,
-                              dispyp: _Q = 0,
+                              dispxp: float = 0,
+                              dispyp: float = 0,
                               dpprms: _Q = 0
-
                               ):
-        """Initialize a beam with a 5D particle distribution from Twiss parameters."""
+        """
+        Initialize a beam with a 5D particle distribution from Twiss parameters.
+        Args:
+            n (int): number of particles
+            x (_Q): Horizontal position [m]
+            px (float): Horizontal component momentum of unit vector
+            y (_Q): Vertical position [m]
+            py (float): Vertical component momentum of unit vector
+            dpp (float): Momentum spread
+            betax (_Q): Horizontal beta function [m]
+            alphax (): Horizontal alpha function
+            betay (_Q): Vertical beta function [m]
+            alphay (float): Vertical alpha function
+            emitx (_Q): Horizontal emittance [m rad]
+            emity (_Q): Vertical emittance [m rad]
+            dispx (_Q): Horizontal dispersion function [m]
+            dispy (_Q): Vertical dispersion function [m]
+            dispxp (float): Horizontal angular dispersion function
+            dispyp (float): Vertical angular dispersion function
+            dpprms (float): Relative momentum spread
+
+        Returns:
+            An instance of the class with the distribution
+        """
 
         gammax = (1 + alphax ** 2) / betax.m_as('m')
         gammay = (1 + alphay ** 2) / betay.m_as('m')
@@ -441,9 +534,9 @@ class Distribution:
 
         return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
                                                                             x=x.m_as('m'),
-                                                                            px=px.m_as("radians"),
+                                                                            px=px,
                                                                             y=y.m_as("m"),
-                                                                            py=py.m_as("radians"),
+                                                                            py=py,
                                                                             dpp=dpp,
                                                                             s11=s11,
                                                                             s12=s12,
@@ -459,4 +552,5 @@ class Distribution:
                                                                             s23=s23,
                                                                             s14=s14,
                                                                             s24=s24,
-                                                                            s55=s55)))
+                                                                            s55=s55),
+                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
