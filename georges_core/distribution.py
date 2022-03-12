@@ -174,7 +174,7 @@ class Distribution:
     @property
     def emit(self) -> Dict:
         """Return the emittance of the beam in both planes"""
-        tw = self.compute_twiss(self.__distribution.values)
+        tw = njit(self.compute_twiss)(self.__distribution.values)
         return {
             'X': tw[0],
             'Y': tw[5]
@@ -190,7 +190,7 @@ class Distribution:
     @property
     def twiss(self) -> Dict:
         """Return the Twiss parameters of the beam"""
-        tw = self.compute_twiss(self.__distribution.values)
+        tw = njit(self.compute_twiss)(self.__distribution.values)
         return {'emit_x': tw[0],
                 'beta_x': tw[1],
                 'alpha_x': tw[2],
@@ -225,11 +225,6 @@ class Distribution:
                               )
         return self._halo
 
-    @property
-    def coupling(self):
-        """Return a dataframe containing the covariances (coupling) between each dimensions."""
-        return self.__distribution.cov()
-
     def __getitem__(self, item):
         if item not in PHASE_SPACE_DIMENSIONS[:self.__dims]:
             raise DistributionException("Trying to access an invalid data from a beam.")
@@ -251,9 +246,7 @@ class Distribution:
         else:
             self.__distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(self.__distribution.columns.values))] = 0
 
-
     @staticmethod
-    @njit
     def compute_twiss(beam: _np.ndarray) -> _np.array:
 
         s11 = _np.var(beam[:, 0])

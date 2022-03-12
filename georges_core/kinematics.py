@@ -223,7 +223,7 @@ class Kinematics:
     brho_ = property(_partial(to_brho, magnitude=True))
     """Provides *brho* (magnitude only)."""
 
-    def to_pv(self) -> float:
+    def to_pv(self) -> _Q:
         """
 
         Returns:
@@ -780,7 +780,7 @@ def range_to_ekin(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         the kinetic energy of the particle.
     """
-    if type(particle) is not type(_Proton):
+    if particle != _Proton:
         raise KinematicsException("Conversion from range only works for protons.")
 
     a = 0.00169
