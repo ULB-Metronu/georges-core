@@ -2,6 +2,7 @@ from typing import Dict, Callable, Tuple, Any, List, AnyStr
 import os
 from .. import ureg as _ureg
 import georges_core
+import georges_core.sequences
 import numpy as _np
 
 MANZONI_FLAVOR = {"Srotation": "SRotation",

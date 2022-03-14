@@ -857,7 +857,7 @@ class TransportSequence(Sequence):
     df = property(to_df)
 
 
-class SurveySequence(Sequence):
+class SurveySequence(PlacementSequence):
     def __init__(self,
                  filename: str,
                  path: str = '.',
@@ -977,10 +977,8 @@ class SurveySequence(Sequence):
                                                              'E2', 'TILT', 'MATERIAL', 'KINETIC_ENERGY', 'ANGLE',
                                                              'KICK'})
         for element in sequence.iterrows():
-            if extra_columns:
-                ele = {**csv_element_factory(element), **element[1][sequence.columns.values]}
-            else:
-                ele = {**csv_element_factory(element)}
+            ele = csv_element_factory(element)
+            ele.data = {**ele.data, **element[1][extra_columns].to_dict()}
             data.append((ele,
                          element[1]['AT_ENTRY'],
                          element[1]['AT_CENTER'],

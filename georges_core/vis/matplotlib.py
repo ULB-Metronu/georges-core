@@ -231,11 +231,10 @@ class MatplotlibArtist(_Artist):
         if 'APERTURE' not in bl:
             logging.warning("No APERTURE defined in the beamline")
             return
-
+        bl = bl[~bl['APERTYPE'].isnull()]
         bl['CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
         bl['APERTYPE'] = bl['APERTYPE'].apply(lambda e: e.upper())
-        _elements = ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']
-        bl.query("CLASS in @_elements", inplace=True)
+        bl.query("CLASS in ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']", inplace=True)
         planes = kwargs.get('plane', 'X')
 
         # Set the y aperture for circular apertype

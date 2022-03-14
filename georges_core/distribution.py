@@ -10,7 +10,7 @@ from .units import ureg as _ureg
 from .units import Q_ as _Q
 
 PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
-PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'DT']
+PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'PT']
 DEFAULT_N_PARTICLES = 1e5
 
 
@@ -139,8 +139,8 @@ class Distribution:
         try:
             self.__initialize_distribution(distribution)
         except DistributionException:
-            self.__dims = 6
-            self.__distribution = _pd.DataFrame(_np.zeros((1, 6)))
+            self.__dims = len(PHASE_SPACE_DIMENSIONS)
+            self.__distribution = _pd.DataFrame(_np.zeros((1, self.__dims)))
             self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
         self.__n_particles = self.__distribution.shape[0]
         if self.__n_particles <= 0:
@@ -245,8 +245,7 @@ class Distribution:
             logging.warning(f"Distribution is None: generate a default beam")
             raise DistributionException('')
         self.__dims = self.__distribution.shape[1]
-        print(self.__distribution)
-        if self.__dims < 4 or self.__dims > 6:
+        if self.__dims < 4 or self.__dims > len(PHASE_SPACE_DIMENSIONS):
             missing_key = list({'X', 'Y', 'PX', 'PY'} - set(distribution.columns.values))
             logging.warning(f"Trying to initialize a beam distribution with invalid dimensions. "
                             f"{missing_key} are missing. Generate a default beam")
@@ -344,10 +343,6 @@ class Distribution:
     @classmethod
     def from_5d_sigma_matrix(cls,
                              n: int,
-                             x: float = 0,
-                             px: float = 0,
-                             y: float = 0,
-                             py: float = 0,
                              x: _Q = 0 * _ureg.m,
                              px: float = 0,
                              y: _Q = 0 * _ureg.m,
