@@ -3,7 +3,9 @@ TODO
 """
 from typing import Optional
 import numpy as _np
+import numpy as np
 import quaternion
+from numba import njit
 
 
 class Intersections:
@@ -311,13 +313,16 @@ def build_segments(trajectory: Points):
     return Segments(segments)
 
 
-def intersection_segment_plane(segment: Segment, plane: Plane):
+@njit
+def intersection_segment_plane(seg_u: np.ndarray, seg_p0: np.ndarray, plane_point: np.ndarray,
+                               plane_normal: np.ndarray):
     """Provides the intersection between a plane and a segment. Returns -1 if negative."""
     # Attention, un segment isolé doit quand même avoir une dimension "vertiale" --> ndim = (1, 2 , 6)
-    u = segment.u[0, 0:3]
-    w = segment.p0[0, 0:3] - plane.point
-    D = _np.dot(plane.normal, u)
-    N = -_np.dot(plane.normal, w)
+    u = seg_u[0, 0:3]
+    w = seg_p0[0, 0:3] - plane_point
+
+    D = _np.dot(plane_normal, u)
+    N = -_np.dot(plane_normal, w)
 
     if _np.abs(D) < 1e-4:
         if N == 0:
@@ -330,12 +335,12 @@ def intersection_segment_plane(segment: Segment, plane: Plane):
     return sI
 
 
-def intersection_point(segment: Segment, sI: float):
-    """
-    Compute the intersection point between a segment and a plane, given the value sI, and interpolate all coordinates
-    """
-    pm = segment.p0 + segment.u * sI
-    return pm
+def create_segment(a):
+    return build_segments(Points(a.data)).data
+
+
+def reshape_segment(s):
+    return Segment(s.reshape(1, 2, 6))
 
 
 def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
@@ -345,17 +350,19 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
     data point of the reference trajectory (so it returns an array of NT projected trajectories, each of
     length NR).
     """
-    results = _np.zeros((len(trajectories), ref.data.shape[0], 6))
-    for it, t in enumerate(trajectories):
-        for ir, r in enumerate(ref.frenet_frames().data):
-            for s in build_segments(Points(t.data)).data:
-                segment = Segment(s.reshape(1, 2, 6))
-                i = intersection_segment_plane(segment, Plane(r))
-                if i < 0:  # we don't have an intersection, try the next one
+
+    frenet_planes = list(map(Plane, ref.frenet_frames().data))
+    all_segments = [list(map(reshape_segment, all_s)) for all_s in list(map(create_segment, trajectories))]
+    results = np.zeros((len(all_segments), len(frenet_planes), 6))
+    for it, segments in enumerate(all_segments):
+        mu = 0
+        for ir, plane in enumerate(frenet_planes):
+            for mu, k in enumerate(segments):
+                i = intersection_segment_plane(k.u, k.p0, plane.point, plane.normal)
+                if i < 0:
                     continue
-                # compute the intersection point (x, y, z) and interpolate (t, p and s) using i
-                i_coordinates = intersection_point(segment,
-                                                   i)
+                i_coordinates = k.p0 + k.u * i
                 results[it, ir] = i_coordinates
                 break
+            segments = segments[mu:]
     return results
