@@ -307,9 +307,9 @@ def build_segments(trajectory: Points):
     for pt in range(trajectory.data.shape[0] - 1):
         segment = trajectory.data[pt:pt + 2]
         if pt == 0:
-            segments = segment.reshape(1, 2, 6)
+            segments = segment.reshape(1, 2, trajectory.data.shape[1])
         else:
-            segments = _np.vstack((segments, segment.reshape(1, 2, 6)))
+            segments = _np.vstack((segments, segment.reshape(1, 2, trajectory.data.shape[1])))
     return Segments(segments)
 
 
@@ -340,7 +340,7 @@ def create_segment(a):
 
 
 def reshape_segment(s):
-    return Segment(s.reshape(1, 2, 6))
+    return Segment(s.reshape(1, 2, s.shape[1]))
 
 
 def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
@@ -350,10 +350,12 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
     data point of the reference trajectory (so it returns an array of NT projected trajectories, each of
     length NR).
     """
+    assert ref.data.shape[1] == trajectories[0].data.shape[1]
 
     frenet_planes = list(map(Plane, ref.frenet_frames().data))
     all_segments = [list(map(reshape_segment, all_s)) for all_s in list(map(create_segment, trajectories))]
-    results = np.zeros((len(all_segments), len(frenet_planes), 6))
+
+    results = np.zeros((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
     for it, segments in enumerate(all_segments):
         mu = 0
         for ir, plane in enumerate(frenet_planes):
