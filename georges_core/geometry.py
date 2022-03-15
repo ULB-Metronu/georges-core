@@ -7,6 +7,12 @@ import numpy as np
 import quaternion
 from numba import njit
 
+__all__ = ['ReferenceTrajectory',
+           'Trajectories',
+           'Points',
+           'project_on_reference'
+           ]
+
 
 class Intersections:
     def __init__(self, lines1, line2):
@@ -304,6 +310,7 @@ def construct_tangent_vectors(p: Points,
 def build_segments(trajectory: Points):
     """Builds a set of NT-1 segments from a list of NT points. Uses the spacial coordinates x, y, z to build
     a segment in space, and also associate the start and end points for the other coordiantes (t, p and s)."""
+    segments = None
     for pt in range(trajectory.data.shape[0] - 1):
         segment = trajectory.data[pt:pt + 2]
         if pt == 0:
@@ -355,7 +362,7 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
     frenet_planes = list(map(Plane, ref.frenet_frames().data))
     all_segments = [list(map(reshape_segment, all_s)) for all_s in list(map(create_segment, trajectories))]
 
-    results = np.zeros((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
+    results = -np.ones((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
     for it, segments in enumerate(all_segments):
         mu = 0
         for ir, plane in enumerate(frenet_planes):
