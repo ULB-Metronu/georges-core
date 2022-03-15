@@ -227,13 +227,12 @@ class MatplotlibArtist(_Artist):
             self._ax.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     def draw_aperture(self, bl, **kwargs):
-
+        bl = bl.copy()
         if 'APERTURE' not in bl:
             logging.warning("No APERTURE defined in the beamline")
             return
         bl = bl[~bl['APERTYPE'].isnull()]
-        bl['CLASS'] = bl['CLASS'].apply(lambda e: e.upper())
-        bl['APERTYPE'] = bl['APERTYPE'].apply(lambda e: e.upper())
+        bl[['APERTYPE', 'CLASS']] = bl[['APERTYPE', 'CLASS']].applymap(lambda e: e.upper())
         bl.query("CLASS in ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']", inplace=True)
         planes = kwargs.get('plane', 'X')
 

@@ -10,7 +10,7 @@ from .units import ureg as _ureg
 from .units import Q_ as _Q
 
 PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
-PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'PT']
+PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'PT', 'DT']
 DEFAULT_N_PARTICLES = 1e5
 
 
