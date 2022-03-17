@@ -362,7 +362,8 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
     frenet_planes = list(map(Plane, ref.frenet_frames().data))
     all_segments = [list(map(reshape_segment, all_s)) for all_s in list(map(create_segment, trajectories))]
 
-    results = -np.ones((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
+    results = np.empty((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
+    results.fill(np.nan)
     for it, segments in enumerate(all_segments):
         mu = 0
         for ir, plane in enumerate(frenet_planes):
