@@ -52,6 +52,7 @@ def test_survey_sequence():
     survey_line = georges_core.sequences.SurveySequence(path='../examples/converter/CSV',
                                                         filename="survey.csv",
                                                         kinematics=kin)
+    survey_line.expand()
     artist = georges_core.vis.MatplotlibArtist()
     artist.plot_cartouche(survey_line.df)
     artist.plot_beamline(survey_line.df)
