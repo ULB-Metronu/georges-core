@@ -1001,7 +1001,6 @@ class SurveySequence(PlacementSequence):
     df = property(to_df)
 
 
-# TODO use with pybdsim
 class BDSIMSequence(Sequence):
 
     def __init__(self,
@@ -1028,8 +1027,6 @@ class BDSIMSequence(Sequence):
         self.set_units(bdsim_model)
 
         # Load the beam properties
-        # FIXME Change the method to access beam base. Check in pybdsim
-
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=['beamEnergy', 'particle'])
         particle_name = bdsim_beam["particle"].values[0].capitalize()
         particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV

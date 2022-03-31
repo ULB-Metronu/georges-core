@@ -2,7 +2,7 @@
 TODO
 """
 import logging
-
+import numpy as _np
 import pandas as _pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -33,11 +33,13 @@ palette['MULTIPOLE'] = palette['gray']
 palette['DEGRADER'] = palette['base02']
 palette['RECTANGULARCOLLIMATOR'] = palette['goldenrod']
 palette['CIRCULARCOLLIMATOR'] = palette['orange']
+palette['ELLIPTICALCOLLIMATOR'] = palette['orange']
 palette['COLLIMATOR'] = 'gold'
 palette['HKICKER'] = palette['magenta']
 palette['VKICKER'] = palette['violet']
 palette['SCATTERER'] = palette['base02']
 palette['MATRIX'] = palette['cyan']
+palette['ELEMENT'] = palette['base0']
 
 
 class MatplotlibArtist(_Artist):
@@ -122,11 +124,12 @@ class MatplotlibArtist(_Artist):
     def beamline_get_ticks_labels(o):
         return list(o.index)
 
-    def plot_cartouche(self, beamline: _pd.DataFrame = None, print_label: bool = False):
+    def plot_cartouche(self, beamline: _pd.DataFrame = None, print_label: bool = False, labels: _pd.DataFrame = None):
         """
         Args:
             beamline:
             print_label:
+            labels:
 
         Returns:
 
@@ -158,7 +161,20 @@ class MatplotlibArtist(_Artist):
                 )
 
             elif e['CLASS'].upper() in ['SEXTUPOLE', 'QUADRUPOLE', 'MULTIPOLE', 'HKICKER', 'RECTANGULARCOLLIMATOR',
-                                        'VKICKER', 'DEGRADER', 'CIRCULARCOLLIMATOR', 'MATRIX', 'SCATTERER']:
+                                        'VKICKER', 'DEGRADER', 'CIRCULARCOLLIMATOR', "ELLIPTICALCOLLIMATOR", "MATRIX",
+                                        'SCATTERER']:
+                self._ax2.add_patch(
+                    patches.Rectangle(
+                        (e['AT_ENTRY'].m_as('m'), offset - 0.05),
+                        e['L'].m_as('m'),
+                        .1,
+                        hatch='',
+                        facecolor=palette[e['CLASS'].upper()],
+                        ec=palette[e['CLASS'].upper()],
+                        clip_on=False,
+                    )
+                )
+            elif e['CLASS'].upper() in ['ELEMENT']:
                 self._ax2.add_patch(
                     patches.Rectangle(
                         (e['AT_ENTRY'].m_as('m'), offset - 0.05),
@@ -179,8 +195,12 @@ class MatplotlibArtist(_Artist):
             bl_short = bl_short.query("CLASS != 'Drift'")
             bl_short = bl_short.set_index("NAME")
 
-            ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
-            ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
+            if labels is not None:
+                ticks_locations_short = self.beamline_get_ticks_locations(labels)
+                ticks_labels_short = self.beamline_get_ticks_labels(labels)
+            else:
+                ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
+                ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
 
             self._ax2.get_xaxis().set_tick_params(direction='out')
             self._ax2.tick_params(axis='both', which='major')
@@ -192,12 +212,14 @@ class MatplotlibArtist(_Artist):
     def plot_beamline(self, beamline: _pd.DataFrame = None,
                       print_label: bool = False,
                       with_aperture: bool = True,
+                      labels: _pd.DataFrame = None,
                       **kwargs):
         """
         Args:
             beamline ():
             print_label ():
             with_aperture ():
+            labels ():
             **kwargs ():
 
         Returns:
@@ -223,6 +245,9 @@ class MatplotlibArtist(_Artist):
             self.draw_aperture(beamline, **kwargs)
 
         if print_label:
+            if labels is not None:
+                ticks_locations_short = self.beamline_get_ticks_locations(labels)
+                ticks_labels_short = self.beamline_get_ticks_labels(labels)
             self._ax.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
             self._ax.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
@@ -233,12 +258,14 @@ class MatplotlibArtist(_Artist):
             return
         bl = bl[~bl['APERTYPE'].isnull()]
         bl[['APERTYPE', 'CLASS']] = bl[['APERTYPE', 'CLASS']].applymap(lambda e: e.upper())
-        bl.query("CLASS in ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR']", inplace=True)
+        bl.query("CLASS in ['QUADRUPOLE', 'SBEND', 'RBEND', 'RECTANGULARCOLLIMATOR', 'CIRCULARCOLLIMATOR', "
+                 "'ELLIPTICALCOLLIMATOR']",
+                 inplace=True)
         planes = kwargs.get('plane', 'X')
 
         # Set the y aperture for circular apertype
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
-            bl.at[idx, 'APERTURE'] = [bl.at[idx, 'APERTURE'][0], bl.at[idx, 'APERTURE'][0]]
+            bl.at[idx, 'APERTURE'][0:] = [bl.at[idx, 'APERTURE'][0], bl.at[idx, 'APERTURE'][0]]
 
         if planes == 'X':
             index = [0, 0]
@@ -307,7 +334,7 @@ class MatplotlibArtist(_Artist):
 
     def draw_bend(self, e):
         tmp = e['APERTURE_UP'] + e['CHAMBER_UP']
-        if tmp < 55:
+        if tmp > 55:
             logging.warning(f"Aperture are bigger than 55 mm for {e.name}.")
 
         self._ax.add_patch(
@@ -319,6 +346,8 @@ class MatplotlibArtist(_Artist):
             )
         )
         tmp = -e['APERTURE_DOWN'] - e['CHAMBER_UP']
+        if tmp < -55:
+            logging.warning(f"Aperture are bigger than 55 mm for {e.name}.")
         self._ax.add_patch(
             patches.Rectangle(
                 (e['AT_ENTRY'].m_as('m'), tmp if abs(tmp) < 55 else -55),  # (x,y)
