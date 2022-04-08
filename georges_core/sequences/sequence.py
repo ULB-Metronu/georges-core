@@ -219,6 +219,7 @@ class Sequence(metaclass=SequenceType):
                 df['AT_ENTRY'] = df['AT_ENTRY'].apply(safe_convert('meter'))
                 df['AT_CENTER'] = df['AT_CENTER'].apply(safe_convert('meter'))
                 df['AT_EXIT'] = df['AT_EXIT'].apply(safe_convert('meter'))
+                df['S'] = df['S'].apply(safe_convert('meter'))
                 try:
                     df['L'] = df['L'].apply(safe_convert('meter'))
                 except KeyError:
