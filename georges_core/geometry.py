@@ -364,7 +364,7 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
 
     results = np.empty((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
     results.fill(np.nan)
-    for it, segments in enumerate(all_segments):
+    for it, segments in enumerate(all_segments): #TODO rename segments to be more explicit
         mu = 0
         for ir, plane in enumerate(frenet_planes):
             for mu, k in enumerate(segments):
