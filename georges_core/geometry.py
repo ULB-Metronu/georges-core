@@ -364,8 +364,7 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
 
     results = np.empty((len(all_segments), len(frenet_planes), all_segments[0][0].data.shape[2]))
     results.fill(np.nan)
-    for it, segments in enumerate(all_segments): #TODO rename segments to be more explicit
-        mu = 0
+    for it, segments in enumerate(all_segments):
         for ir, plane in enumerate(frenet_planes):
             for mu, k in enumerate(segments):
                 i = intersection_segment_plane(k.u, k.p0, plane.point, plane.normal)
@@ -373,6 +372,6 @@ def project_on_reference(ref: ReferenceTrajectory, trajectories: list):
                     continue
                 i_coordinates = k.p0 + k.u * i
                 results[it, ir] = i_coordinates
+                segments = segments[mu:]
                 break
-            segments = segments[mu:]
     return results
