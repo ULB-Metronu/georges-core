@@ -322,7 +322,7 @@ def build_segments(trajectory: Points):
 
 @njit
 def intersection_segment_plane(seg_u: np.ndarray, seg_p0: np.ndarray, plane_point: np.ndarray,
-                               plane_normal: np.ndarray):
+                               plane_normal: np.ndarray, epsilon: float = 1e-3):
     """Provides the intersection between a plane and a segment. Returns -1 if negative."""
     # Attention, un segment isolé doit quand même avoir une dimension "vertiale" --> ndim = (1, 2 , 6)
     u = seg_u[0, 0:3]
@@ -331,13 +331,13 @@ def intersection_segment_plane(seg_u: np.ndarray, seg_p0: np.ndarray, plane_poin
     D = _np.dot(plane_normal, u)
     N = -_np.dot(plane_normal, w)
 
-    if _np.abs(D) < 1e-4:
+    if _np.abs(D) < epsilon:
         if N == 0:
             return 2  # Segment dans le plan
         else:
             return -1  # No intersection
     sI = N / D
-    if sI < 0 or sI > 1:
+    if sI < 0 or sI > 1 + epsilon:
         return -1
     return sI
 
