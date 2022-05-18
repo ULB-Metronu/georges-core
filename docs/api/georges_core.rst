@@ -8,6 +8,7 @@ Subpackages
    :maxdepth: 4
 
    georges_core.codes_io
+   georges_core.madx
    georges_core.sequences
    georges_core.vis
 

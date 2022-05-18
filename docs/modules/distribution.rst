@@ -1,9 +1,18 @@
-****************************
-Generate a beam distribution
-****************************
+*****************
+Beam distribution
+*****************
 
 Georges-core provides methods to load and analyze beam distributions.
 These methods return a distribution object that can be used or analyzed.
+
+.. jupyter-execute::
+    :hide-output:
+
+    import georges_core
+    from georges_core.distribution import Distribution
+    from georges_core.units import ureg as _ureg
+
+
 Supported format for external files are *csv* and *parquet*::
 
     beam_distribution = Distribution.from_csv('beam.csv')
@@ -13,13 +22,28 @@ A beam distribution can be defined from his parameters. Different methods are im
 
 * *from_5d_sigma_matrix*
 
-::
+.. jupyter-execute::
 
     pass
 
 * *from_5d_multigaussian_distribution*
 
-::
+.. jupyter-execute::
+    :hide-output:
+    :hide-code:
+
+    x = 0.0 * _ureg.cm
+    px = 0
+    y = 0.0 * _ureg.cm
+    py = 0
+    dpp = 0
+    xrms = 0.5 * _ureg.cm
+    yrms = 0.5 * _ureg.cm
+    pxrms = 0.5
+    pyrms = 0.5
+    dpprms = 0
+
+.. jupyter-execute::
 
      beam_distribution = Distribution.from_5d_multigaussian_distribution(n=int(1e3),
                                                                         x=x,
@@ -55,11 +79,21 @@ A beam distribution can be defined from his parameters. Different methods are im
                                                                dispyp=dispyp,
                                                                dpprms=dpprms)
 
+All these methods give a instance of a Class distribution.
+This class has many propoerties to analyse the beam's distribution.
 
-Analysis :
+.. jupyter-execute::
 
-* mean
-* std
-* emit
-* coupling
-* halo
+    beam_distribution.mean
+
+.. jupyter-execute::
+
+    beam_distribution.std
+
+.. jupyter-execute::
+
+    beam_distribution.emit
+
+.. jupyter-execute::
+
+    beam_distribution.twiss

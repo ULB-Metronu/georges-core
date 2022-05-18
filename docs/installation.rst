@@ -2,7 +2,7 @@
 Installation
 ************
 
-The installation process to get Georges-core up and running is relatively simple: the whole library is ready to be installed with `pip` and with `conda`.
+The installation process to get Georges-core up and running is relatively simple: the whole library is ready to be installed with `poetry`.
 
 The Georges-core' git repository is hosted on `Github <https://github.com/ULB-Metronu/georges-core/>`_.
 

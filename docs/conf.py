@@ -12,23 +12,17 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
-import shutil
 import georges_core
-
-sys.path.insert(0, os.path.abspath('..'))
-
-# Copy all examples in the docs repository
-shutil.copytree(src="../examples", dst='./examples', dirs_exist_ok=True)
 
 # -- Project information -----------------------------------------------------
 
 project = 'Georges-core'
 copyright = u'2018-2021, Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), ' \
-            u'Eustache Gnacadja (eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be) '
+            u'Eustache Gnacadja (eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be), ' \
+            u'Marion Vanwelde (marion.vanwelde@ulb.be)'
 author = u'Cédric Hernalsteens (cedric.hernalsteens@ulb.be), Robin Tesse (robin.tesse@ulb.be), Eustache Gnacadja (' \
-         u'eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be) '
+         u'eustache.gnacadja@ulb.be), Eliott Ramoisiaux (eliott.ramoisiaux@ulb.be), ' \
+         u'Marion Vanwelde (marion.vanwelde@ulb.be)'
 
 # The short X.Y version
 version = georges_core.__version__
@@ -58,7 +52,10 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'nbsphinx'
+    'sphinx_copybutton',
+    'nbsphinx',
+    'jupyter_sphinx',
+
 ]
 
 numpydoc_show_class_members = False  # https://sphinx-automodapi.readthedocs.io/en/latest/
