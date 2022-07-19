@@ -48,6 +48,8 @@ pytest-bdd = { version = "^4.0.2", optional = true }
 
 
 [tool.poetry.dev-dependencies]
+yapf = "^0.32.0"
+flake8 = "^4.0.1"
 
 [tool.poetry.extras]
 sphinx = [

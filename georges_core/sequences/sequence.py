@@ -970,6 +970,7 @@ class SurveySequence(PlacementSequence):
 
         sequence['APERTURE'] = sequence['APERTURE'].apply(lambda e: check_apertures(e))
         data = []
+        # FIXME if no kinematics is provided this will raise an error.
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics,
                                                          particle=kinematics.particule)
 
