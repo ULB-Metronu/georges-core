@@ -48,6 +48,9 @@ class BetaBlock(metaclass=BetaBlockType):
     def __getitem__(self, item):
         return getattr(self, item)
 
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+
     def to_df(self):
         return _pd.Series(data={'BETA11': self.BETA11,
                                 'ALPHA11': self.ALPHA11,
