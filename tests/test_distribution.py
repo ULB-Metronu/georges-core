@@ -47,7 +47,6 @@ def test_from_twiss(x, px, y, py, dpp, betax, alphax, betay, alphay,
     mean_distribution = beam_distribution.mean
     twiss_distribution = beam_distribution.twiss
     emit_distribution = beam_distribution.emit
-    print(mean_distribution, x)
     assert x.m_as('m') == pytest.approx(mean_distribution['X'], abs=1e-4)
     assert y.m_as('m') == pytest.approx(mean_distribution['Y'], abs=1e-4)
     assert px == pytest.approx(mean_distribution['PX'], abs=1e-4)

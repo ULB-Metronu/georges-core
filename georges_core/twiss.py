@@ -216,7 +216,7 @@ class Twiss(Parametrization):
             dp0 = twiss['DISP4']
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
-        r15: _pd.Series = m[f"R{p}5"]
+        r15: _pd.Series = m[f"R{p}6"]
         return d0 * r11 + dp0 * r12 + r15
 
     @staticmethod
@@ -245,7 +245,7 @@ class Twiss(Parametrization):
             dp0 = twiss['DISP4']
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
-        r25: _pd.Series = m[f"R{p + 1}5"]
+        r25: _pd.Series = m[f"R{p + 1}6"]
         return d0 * r21 + dp0 * r22 + r25
 
     @staticmethod
