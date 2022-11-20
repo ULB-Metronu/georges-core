@@ -64,6 +64,7 @@ sphinx = [
     "pandoc",
     "nbsphinx",
     "ipython",
+    "jupyter-sphinx",
 ]
 
 test = [
@@ -71,8 +72,7 @@ test = [
     "ipython_genutils",
     "pytest-bdd",
     "tox",
-    "tox-poetry-installer"
-    "jupyter-sphinx"
+    "tox-poetry-installer",
 ]
 
 [build-system]
