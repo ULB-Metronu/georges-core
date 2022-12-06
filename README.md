@@ -1,6 +1,6 @@
 # georges-core
 [![develop](https://github.com/ULB-Metronu/georges-core/actions/workflows/develop.yml/badge.svg?branch=develop)](https://github.com/ULB-Metronu/georges-core/actions/workflows/develop.yml)
-[![develop](https://github.com/rtesse/georges-core/actions/workflows/documentation.yml/badge.svg?branch=develop)](https://github.com/ULB-Metronu/georges-core/actions/workflows/documentation.yml)
+[![documentation](https://github.com/rtesse/georges-core/actions/workflows/documentation.yml/badge.svg?branch=develop)](https://github.com/ULB-Metronu/georges-core/actions/workflows/documentation.yml)
 ![Python](docs/_static/python_versions.svg)
 ![version](https://img.shields.io/badge/version-2022.1-blue)
 
