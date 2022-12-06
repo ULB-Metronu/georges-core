@@ -32,7 +32,7 @@ def fortran_float(input_string: str) -> float:
     except ValueError:
         match = _re_f_float_neg.match(input_string.strip())
         if match:
-            processed_string: str = match.group(1)+'E'+match.group(2)
+            processed_string: str = match.group(1) + 'E' + match.group(2)
             fl = float(processed_string)
         else:
             raise ValueError(f"Failed to convert {input_string:s} to float")

@@ -18,10 +18,8 @@ DEFAULT_N_PARTICLES = 1e5
 def load_from_file(path: str = '', filename='', file_format='csv') -> _pd.DataFrame:
     if file_format == 'csv':
         return _pd.read_csv(os.path.join(path, filename))
-    elif file_format == 'parquet':
+    if file_format == 'parquet':
         return _pd.read_parquet(os.path.join(path, filename))
-    else:
-        raise DistributionException(f"{file_format} is not a valid format. Please use csv or parquet instead")
 
 
 def generate_from_5d_sigma_matrix(n: int,
@@ -138,6 +136,7 @@ class Distribution:
         """
         try:
             self.__initialize_distribution(distribution)
+            self.__dims = self.__distribution.shape[1]
         except DistributionException:
             self.__dims = len(PHASE_SPACE_DIMENSIONS)
             self.__distribution = _pd.DataFrame(_np.zeros((1, self.__dims)))
@@ -175,7 +174,7 @@ class Distribution:
     @property
     def emit(self) -> Dict:
         """Return the emittance of the beam in both planes"""
-        tw = self.compute_twiss(self.__distribution.values)
+        tw = njit(self.compute_twiss)(self.__distribution.values)
         return {
             'X': tw[0],
             'Y': tw[5]
@@ -191,7 +190,7 @@ class Distribution:
     @property
     def twiss(self) -> Dict:
         """Return the Twiss parameters of the beam"""
-        tw = self.compute_twiss(self.__distribution.values)
+        tw = njit(self.compute_twiss)(self.__distribution.values)
         return {'emit_x': tw[0],
                 'beta_x': tw[1],
                 'alpha_x': tw[2],
@@ -212,24 +211,19 @@ class Distribution:
             self._halo = _pd.concat([
                 self.__distribution[dimensions].quantile(0.01),
                 self.__distribution[dimensions].quantile(0.05),
-                self.__distribution[dimensions].quantile(1.0 - 0.842701),
-                self.__distribution[dimensions].quantile(0.842701),
+                self.__distribution[dimensions].quantile(0.2),
+                self.__distribution[dimensions].quantile(0.8),
                 self.__distribution[dimensions].quantile(0.95),
                 self.__distribution[dimensions].quantile(0.99)
             ], axis=1).rename(columns={0.01: '1%',
                                        0.05: '5%',
-                                       1.0 - 0.842701: '20%',
-                                       0.842701: '80%',
+                                       0.2: '20%',
+                                       0.8: '80%',
                                        0.95: '95%',
                                        0.99: '99%'
                                        }
                               )
         return self._halo
-
-    @property
-    def coupling(self):
-        """Return a dataframe containing the covariances (coupling) between each dimensions."""
-        return self.__distribution.cov()
 
     def __getitem__(self, item):
         if item not in PHASE_SPACE_DIMENSIONS[:self.__dims]:
@@ -239,7 +233,6 @@ class Distribution:
     def __initialize_distribution(self, distribution=None):
         """Try setting the internal pandas.DataFrame with a distribution."""
         if distribution is not None:
-            distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(distribution.columns.values))] = 0
             self.__distribution = distribution
         else:
             logging.warning(f"Distribution is None: generate a default beam")
@@ -250,9 +243,10 @@ class Distribution:
             logging.warning(f"Trying to initialize a beam distribution with invalid dimensions. "
                             f"{missing_key} are missing. Generate a default beam")
             raise DistributionException('')
+        else:
+            self.__distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(self.__distribution.columns.values))] = 0
 
     @staticmethod
-    @njit
     def compute_twiss(beam: _np.ndarray) -> _np.array:
 
         s11 = _np.var(beam[:, 0])
@@ -467,21 +461,21 @@ class Distribution:
     def from_twiss_parameters(cls,
                               n: int = DEFAULT_N_PARTICLES,
                               x: _Q = 0 * _ureg.m,
-                              px: _Q = 0 * _ureg.radians,
+                              px: float = 0,
                               y: _Q = 0 * _ureg.m,
-                              py: _Q = 0 * _ureg.radians,
-                              dpp: _Q = 0,
+                              py: float = 0,
+                              dpp: float = 0,
                               betax: _Q = 1 * _ureg.m,
-                              alphax: _Q = 0,
+                              alphax: float = 0,
                               betay: _Q = 1 * _ureg.m,
-                              alphay: _Q = 0,
+                              alphay: float = 0,
                               emitx: _Q = 1e-6 * _ureg.m * _ureg.radians,
                               emity: _Q = 1e-6 * _ureg.m * _ureg.radians,
                               dispx: _Q = 0 * _ureg.m,
                               dispy: _Q = 0 * _ureg.m,
                               dispxp: float = 0,
                               dispyp: float = 0,
-                              dpprms: _Q = 0
+                              dpprms: float = 0
                               ):
         """
         Initialize a beam with a 5D particle distribution from Twiss parameters.
