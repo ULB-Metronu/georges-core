@@ -32,20 +32,24 @@ def test_madng_sequence():
 
 
 def test_transport_sequence():
-    transport_line = georges_core.sequences.TransportSequence(path=f"{os.path.join(os.getcwd(), 'examples/converter/TRANSPORT')}",
-                                                              filename='calc.bml',
-                                                              flavor=georges_core.codes_io.transport.TransportInputIBAFlavor)
+    transport_line = georges_core.sequences.TransportSequence(
+        path=f"{os.path.join(os.getcwd(), 'examples/converter/TRANSPORT')}",
+        filename='calc.bml',
+        flavor=georges_core.codes_io.transport.TransportInputIBAFlavor)
     artist = georges_core.vis.MatplotlibArtist()
     artist.plot_cartouche(transport_line.df)
     artist.plot_beamline(transport_line.df)
 
 
-#def test_bdsim_sequence():
-#    bdsim_line = georges_core.sequences.BDSIMSequence(path=f"{os.path.join(os.getcwd(), 'examples/converter/BDSIM')}",
-#                                                      filename='output.root')
-#    artist = georges_core.vis.MatplotlibArtist()
-#    artist.plot_cartouche(bdsim_line.df)
-#    artist.plot_beamline(bdsim_line.df)
+def test_bdsim_sequence():
+    # TODO Fix error when importing root: use conda env ?
+
+    # bdsim_line = georges_core.sequences.BDSIMSequence(path=f"{os.path.join(os.getcwd(), 'examples/converter/BDSIM')}",
+    #                                                   filename='output.root')
+    # artist = georges_core.vis.MatplotlibArtist()
+    # artist.plot_cartouche(bdsim_line.df)
+    # artist.plot_beamline(bdsim_line.df)
+    pass
 
 
 def test_survey_sequence():
