@@ -189,12 +189,15 @@ class PlotlyArtist(_Artist):
         """A proxy for plotly.graph_objs.Surface ."""
         self._data.append(go.Surface(*args, **kwargs))
 
+    def heatmap(self, *args, **kwargs):
+        """A proxy for plotly.graph_objs.Surface ."""
+        self._data.append(go.Heatmap(*args, **kwargs))
+
     def plot_cartouche(self,
                        beamline_survey: _pd.DataFrame,
                        vertical_position: float = 1.2,
                        unsplit_bends: bool = True,
-                       skip_elements: Optional[list] = None,
-                       ):
+                       skip_elements: Optional[list] = None):
         """
 
         Args:
