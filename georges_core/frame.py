@@ -16,20 +16,19 @@ Example:
 
 """
 from __future__ import annotations
-from typing import Optional, List, NoReturn, Mapping
+
+from typing import List, Mapping, NoReturn, Optional
+
 import numpy as _np
 import quaternion as _quaternion
+
 from . import ureg as _ureg
 
 _X = 0
 _Y = 1
 _Z = 2
 
-_AXES = {
-    'X': 0,
-    'Y': 1,
-    'Z': 2
-}
+_AXES = {"X": 0, "Y": 1, "Z": 2}
 
 
 class FrameException(Exception):
@@ -64,6 +63,7 @@ class Frame:
     >>> f2.o == f2.origin == f2.get_origin(None)
     True
     """
+
     def __init__(self, parent: Optional[Frame] = None, reference: Optional[Frame] = None):
         """
         Initialize a Frame with respect to a parent frame. If no parent is provided the newly created frame
@@ -212,16 +212,16 @@ class Frame:
             quaternion(0.996194..., 0.087155..., 0, 0)
         """
         ref = ref or self._r
-        if ref is None and self._cache.get('q'):
-            return self._cache['q']
+        if ref is None and self._cache.get("q"):
+            return self._cache["q"]
         if self._p is ref:
             q = self._q
         elif ref is self:
             q = _np.quaternion(1, 0, 0, 0)  # Identity rotation with respect to oneself
         else:
             # Caution: this one DOES NOT commute
-            q = self._p.get_quaternion(ref) * self._q   # Recursion
-        self._cache['q'] = q
+            q = self._p.get_quaternion(ref) * self._q  # Recursion
+        self._cache["q"] = q
         return q
 
     quaternion = property(get_quaternion)
@@ -250,8 +250,8 @@ class Frame:
             array([0., 1., 0.])
         """
         ref = ref or self._r
-        if ref is None and self._cache.get('o') is not None:
-            return self._cache['o']
+        if ref is None and self._cache.get("o") is not None:
+            return self._cache["o"]
         if self._p is ref:
             return self._o
         elif ref is self:
@@ -259,7 +259,7 @@ class Frame:
         else:
             m = _quaternion.as_rotation_matrix(self.get_quaternion(ref))
             o = self._p._get_origin(ref) + _np.matmul(m, self._o)
-        self._cache['o'] = o
+        self._cache["o"] = o
         return o
 
     o_ = property(_get_origin)
@@ -517,11 +517,13 @@ class Frame:
             m22 = 1.0
         elif m22 < -1.0:
             m22 = -1.0
-        return _np.array([
-            -_np.pi / 2 + _np.arctan2(m[0, 0], m[1, 0]),
-            _np.arccos(m11),
-            _np.arccos(m22),
-        ])
+        return _np.array(
+            [
+                -_np.pi / 2 + _np.arctan2(m[0, 0], m[1, 0]),
+                _np.arccos(m11),
+                _np.arccos(m22),
+            ],
+        )
 
     def get_angles(self, ref: Optional[Frame] = None, units: _ureg.Unit = _ureg.radian) -> List[_ureg.Quantity]:
         """
@@ -646,7 +648,7 @@ class Frame:
         Returns:
             the rotated frame (in place), allows method chaining
         """
-        self._cache.pop('q', None)  # Invalidates the cache
+        self._cache.pop("q", None)  # Invalidates the cache
         self._q *= q
         return self
 
@@ -673,7 +675,7 @@ class Frame:
         Returns:
             the rotated frame (in place), allows method chaining
         """
-        return self._rotate(_np.array(list(map(lambda _: _.m_as('radian'), angles))))
+        return self._rotate(_np.array(list(map(lambda _: _.m_as("radian"), angles))))
 
     def _rotate_x(self, angle: float) -> Frame:
         """
@@ -701,7 +703,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_x(angle.m_as('radian'))
+        return self._rotate_x(angle.m_as("radian"))
 
     def _rotate_y(self, angle: float) -> Frame:
         """
@@ -729,7 +731,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_y(angle.m_as('radian'))
+        return self._rotate_y(angle.m_as("radian"))
 
     def _rotate_z(self, angle: float) -> Frame:
         """
@@ -757,7 +759,7 @@ class Frame:
         Returns:
 
         """
-        return self._rotate_z(angle.m_as('radian'))
+        return self._rotate_z(angle.m_as("radian"))
 
     def rotate_axis(self, axis: str, angle: float) -> Frame:
         """
@@ -797,7 +799,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
-        self._cache.pop('o', None)  # Invalidaets the cache
+        self._cache.pop("o", None)  # Invalidaets the cache
         return self.translate(offset)
 
     def _translate(self, offset: _np.ndarray) -> Frame:
@@ -842,7 +844,7 @@ class Frame:
         """
         if len(offset) != 3:
             raise FrameException("The offset must be of length 3.")
-        return self._translate(_np.array(list(map(lambda _: _.m_as('m'), offset))))
+        return self._translate(_np.array(list(map(lambda _: _.m_as("m"), offset))))
 
     def _translate_x(self, offset: float) -> Frame:
         """
@@ -871,7 +873,7 @@ class Frame:
         Returns:
 
         """
-        return self._translate_x(offset.m_as('m'))
+        return self._translate_x(offset.m_as("m"))
 
     def _translate_y(self, offset: float) -> Frame:
         """
@@ -900,7 +902,7 @@ class Frame:
         Returns:
 
         """
-        return self._translate_y(offset.m_as('m'))
+        return self._translate_y(offset.m_as("m"))
 
     def _translate_z(self, offset: float) -> Frame:
         """
@@ -929,7 +931,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
-        return self._translate_z(offset.m_as('m'))
+        return self._translate_z(offset.m_as("m"))
 
     def _translate_axis(self, axis: str, offset: float) -> Frame:
         """
@@ -961,7 +963,7 @@ class Frame:
         Returns:
             the translated frame (in place)
         """
-        return self._translate_axis(axis, offset.m_as('m'))
+        return self._translate_axis(axis, offset.m_as("m"))
 
     def reset(self) -> Frame:
         """Reset the frame.

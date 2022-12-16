@@ -93,7 +93,7 @@ Finally, we place the elements in a sequence.
     sequence.place_after_last(b2)
     sequence.place_after_last(d5);
 
-Of course, we can visualize the sequence.
+Of course, we can visualize the sequence with matplotlib or plotly.
 
 .. jupyter-execute::
 
@@ -106,3 +106,9 @@ Of course, we can visualize the sequence.
     artist = MatplotlibArtist(ax2)
     artist.plot_beamline(sequence.df, plane='Y')
     artist.plot_cartouche(sequence.df)
+
+.. jupyter-execute::
+
+    artist = PlotlyArtist()
+    artist.plot_cartouche(sequence.df)
+    artist.render()

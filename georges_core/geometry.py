@@ -2,16 +2,13 @@
 TODO
 """
 from typing import Optional
+
 import numpy as _np
 import numpy as np
 import quaternion
 from numba import njit
 
-__all__ = ['ReferenceTrajectory',
-           'Trajectories',
-           'Points',
-           'project_on_reference'
-           ]
+__all__ = ["Intersections", "ReferenceTrajectory", "Trajectories", "Points", "project_on_reference"]
 
 
 class Intersections:
@@ -78,10 +75,7 @@ class Intersections:
         if self._t_intersections is None:
             t_num = _np.cross(self.u, self.w)
             self._t_intersections = -t_num / denom
-        return (
-            self._s_intersections,
-            self._t_intersections
-        )
+        return self._s_intersections, self._t_intersections
 
     @property
     def intersects_ray_segment(self):
@@ -93,7 +87,7 @@ class Intersections:
         s_intersections, t_intersections = self.parameters_at_intersections
         return _np.ma.masked_where(
             ~_np.column_stack((self.intersects_ray_segment, self.intersects_ray_segment)),
-            self._lines1[:, 0] + _np.stack([self._s_intersections, self._s_intersections]).T * self._u
+            self._lines1[:, 0] + _np.stack([self._s_intersections, self._s_intersections]).T * self._u,
         )
 
 
@@ -268,7 +262,6 @@ class Plane(Primitives):
 
 
 class ReferenceTrajectory:
-
     def __init__(self, points: Points):
         """Initialized with an array of 6D data points (x, y, z, t, p, s)"""
         self._points = points
@@ -291,8 +284,7 @@ class ReferenceTrajectory:
         return self._data
 
 
-def construct_tangent_vectors(p: Points,
-                              norm: float = 1.0) -> Vectors:
+def construct_tangent_vectors(p: Points, norm: float = 1.0) -> Vectors:
     """
     Constructs the tangent vector to the trajectory at the point p
     """
@@ -312,7 +304,7 @@ def build_segments(trajectory: Points):
     a segment in space, and also associate the start and end points for the other coordiantes (t, p and s)."""
     segments = None
     for pt in range(trajectory.data.shape[0] - 1):
-        segment = trajectory.data[pt:pt + 2]
+        segment = trajectory.data[pt : pt + 2]
         if pt == 0:
             segments = segment.reshape(1, 2, trajectory.data.shape[1])
         else:
@@ -321,25 +313,30 @@ def build_segments(trajectory: Points):
 
 
 @njit
-def intersection_segment_plane(seg_u: np.ndarray, seg_p0: np.ndarray, plane_point: np.ndarray,
-                               plane_normal: np.ndarray, epsilon: float = 1e-3):
+def intersection_segment_plane(
+    seg_u: np.ndarray,
+    seg_p0: np.ndarray,
+    plane_point: np.ndarray,
+    plane_normal: np.ndarray,
+    epsilon: float = 1e-3,
+):
     """Provides the intersection between a plane and a segment. Returns -1 if negative."""
     # Attention, un segment isolé doit quand même avoir une dimension "vertiale" --> ndim = (1, 2 , 6)
     u = seg_u[0, 0:3]
     w = seg_p0[0, 0:3] - plane_point
 
-    D = _np.dot(plane_normal, u)
-    N = -_np.dot(plane_normal, w)
+    d = _np.dot(plane_normal, u)
+    n = -_np.dot(plane_normal, w)
 
-    if _np.abs(D) < epsilon:
-        if N == 0:
+    if _np.abs(d) < epsilon:
+        if n == 0:
             return 2  # Segment dans le plan
         else:
             return -1  # No intersection
-    sI = N / D
-    if sI < 0 or sI > 1 + epsilon:
+    si = n / d
+    if si < 0 or si > 1 + epsilon:
         return -1
-    return sI
+    return si
 
 
 def create_segment(a):

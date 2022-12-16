@@ -10,5 +10,5 @@ Modules
     modules/distribution
     modules/geometry
     modules/madx
+    modules/twiss
     modules/plotting
-

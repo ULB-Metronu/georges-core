@@ -39,11 +39,3 @@ For each particle, theses properties are available:
 
     e = georges_core.particles.Electron
     e
-
-API
----
-
-.. automodule:: georges_core.particles
-   :members:
-   :undoc-members:
-   :show-inheritance:

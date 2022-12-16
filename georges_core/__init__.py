@@ -1,11 +1,10 @@
-__version__ = "2020.1"
+__version__ = "2022.1"
 
-from .units import ureg, Q_
-from .kinematics import Kinematics, KinematicsException
-from .frame import Frame, FrameFrenet, FrameException
-from .patchable import Patchable
-from .vis import Artist, GnuplotArtist, PlotlyArtist, vtk_utils
-from .geometry import Trajectories, ReferenceTrajectory, project_on_reference, Points
-from .geometry import Intersections
 from .distribution import Distribution, DistributionException
-from .twiss import Twiss, TengEdwardsTwiss, RipkenTwiss, WolskiTwiss
+from .units import Q_, ureg
+from .frame import Frame, FrameException, FrameFrenet
+from .geometry import Intersections, Points, ReferenceTrajectory, Trajectories, project_on_reference
+from .kinematics import Kinematics, KinematicsException
+from .patchable import Patchable
+from .twiss import RipkenTwiss, TengEdwardsTwiss, Twiss, WolskiTwiss
+from .vis import Artist, GnuplotArtist, PlotlyArtist, vtk_utils

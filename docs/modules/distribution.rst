@@ -80,7 +80,7 @@ A beam distribution can be defined from his parameters. Different methods are im
                                                                dpprms=dpprms)
 
 All these methods give a instance of a Class distribution.
-This class has many propoerties to analyse the beam's distribution.
+This class has many properties to analyse the beam's distribution.
 
 .. jupyter-execute::
 

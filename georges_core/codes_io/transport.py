@@ -1,10 +1,12 @@
 """
 TODO
 """
-from typing import Dict, Callable, Tuple, Any, List, AnyStr
 import os
-from .. import ureg as _ureg
+from typing import Any, AnyStr, Callable, Dict, List, Tuple
+
 import georges_core
+
+from .. import ureg as _ureg
 from ..kinematics import Kinematics as _Kinematics
 
 
@@ -33,84 +35,76 @@ def _process_beam_correlations_code(code, sequence_metadata):
 
 
 TRANSPORT_TYPE_CODES_IBA: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, Any], Any]]] = {
-    0: (lambda _: None,
-        lambda _, __: None),
-    1: (lambda _: None,
-        _process_beam_code_iba),
-    2: (lambda _: georges_core.sequences.Element.Face(E1=float(_[1]) * _ureg.degrees),
-        lambda _, __: None),
-    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
-        lambda _, __: None),
-    4: (lambda _: georges_core.sequences.Element.SBend(
-        ANGLE=float(_[1]) * _ureg.degree,
-        L=float(_[2]) * _ureg.m,
-        N=float(_[3]),
-        K1=-float(_[3]) / (((float(_[2]) * _ureg.m)/(float(_[1]) * _ureg.degree))**2).to('m**2')
+    0: (lambda _: None, lambda _, __: None),
+    1: (lambda _: None, _process_beam_code_iba),
+    2: (lambda _: georges_core.sequences.Element.Face(E1=float(_[1]) * _ureg.degrees), lambda _, __: None),
+    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m), lambda _, __: None),
+    4: (
+        lambda _: georges_core.sequences.Element.SBend(
+            ANGLE=float(_[1]) * _ureg.degree,
+            L=float(_[2]) * _ureg.m,
+            N=float(_[3]),
+            K1=-float(_[3]) / (((float(_[2]) * _ureg.m) / (float(_[1]) * _ureg.degree)) ** 2).to("m**2"),
+        ),
+        lambda _, __: None,
     ),
-        lambda _, __: None),
-    5: (lambda _: georges_core.sequences.Element.Quadrupole(
-        L=float(_[1]) * _ureg.m,
-        B1=(float(_[2]) * _ureg.T),
-        R=(float(_[3]) * _ureg.mm)
+    5: (
+        lambda _: georges_core.sequences.Element.Quadrupole(
+            L=float(_[1]) * _ureg.m,
+            B1=(float(_[2]) * _ureg.T),
+            R=(float(_[3]) * _ureg.mm),
+        ),
+        lambda _, __: None,
     ),
-        lambda _, __: None),
-    6: (lambda _: georges_core.sequences.Element.Collimator(),
-        lambda _, __: None),
-    7: (lambda _: georges_core.sequences.Element.HKicker(
-        L=0.25 * _ureg.m,
-        KICK=(float(_[2]) * _ureg.milliradian),
-        TILT=0.0 * _ureg.radian),
-        lambda _, __: None),
-    10: (lambda _: None,
-         lambda _, __: None),
-    12: (lambda _: None,
-         _process_beam_correlations_code),
-    15: (lambda _: None,
-         lambda _, __: None),
-    16: (lambda _: None,
-         lambda _, __: None),
-    100: (lambda _: None,
-          lambda _, __: None),
+    6: (lambda _: georges_core.sequences.Element.Collimator(), lambda _, __: None),
+    7: (
+        lambda _: georges_core.sequences.Element.HKicker(
+            L=0.25 * _ureg.m,
+            KICK=(float(_[2]) * _ureg.milliradian),
+            TILT=0.0 * _ureg.radian,
+        ),
+        lambda _, __: None,
+    ),
+    10: (lambda _: None, lambda _, __: None),
+    12: (lambda _: None, _process_beam_correlations_code),
+    15: (lambda _: None, lambda _, __: None),
+    16: (lambda _: None, lambda _, __: None),
+    100: (lambda _: None, lambda _, __: None),
 }
 
 TRANSPORT_TYPE_CODES_ORIGINAL: Dict[int, Tuple[Callable[[Any], Any], Callable[[Any, Any], Any]]] = {
-    0: (lambda _: None,
-        lambda _, __: None),
-    1: (lambda _: None,
-        _process_beam_code_original),
-    2: (lambda _: None,
-        lambda _, __: None),
-    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m),
-        lambda _, __: None),
-    4: (lambda _: georges_core.sequences.Element.SBend(B=float(_[2]) * _ureg.tesla,
-                                                       L=float(_[1]) * _ureg.m,
-                                                       N=float(_[3])
-                                                       ),
-        lambda _, __: None),
-    5: (lambda _: georges_core.sequences.Element.Quadrupole(L=float(_[1]) * _ureg.m,
-                                                            B1=(float(_[2]) * _ureg.T),
-                                                            R=(float(_[3]) * _ureg.mm)
-                                                            ),
-        lambda _, __: None),
-    6: (lambda _: georges_core.sequences.Element.Collimator(),
-        lambda _, __: None),
-    7: (lambda _: georges_core.sequences.Element.Kicker(),
-        lambda _, __: None),
-    10: (lambda _: None,
-         lambda _, __: None),
-    12: (lambda _: None,
-         _process_beam_correlations_code),
-    15: (lambda _: None,
-         lambda _, __: None),
-    16: (lambda _: None,
-         lambda _, __: None),
-    100: (lambda _: None,
-          lambda _, __: None),
+    0: (lambda _: None, lambda _, __: None),
+    1: (lambda _: None, _process_beam_code_original),
+    2: (lambda _: None, lambda _, __: None),
+    3: (lambda _: georges_core.sequences.Element.Drift(L=float(_[1]) * _ureg.m), lambda _, __: None),
+    4: (
+        lambda _: georges_core.sequences.Element.SBend(
+            B=float(_[2]) * _ureg.tesla,
+            L=float(_[1]) * _ureg.m,
+            N=float(_[3]),
+        ),
+        lambda _, __: None,
+    ),
+    5: (
+        lambda _: georges_core.sequences.Element.Quadrupole(
+            L=float(_[1]) * _ureg.m,
+            B1=(float(_[2]) * _ureg.T),
+            R=(float(_[3]) * _ureg.mm),
+        ),
+        lambda _, __: None,
+    ),
+    6: (lambda _: georges_core.sequences.Element.Collimator(), lambda _, __: None),
+    7: (lambda _: georges_core.sequences.Element.Kicker(), lambda _, __: None),
+    10: (lambda _: None, lambda _, __: None),
+    12: (lambda _: None, _process_beam_correlations_code),
+    15: (lambda _: None, lambda _, __: None),
+    16: (lambda _: None, lambda _, __: None),
+    100: (lambda _: None, lambda _, __: None),
 }
 
 
-def load_transport_input_file(filename: str, path: str = '.') -> List[AnyStr]:
-    with open(os.path.join(path, filename), 'r') as f:
+def load_transport_input_file(filename: str, path: str = ".") -> List[AnyStr]:
+    with open(os.path.join(path, filename), "r") as f:
         return f.readlines()
 
 
