@@ -5,9 +5,13 @@ name: documentation
 
 on:
   push:
-    branches: [ develop ]
+    branches:
+      - master
+      - develop
   pull_request:
-    branches: [ develop ]
+    branches:
+      - master
+      - develop
 
 jobs:
   build:
@@ -43,4 +47,6 @@ jobs:
         run: |
           source .venv/bin/activate
           cd docs
+          sudo apt install -y latexmk texlive-latex-extra
           make html
+          make latexpdf

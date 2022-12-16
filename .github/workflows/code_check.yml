@@ -5,9 +5,13 @@ name: code check
 
 on:
   push:
-    branches: [ develop ]
+    branches:
+      - master
+      - develop
   pull_request:
-    branches: [ develop ]
+    branches:
+      - master
+      - develop
     types: [opened, synchronize, reopened]
 
 jobs:

@@ -78,9 +78,7 @@ def load_mad_twiss_table(
     _["KEYWORD"] = _["KEYWORD"].apply(lambda e: e.upper())
 
     # Compute strength of magnetics elements K1, K2, K3
-    ele = ["MARKER", "DRIFT"]
-    _ = _[~_["KEYWORD"].isin(ele)]
-    idx = _.index
+    idx = _.query("L > 0").index
     if "K1" not in _.columns:
         _["K1"] = 0
         _.loc[idx, "K1"] = _.loc[idx, "K1L"].values / _.loc[idx, "L"].values

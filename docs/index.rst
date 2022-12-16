@@ -59,8 +59,8 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
-.. |Actions Status| image:: https://github.com/ULB-Metronu/georges-core/actions/workflows/develop.yml/badge.svg?branch=develop
+.. |Actions Status| image:: https://github.com/ULB-Metronu/georges-core/actions/workflows/ci.yml/badge.svg?branch=master
    :target: https://github.com/ULB-Metronu/georges-core/actions
 
-.. |Documentation Status| image:: https://readthedocs.org/projects/zgoubidoo/badge/?version=latest
-   :target: https://georges-core.readthedocs.io/en/latest/?badge=latest
+.. |Documentation Status| image:: https://github.com/ULB-Metronu/georges-core/actions/workflows/documentation.yml/badge.svg?branch=master
+   :target: https://github.com/ULB-Metronu/georges-core/actions
