@@ -4,11 +4,13 @@ The standard uncoupled Twiss parametrization (including off-momentum effects, ak
 Additional formalisms for the parametrization of fully coupled transfer matrices are also available (Teng, Ripken,
 etc.).
 """
-from typing import Optional, Tuple, Union
-from logging import warning
 import warnings
+from logging import warning
+from typing import Optional, Tuple, Union
+
 import numpy as _np
 import pandas as _pd
+
 from . import ureg as _ureg
 from .sequences import BetaBlock as _BetaBlock
 
@@ -23,8 +25,8 @@ def _get_matrix_elements_block(m: _pd.DataFrame, twiss: Optional[_BetaBlock], bl
     r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
     if twiss is not None:
         alpha: float = twiss[f"ALPHA{v}{v}"]
-        beta: float = twiss[f"BETA{v}{v}"].m_as('m')
-        gamma: float = twiss[f"GAMMA{v}{v}"].m_as('m**-1')
+        beta: float = twiss[f"BETA{v}{v}"].m_as("m")
+        gamma: float = twiss[f"GAMMA{v}{v}"].m_as("m**-1")
         return r11, r12, r21, r22, alpha, beta, gamma
     else:
         return r11, r12, r21, r22
@@ -39,9 +41,7 @@ class Parametrization(metaclass=ParametrizationType):
 
 
 class Twiss(Parametrization):
-    def __init__(self,
-                 twiss_init: Optional[_BetaBlock] = None,
-                 with_phase_unrolling: bool = True):
+    def __init__(self, twiss_init: Optional[_BetaBlock] = None, with_phase_unrolling: bool = True):
         """
 
         Args:
@@ -52,10 +52,7 @@ class Twiss(Parametrization):
         self._twiss_init = twiss_init
         self._with_phase_unrolling = with_phase_unrolling
 
-    def __call__(self,
-                 matrix: _pd.DataFrame,
-                 end: Union[int, str] = -1
-                 ) -> _pd.DataFrame:
+    def __call__(self, matrix: _pd.DataFrame, end: Union[int, str] = -1) -> _pd.DataFrame:
         """
         Uses a step-by-step transfer matrix to compute the Twiss parameters (uncoupled). The phase advance and the
         determinants of the jacobians are computed as well.
@@ -71,20 +68,20 @@ class Twiss(Parametrization):
         else:
             twiss_init = self._twiss_init
 
-        matrix['BETA11'] = self.compute_beta_from_matrix(matrix, twiss_init)
-        matrix['BETA22'] = self.compute_beta_from_matrix(matrix, twiss_init, plane=2)
-        matrix['ALPHA11'] = self.compute_alpha_from_matrix(matrix, twiss_init)
-        matrix['ALPHA22'] = self.compute_alpha_from_matrix(matrix, twiss_init, plane=2)
-        matrix['GAMMA11'] = self.compute_gamma_from_matrix(matrix, twiss_init)
-        matrix['GAMMA22'] = self.compute_gamma_from_matrix(matrix, twiss_init, plane=2)
-        matrix['MU1'] = self.compute_mu_from_matrix(matrix, twiss_init)
-        matrix['MU2'] = self.compute_mu_from_matrix(matrix, twiss_init, plane=2)
-        matrix['DET1'] = self.compute_jacobian_from_matrix(matrix)
-        matrix['DET2'] = self.compute_jacobian_from_matrix(matrix, plane=2)
-        matrix['DISP1'] = self.compute_dispersion_from_matrix(matrix, twiss_init)
-        matrix['DISP2'] = self.compute_dispersion_prime_from_matrix(matrix, twiss_init)
-        matrix['DISP3'] = self.compute_dispersion_from_matrix(matrix, twiss_init, plane=2)
-        matrix['DISP4'] = self.compute_dispersion_prime_from_matrix(matrix, twiss_init, plane=2)
+        matrix["BETA11"] = self.compute_beta_from_matrix(matrix, twiss_init)
+        matrix["BETA22"] = self.compute_beta_from_matrix(matrix, twiss_init, plane=2)
+        matrix["ALPHA11"] = self.compute_alpha_from_matrix(matrix, twiss_init)
+        matrix["ALPHA22"] = self.compute_alpha_from_matrix(matrix, twiss_init, plane=2)
+        matrix["GAMMA11"] = self.compute_gamma_from_matrix(matrix, twiss_init)
+        matrix["GAMMA22"] = self.compute_gamma_from_matrix(matrix, twiss_init, plane=2)
+        matrix["MU1"] = self.compute_mu_from_matrix(matrix, twiss_init)
+        matrix["MU2"] = self.compute_mu_from_matrix(matrix, twiss_init, plane=2)
+        matrix["DET1"] = self.compute_jacobian_from_matrix(matrix)
+        matrix["DET2"] = self.compute_jacobian_from_matrix(matrix, plane=2)
+        matrix["DISP1"] = self.compute_dispersion_from_matrix(matrix, twiss_init)
+        matrix["DISP2"] = self.compute_dispersion_prime_from_matrix(matrix, twiss_init)
+        matrix["DISP3"] = self.compute_dispersion_from_matrix(matrix, twiss_init, plane=2)
+        matrix["DISP4"] = self.compute_dispersion_prime_from_matrix(matrix, twiss_init, plane=2)
 
         def phase_unrolling(phi):
             """TODO"""
@@ -99,13 +96,14 @@ class Twiss(Parametrization):
 
         try:
             from numba import njit
+
             phase_unrolling = njit(phase_unrolling)
         except ModuleNotFoundError:
             pass
 
         if self._with_phase_unrolling:
-            matrix['MU1U'] = phase_unrolling(matrix['MU1'].values)
-            matrix['MU2U'] = phase_unrolling(matrix['MU2'].values)
+            matrix["MU1U"] = phase_unrolling(matrix["MU1"].values)
+            matrix["MU2U"] = phase_unrolling(matrix["MU2"].values)
 
         return matrix
 
@@ -126,8 +124,12 @@ class Twiss(Parametrization):
         return -r11 * r21 * beta + (r11 * r22 + r12 * r21) * alpha - r12 * r22 * gamma
 
     @staticmethod
-    def compute_beta_from_matrix(m: _pd.DataFrame, twiss: _BetaBlock, plane: int = 1,
-                                 strict: bool = False) -> _pd.Series:
+    def compute_beta_from_matrix(
+        m: _pd.DataFrame,
+        twiss: _BetaBlock,
+        plane: int = 1,
+        strict: bool = False,
+    ) -> _pd.Series:
         """
         Computes the Twiss beta values at every steps of the input step-by-step transfer matrix.
 
@@ -141,7 +143,7 @@ class Twiss(Parametrization):
             a Pandas Series with the beta values computed at all steps of the input step-by-step transfer matrix
         """
         r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
-        _ = r11 ** 2 * beta - 2.0 * r11 * r12 * alpha + r12 ** 2 * gamma
+        _ = r11**2 * beta - 2.0 * r11 * r12 * alpha + r12**2 * gamma
         if strict:
             assert (_ > 0).all(), "Not all computed beta are positive."
         return _
@@ -160,7 +162,7 @@ class Twiss(Parametrization):
             a Pandas Series with the gamma values computed at all steps of the input step-by-step transfer matrix
         """
         r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
-        return r21 ** 2 * beta - 2.0 * r21 * r22 * alpha + r22 ** 2 * gamma
+        return r21**2 * beta - 2.0 * r21 * r22 * alpha + r22**2 * gamma
 
     @staticmethod
     def compute_mu_from_matrix(m: _pd.DataFrame, twiss: _BetaBlock, plane: int = 1) -> _pd.Series:
@@ -209,11 +211,11 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1'].m_as('m')
-            dp0 = twiss['DISP2']
+            d0 = twiss["DISP1"].m_as("m")
+            dp0 = twiss["DISP2"]
         else:
-            d0 = twiss['DISP3'].m_as('m')
-            dp0 = twiss['DISP4']
+            d0 = twiss["DISP3"].m_as("m")
+            dp0 = twiss["DISP4"]
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
         r15: _pd.Series = m[f"R{p}6"]
@@ -238,11 +240,11 @@ class Twiss(Parametrization):
         """
         p = 1 if plane == 1 else 3
         if p == 1:
-            d0 = twiss['DISP1'].m_as('m')
-            dp0 = twiss['DISP2']
+            d0 = twiss["DISP1"].m_as("m")
+            dp0 = twiss["DISP2"]
         else:
-            d0 = twiss['DISP3'].m_as('m')
-            dp0 = twiss['DISP4']
+            d0 = twiss["DISP3"].m_as("m")
+            dp0 = twiss["DISP4"]
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
         r25: _pd.Series = m[f"R{p + 1}6"]
@@ -265,46 +267,68 @@ class Twiss(Parametrization):
             m = matrix.iloc[end]
         elif isinstance(end, str):
             m = matrix[matrix.LABEL1 == end].iloc[-1]
-        twiss = dict({
-            'CMU1': (m['R11'] + m['R22']) / 2.0,
-            'CMU2': (m['R33'] + m['R44']) / 2.0,
-        })
-        if twiss['CMU1'] < -1.0 or twiss['CMU1'] > 1.0:
+        twiss = dict(
+            {
+                "CMU1": (m["R11"] + m["R22"]) / 2.0,
+                "CMU2": (m["R33"] + m["R44"]) / 2.0,
+            },
+        )
+        if twiss["CMU1"] < -1.0 or twiss["CMU1"] > 1.0:
             warning(f"Horizontal motion is unstable; proceed with caution (cos(mu) = {twiss['CMU1']}).")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            twiss['MU1'] = _np.arccos(twiss['CMU1'])
-        if twiss['CMU2'] < -1.0 or twiss['CMU2'] > 1.0:
+            twiss["MU1"] = _np.arccos(twiss["CMU1"])
+        if twiss["CMU2"] < -1.0 or twiss["CMU2"] > 1.0:
             warning(f"Vertical motion is unstable; proceed with caution (cos(mu) = {twiss['CMU2']}).")
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            twiss['MU2'] = _np.arccos(twiss['CMU2'])
-        twiss['BETA11'] = m['R12'] / _np.sin(twiss['MU1']) * _ureg.m
-        if twiss['BETA11'] < 0.0:
-            twiss['BETA11'] *= -1
-            twiss['MU1'] *= -1
-        twiss['BETA22'] = m['R34'] / _np.sin(twiss['MU2']) * _ureg.m
-        if twiss['BETA22'] < 0.0:
-            twiss['BETA22'] *= -1
-            twiss['MU2'] *= -1
-        twiss['ALPHA11'] = (m['R11'] - m['R22']) / (2.0 * _np.sin(twiss['MU1']))
-        twiss['ALPHA22'] = (m['R33'] - m['R44']) / (2.0 * _np.sin(twiss['MU2']))
-        twiss['GAMMA11'] = -m['R21'] / _np.sin(twiss['MU1']) * _ureg.m ** -1
-        twiss['GAMMA22'] = -m['R43'] / _np.sin(twiss['MU2']) * _ureg.m ** -1
-        m44 = m[['R11', 'R12', 'R13', 'R14',
-                 'R21', 'R22', 'R23', 'R24',
-                 'R31', 'R32', 'R33', 'R34',
-                 'R41', 'R42', 'R43', 'R44']].apply(float).values.reshape(4, 4)
-        r6 = m[['R15', 'R25', 'R35', 'R45']].apply(float).values.reshape(4, 1)
+            twiss["MU2"] = _np.arccos(twiss["CMU2"])
+        twiss["BETA11"] = m["R12"] / _np.sin(twiss["MU1"]) * _ureg.m
+        if twiss["BETA11"] < 0.0:
+            twiss["BETA11"] *= -1
+            twiss["MU1"] *= -1
+        twiss["BETA22"] = m["R34"] / _np.sin(twiss["MU2"]) * _ureg.m
+        if twiss["BETA22"] < 0.0:
+            twiss["BETA22"] *= -1
+            twiss["MU2"] *= -1
+        twiss["ALPHA11"] = (m["R11"] - m["R22"]) / (2.0 * _np.sin(twiss["MU1"]))
+        twiss["ALPHA22"] = (m["R33"] - m["R44"]) / (2.0 * _np.sin(twiss["MU2"]))
+        twiss["GAMMA11"] = -m["R21"] / _np.sin(twiss["MU1"]) * _ureg.m**-1
+        twiss["GAMMA22"] = -m["R43"] / _np.sin(twiss["MU2"]) * _ureg.m**-1
+        m44 = (
+            m[
+                [
+                    "R11",
+                    "R12",
+                    "R13",
+                    "R14",
+                    "R21",
+                    "R22",
+                    "R23",
+                    "R24",
+                    "R31",
+                    "R32",
+                    "R33",
+                    "R34",
+                    "R41",
+                    "R42",
+                    "R43",
+                    "R44",
+                ]
+            ]
+            .apply(float)
+            .values.reshape(4, 4)
+        )
+        r6 = m[["R15", "R25", "R35", "R45"]].apply(float).values.reshape(4, 1)
         disp = _np.dot(_np.linalg.inv(_np.identity(4) - m44), r6).reshape(4)
-        twiss['DY'] = disp[0] * _ureg.m
-        twiss['DYP'] = disp[1]
-        twiss['DZ'] = disp[2] * _ureg.m
-        twiss['DZP'] = disp[3]
-        twiss['DISP1'] = twiss['DY']
-        twiss['DISP2'] = twiss['DYP']
-        twiss['DISP3'] = twiss['DZ']
-        twiss['DISP4'] = twiss['DZP']
+        twiss["DY"] = disp[0] * _ureg.m
+        twiss["DYP"] = disp[1]
+        twiss["DZ"] = disp[2] * _ureg.m
+        twiss["DZP"] = disp[3]
+        twiss["DISP1"] = twiss["DY"]
+        twiss["DISP2"] = twiss["DYP"]
+        twiss["DISP3"] = twiss["DZ"]
+        twiss["DISP4"] = twiss["DZP"]
 
         return _BetaBlock(**twiss)
 

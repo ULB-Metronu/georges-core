@@ -8,3 +8,5 @@ georges_core.egg-info/
 .coverage
 coverage.xml
 .tox/
+docs/build
+docs/jupyter_execute

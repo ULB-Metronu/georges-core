@@ -1,6 +1,7 @@
 import numpy as np
-from georges_core import ureg as _
+
 from georges_core import Frame, FrameFrenet
+from georges_core import ureg as _
 
 
 def test_frame_frenet_does_only_z_rotation():

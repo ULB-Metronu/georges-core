@@ -1,86 +1,90 @@
-import pandas as _pd
-import numpy as _np
-import os
 import logging
+import os
+from typing import Dict
 
+import numpy as _np
+import pandas as _pd
 import pandas as pd
 from numba import njit
-from typing import Dict
-from .units import ureg as _ureg
-from .units import Q_ as _Q
 
-PARTICLE_TYPES = {'proton', 'antiproton', 'electron', 'positron'}
-PHASE_SPACE_DIMENSIONS = ['X', 'PX', 'Y', 'PY', 'DPP', 'PT', 'DT']
+from .units import Q_ as _Q
+from .units import ureg as _ureg
+
+PARTICLE_TYPES = {"proton", "antiproton", "electron", "positron"}
+PHASE_SPACE_DIMENSIONS = ["X", "PX", "Y", "PY", "DPP", "PT", "DT"]
 DEFAULT_N_PARTICLES = 1e5
 
 
 # Define all methods to generate the beam
-def load_from_file(path: str = '', filename='', file_format='csv') -> _pd.DataFrame:
-    if file_format == 'csv':
+def load_from_file(path: str = "", filename="", file_format="csv") -> _pd.DataFrame:
+    if file_format == "csv":
         return _pd.read_csv(os.path.join(path, filename))
-    if file_format == 'parquet':
+    if file_format == "parquet":
         return _pd.read_parquet(os.path.join(path, filename))
 
 
-def generate_from_5d_sigma_matrix(n: int,
-                                  x: float = 0,
-                                  px: float = 0,
-                                  y: float = 0,
-                                  py: float = 0,
-                                  dpp: float = 0,
-                                  s11: float = 0,
-                                  s12: float = 0,
-                                  s13: float = 0,
-                                  s14: float = 0,
-                                  s15: float = 0,
-                                  s22: float = 0,
-                                  s23: float = 0,
-                                  s24: float = 0,
-                                  s25: float = 0,
-                                  s33: float = 0,
-                                  s34: float = 0,
-                                  s35: float = 0,
-                                  s44: float = 0,
-                                  s45: float = 0,
-                                  s55: float = 0,
-                                  matrix=None,
-                                  ):
+def generate_from_5d_sigma_matrix(
+    n: int,
+    x: float = 0,
+    px: float = 0,
+    y: float = 0,
+    py: float = 0,
+    dpp: float = 0,
+    s11: float = 0,
+    s12: float = 0,
+    s13: float = 0,
+    s14: float = 0,
+    s15: float = 0,
+    s22: float = 0,
+    s23: float = 0,
+    s24: float = 0,
+    s25: float = 0,
+    s33: float = 0,
+    s34: float = 0,
+    s35: float = 0,
+    s44: float = 0,
+    s45: float = 0,
+    s55: float = 0,
+    matrix=None,
+):
     """
 
-        Args:
-            n:
-            x:
-            px:
-            y:
-            py:
-            dpp:
-            s11:
-            s12:
-            s13:
-            s14:
-            s15:
-            s22:
-            s23:
-            s24:
-            s25:
-            s33:
-            s34:
-            s35:
-            s44:
-            s45:
-            s55:
-            matrix:
+    Args:
+        n:
+        x:
+        px:
+        y:
+        py:
+        dpp:
+        s11:
+        s12:
+        s13:
+        s14:
+        s15:
+        s22:
+        s23:
+        s24:
+        s25:
+        s33:
+        s34:
+        s35:
+        s44:
+        s45:
+        s55:
+        matrix:
 
-        Returns:
+    Returns:
 
-        """
+    """
     # For performance considerations, see
     # https://software.intel.com/en-us/blogs/2016/06/15/faster-random-number-generation-in-intel-distribution-for-python
     try:
         import numpy.random_intel
+
         generator = numpy.random_intel.multivariate_normal
     except ModuleNotFoundError:
         import numpy.random
+
         generator = numpy.random.multivariate_normal
 
     s21 = s12
@@ -96,22 +100,20 @@ def generate_from_5d_sigma_matrix(n: int,
 
     if matrix is not None:
         assert matrix.shape == (5, 5)
-        return generator(
-            [x, px, y, py, dpp],
-            matrix,
-            int(n)
-        )
+        return generator([x, px, y, py, dpp], matrix, int(n))
     else:
         return generator(
             [x, px, y, py, dpp],
-            _np.array([
-                [s11, s12, s13, s14, s15],
-                [s21, s22, s23, s24, s25],
-                [s31, s32, s33, s34, s35],
-                [s41, s42, s43, s44, s45],
-                [s51, s52, s53, s54, s55]
-            ]),
-            int(n)
+            _np.array(
+                [
+                    [s11, s12, s13, s14, s15],
+                    [s21, s22, s23, s24, s25],
+                    [s31, s32, s33, s34, s35],
+                    [s41, s42, s43, s44, s45],
+                    [s51, s52, s53, s54, s55],
+                ],
+            ),
+            int(n),
         )
 
 
@@ -140,7 +142,7 @@ class Distribution:
         except DistributionException:
             self.__dims = len(PHASE_SPACE_DIMENSIONS)
             self.__distribution = _pd.DataFrame(_np.zeros((1, self.__dims)))
-            self.__distribution.columns = PHASE_SPACE_DIMENSIONS[:self.__dims]
+            self.__distribution.columns = PHASE_SPACE_DIMENSIONS[: self.__dims]
         self.__n_particles = self.__distribution.shape[0]
         if self.__n_particles <= 0:
             raise DistributionException("Error, no particles in the beam.")
@@ -175,10 +177,7 @@ class Distribution:
     def emit(self) -> Dict:
         """Return the emittance of the beam in both planes"""
         tw = njit(self.compute_twiss)(self.__distribution.values)
-        return {
-            'X': tw[0],
-            'Y': tw[5]
-        }
+        return {"X": tw[0], "Y": tw[5]}
 
     @property
     def sigma(self):
@@ -191,42 +190,40 @@ class Distribution:
     def twiss(self) -> Dict:
         """Return the Twiss parameters of the beam"""
         tw = njit(self.compute_twiss)(self.__distribution.values)
-        return {'emit_x': tw[0],
-                'beta_x': tw[1],
-                'alpha_x': tw[2],
-                'disp_x': tw[3],
-                'disp_xp': tw[4],
-                'emit_y': tw[5],
-                'beta_y': tw[6],
-                'alpha_y': tw[7],
-                'disp_y': tw[8],
-                'disp_yp': tw[9]}
+        return {
+            "emit_x": tw[0],
+            "beta_x": tw[1],
+            "alpha_x": tw[2],
+            "disp_x": tw[3],
+            "disp_xp": tw[4],
+            "emit_y": tw[5],
+            "beta_y": tw[6],
+            "alpha_y": tw[7],
+            "disp_y": tw[8],
+            "disp_yp": tw[9],
+        }
 
     @property
     def halo(self, dimensions=None) -> pd.DataFrame:
         """Return a dataframe containing the 1st, 5th, 95th and 99th percentiles of each dimensions."""
         if dimensions is None:
-            dimensions = ['X', 'Y', 'PX', 'PY']
+            dimensions = ["X", "Y", "PX", "PY"]
         if self._halo is None:
-            self._halo = _pd.concat([
-                self.__distribution[dimensions].quantile(0.01),
-                self.__distribution[dimensions].quantile(0.05),
-                self.__distribution[dimensions].quantile(0.2),
-                self.__distribution[dimensions].quantile(0.8),
-                self.__distribution[dimensions].quantile(0.95),
-                self.__distribution[dimensions].quantile(0.99)
-            ], axis=1).rename(columns={0.01: '1%',
-                                       0.05: '5%',
-                                       0.2: '20%',
-                                       0.8: '80%',
-                                       0.95: '95%',
-                                       0.99: '99%'
-                                       }
-                              )
+            self._halo = _pd.concat(
+                [
+                    self.__distribution[dimensions].quantile(0.01),
+                    self.__distribution[dimensions].quantile(0.05),
+                    self.__distribution[dimensions].quantile(0.2),
+                    self.__distribution[dimensions].quantile(0.8),
+                    self.__distribution[dimensions].quantile(0.95),
+                    self.__distribution[dimensions].quantile(0.99),
+                ],
+                axis=1,
+            ).rename(columns={0.01: "1%", 0.05: "5%", 0.2: "20%", 0.8: "80%", 0.95: "95%", 0.99: "99%"})
         return self._halo
 
     def __getitem__(self, item):
-        if item not in PHASE_SPACE_DIMENSIONS[:self.__dims]:
+        if item not in PHASE_SPACE_DIMENSIONS[: self.__dims]:
             raise DistributionException("Trying to access an invalid data from a beam.")
         return self.__distribution[item]
 
@@ -235,14 +232,16 @@ class Distribution:
         if distribution is not None:
             self.__distribution = distribution
         else:
-            logging.warning(f"Distribution is None: generate a default beam")
-            raise DistributionException('')
+            logging.warning("Distribution is None: generate a default beam")
+            raise DistributionException("")
         self.__dims = self.__distribution.shape[1]
         if self.__dims < 4 or self.__dims > len(PHASE_SPACE_DIMENSIONS):
-            missing_key = list({'X', 'Y', 'PX', 'PY'} - set(distribution.columns.values))
-            logging.warning(f"Trying to initialize a beam distribution with invalid dimensions. "
-                            f"{missing_key} are missing. Generate a default beam")
-            raise DistributionException('')
+            missing_key = list({"X", "Y", "PX", "PY"} - set(distribution.columns.values))
+            logging.warning(
+                f"Trying to initialize a beam distribution with invalid dimensions. "
+                f"{missing_key} are missing. Generate a default beam",
+            )
+            raise DistributionException("")
         else:
             self.__distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(self.__distribution.columns.values))] = 0
 
@@ -269,22 +268,22 @@ class Distribution:
             disp_x = a_xd / s55
             disp_xp = a_xpd / s55
 
-            ebeta_x = (s11 - a_xd ** 2 / s55)
-            egamma_x = (s22 - a_xpd ** 2 / s55)
-            ealpha_x = (-a_xxp + a_xpd * a_xd / s55)
+            ebeta_x = s11 - a_xd**2 / s55
+            egamma_x = s22 - a_xpd**2 / s55
+            ealpha_x = -a_xxp + a_xpd * a_xd / s55
 
-            emit_x = _np.sqrt(ebeta_x * egamma_x - ealpha_x ** 2)
+            emit_x = _np.sqrt(ebeta_x * egamma_x - ealpha_x**2)
             beta_x = ebeta_x / emit_x
             alpha_x = ealpha_x / emit_x
 
             disp_y = a_yd / s55
             disp_yp = a_ypd / s55
 
-            ebeta_y = (s33 - a_yd ** 2 / s55)
-            egamma_y = (s44 - a_ypd ** 2 / s55)
-            ealpha_y = (-a_yyp + a_ypd * a_yd / s55)
+            ebeta_y = s33 - a_yd**2 / s55
+            egamma_y = s44 - a_ypd**2 / s55
+            ealpha_y = -a_yyp + a_ypd * a_yd / s55
 
-            emit_y = _np.sqrt(ebeta_y * egamma_y - ealpha_y ** 2)
+            emit_y = _np.sqrt(ebeta_y * egamma_y - ealpha_y**2)
             beta_y = ebeta_y / emit_y
             alpha_y = ealpha_y / emit_y
 
@@ -305,11 +304,10 @@ class Distribution:
             disp_y = 0
             disp_yp = 0
 
-        return _np.array([emit_x, beta_x, alpha_x, disp_x, disp_xp,
-                          emit_y, beta_y, alpha_y, disp_y, disp_yp])
+        return _np.array([emit_x, beta_x, alpha_x, disp_x, disp_xp, emit_y, beta_y, alpha_y, disp_y, disp_yp])
 
     @classmethod
-    def from_csv(cls, path: str = '', filename: str = ''):
+    def from_csv(cls, path: str = "", filename: str = ""):
         """
 
         Args:
@@ -319,10 +317,10 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
-        return cls(distribution=load_from_file(path, filename, file_format='csv'))
+        return cls(distribution=load_from_file(path, filename, file_format="csv"))
 
     @classmethod
-    def from_parquet(cls, path: str = '', filename: str = ''):
+    def from_parquet(cls, path: str = "", filename: str = ""):
         """
 
         Args:
@@ -332,32 +330,34 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
-        return cls(distribution=load_from_file(path, filename, file_format='parquet'))
+        return cls(distribution=load_from_file(path, filename, file_format="parquet"))
 
     @classmethod
-    def from_5d_sigma_matrix(cls,
-                             n: int,
-                             x: _Q = 0 * _ureg.m,
-                             px: float = 0,
-                             y: _Q = 0 * _ureg.m,
-                             py: float = 0,
-                             dpp: float = 0,
-                             s11: _Q = 0 * _ureg.m ** 2,
-                             s12: float = 0,
-                             s13: float = 0,
-                             s14: float = 0,
-                             s15: float = 0,
-                             s22: float = 0,
-                             s23: float = 0,
-                             s24: float = 0,
-                             s25: float = 0,
-                             s33: _Q = 0 * _ureg.m ** 2,
-                             s34: float = 0,
-                             s35: float = 0,
-                             s44: float = 0,
-                             s45: float = 0,
-                             s55: float = 0,
-                             matrix=None):
+    def from_5d_sigma_matrix(
+        cls,
+        n: int,
+        x: _Q = 0 * _ureg.m,
+        px: float = 0,
+        y: _Q = 0 * _ureg.m,
+        py: float = 0,
+        dpp: float = 0,
+        s11: _Q = 0 * _ureg.m**2,
+        s12: float = 0,
+        s13: float = 0,
+        s14: float = 0,
+        s15: float = 0,
+        s22: float = 0,
+        s23: float = 0,
+        s24: float = 0,
+        s25: float = 0,
+        s33: _Q = 0 * _ureg.m**2,
+        s34: float = 0,
+        s35: float = 0,
+        s44: float = 0,
+        s45: float = 0,
+        s55: float = 0,
+        matrix=None,
+    ):
         """
         Initialize a beam with a 5D particle distribution from a Sigma matrix.
         Args:
@@ -387,43 +387,51 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
-        return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
-                                                                            x=x.m_as('m'),
-                                                                            px=px,
-                                                                            y=y.m_as("m"),
-                                                                            py=py,
-                                                                            dpp=dpp,
-                                                                            s11=s11.m_as('m**2'),
-                                                                            s12=s12,
-                                                                            s13=s13,
-                                                                            s14=s14,
-                                                                            s15=s15,
-                                                                            s22=s22,
-                                                                            s23=s23,
-                                                                            s24=s24,
-                                                                            s25=s25,
-                                                                            s33=s33.m_as('m**2'),
-                                                                            s34=s34,
-                                                                            s35=s35,
-                                                                            s44=s44,
-                                                                            s45=s45,
-                                                                            s55=s55,
-                                                                            matrix=matrix),
-                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
+        return cls(
+            distribution=_pd.DataFrame(
+                generate_from_5d_sigma_matrix(
+                    n=int(n),
+                    x=x.m_as("m"),
+                    px=px,
+                    y=y.m_as("m"),
+                    py=py,
+                    dpp=dpp,
+                    s11=s11.m_as("m**2"),
+                    s12=s12,
+                    s13=s13,
+                    s14=s14,
+                    s15=s15,
+                    s22=s22,
+                    s23=s23,
+                    s24=s24,
+                    s25=s25,
+                    s33=s33.m_as("m**2"),
+                    s34=s34,
+                    s35=s35,
+                    s44=s44,
+                    s45=s45,
+                    s55=s55,
+                    matrix=matrix,
+                ),
+                columns=["X", "PX", "Y", "PY", "DPP"],
+            ),
+        )
 
     @classmethod
-    def from_5d_multigaussian_distribution(cls,
-                                           n: int = DEFAULT_N_PARTICLES,
-                                           x: _Q = 0 * _ureg.m,
-                                           px: float = 0,
-                                           y: _Q = 0 * _ureg.m,
-                                           py: float = 0,
-                                           dpp: float = 0,
-                                           xrms: _Q = 0 * _ureg.m,
-                                           pxrms: float = 0,
-                                           yrms: _Q = 0 * _ureg.m,
-                                           pyrms: float = 0,
-                                           dpprms=0):
+    def from_5d_multigaussian_distribution(
+        cls,
+        n: int = DEFAULT_N_PARTICLES,
+        x: _Q = 0 * _ureg.m,
+        px: float = 0,
+        y: _Q = 0 * _ureg.m,
+        py: float = 0,
+        dpp: float = 0,
+        xrms: _Q = 0 * _ureg.m,
+        pxrms: float = 0,
+        yrms: _Q = 0 * _ureg.m,
+        pyrms: float = 0,
+        dpprms=0,
+    ):
         """
         Initialize a beam with a 5D particle distribution from rms quantities.
         Args:
@@ -442,41 +450,48 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
-        return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
-                                                                            x=x.m_as('m'),
-                                                                            px=px,
-                                                                            y=y.m_as("m"),
-                                                                            py=py,
-                                                                            dpp=dpp,
-                                                                            s11=xrms.m_as("m") ** 2,
-                                                                            s12=0,
-                                                                            s22=pxrms ** 2,
-                                                                            s33=yrms.m_as("m") ** 2,
-                                                                            s34=0,
-                                                                            s44=pyrms ** 2,
-                                                                            s55=dpprms ** 2),
-                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
+        return cls(
+            distribution=_pd.DataFrame(
+                generate_from_5d_sigma_matrix(
+                    n=int(n),
+                    x=x.m_as("m"),
+                    px=px,
+                    y=y.m_as("m"),
+                    py=py,
+                    dpp=dpp,
+                    s11=xrms.m_as("m") ** 2,
+                    s12=0,
+                    s22=pxrms**2,
+                    s33=yrms.m_as("m") ** 2,
+                    s34=0,
+                    s44=pyrms**2,
+                    s55=dpprms**2,
+                ),
+                columns=["X", "PX", "Y", "PY", "DPP"],
+            ),
+        )
 
     @classmethod
-    def from_twiss_parameters(cls,
-                              n: int = DEFAULT_N_PARTICLES,
-                              x: _Q = 0 * _ureg.m,
-                              px: float = 0,
-                              y: _Q = 0 * _ureg.m,
-                              py: float = 0,
-                              dpp: float = 0,
-                              betax: _Q = 1 * _ureg.m,
-                              alphax: float = 0,
-                              betay: _Q = 1 * _ureg.m,
-                              alphay: float = 0,
-                              emitx: _Q = 1e-6 * _ureg.m * _ureg.radians,
-                              emity: _Q = 1e-6 * _ureg.m * _ureg.radians,
-                              dispx: _Q = 0 * _ureg.m,
-                              dispy: _Q = 0 * _ureg.m,
-                              dispxp: float = 0,
-                              dispyp: float = 0,
-                              dpprms: float = 0
-                              ):
+    def from_twiss_parameters(
+        cls,
+        n: int = DEFAULT_N_PARTICLES,
+        x: _Q = 0 * _ureg.m,
+        px: float = 0,
+        y: _Q = 0 * _ureg.m,
+        py: float = 0,
+        dpp: float = 0,
+        betax: _Q = 1 * _ureg.m,
+        alphax: float = 0,
+        betay: _Q = 1 * _ureg.m,
+        alphay: float = 0,
+        emitx: _Q = 1e-6 * _ureg.m * _ureg.radians,
+        emity: _Q = 1e-6 * _ureg.m * _ureg.radians,
+        dispx: _Q = 0 * _ureg.m,
+        dispy: _Q = 0 * _ureg.m,
+        dispxp: float = 0,
+        dispyp: float = 0,
+        dpprms: float = 0,
+    ):
         """
         Initialize a beam with a 5D particle distribution from Twiss parameters.
         Args:
@@ -502,44 +517,50 @@ class Distribution:
             An instance of the class with the distribution
         """
 
-        gammax = (1 + alphax ** 2) / betax.m_as('m')
-        gammay = (1 + alphay ** 2) / betay.m_as('m')
+        gammax = (1 + alphax**2) / betax.m_as("m")
+        gammay = (1 + alphay**2) / betay.m_as("m")
 
-        s11 = betax.m_as('m') * emitx.m_as('m rad') + (dispx.m_as('m') * dpprms) ** 2
-        s12 = -alphax * emitx.m_as('m rad') + dispx.m_as('m') * dispxp * dpprms ** 2
-        s22 = gammax * emitx.m_as('m rad') + (dispxp * dpprms) ** 2
-        s33 = betay.m_as('m') * emity.m_as('m rad') + (dispy.m_as('m') * dpprms) ** 2
-        s34 = -alphay * emity.m_as('m rad') + dispy.m_as('m') * dispyp * dpprms ** 2
-        s44 = gammay * emity.m_as('m rad') + (dispyp * dpprms) ** 2
-        s13 = dispx.m_as('m') * dispy.m_as('m') * dpprms ** 2
-        s23 = dispxp * dispy.m_as('m') * dpprms ** 2
-        s14 = dispx.m_as('m') * dispyp * dpprms ** 2
-        s24 = dispxp * dispyp * dpprms ** 2
-        s15 = dispx.m_as('m') * dpprms ** 2
-        s25 = dispxp * dpprms ** 2
-        s35 = dispy.m_as('m') * dpprms ** 2
-        s45 = dispyp * dpprms ** 2
-        s55 = dpprms ** 2
+        s11 = betax.m_as("m") * emitx.m_as("m rad") + (dispx.m_as("m") * dpprms) ** 2
+        s12 = -alphax * emitx.m_as("m rad") + dispx.m_as("m") * dispxp * dpprms**2
+        s22 = gammax * emitx.m_as("m rad") + (dispxp * dpprms) ** 2
+        s33 = betay.m_as("m") * emity.m_as("m rad") + (dispy.m_as("m") * dpprms) ** 2
+        s34 = -alphay * emity.m_as("m rad") + dispy.m_as("m") * dispyp * dpprms**2
+        s44 = gammay * emity.m_as("m rad") + (dispyp * dpprms) ** 2
+        s13 = dispx.m_as("m") * dispy.m_as("m") * dpprms**2
+        s23 = dispxp * dispy.m_as("m") * dpprms**2
+        s14 = dispx.m_as("m") * dispyp * dpprms**2
+        s24 = dispxp * dispyp * dpprms**2
+        s15 = dispx.m_as("m") * dpprms**2
+        s25 = dispxp * dpprms**2
+        s35 = dispy.m_as("m") * dpprms**2
+        s45 = dispyp * dpprms**2
+        s55 = dpprms**2
 
-        return cls(distribution=_pd.DataFrame(generate_from_5d_sigma_matrix(n=int(n),
-                                                                            x=x.m_as('m'),
-                                                                            px=px,
-                                                                            y=y.m_as("m"),
-                                                                            py=py,
-                                                                            dpp=dpp,
-                                                                            s11=s11,
-                                                                            s12=s12,
-                                                                            s15=s15,
-                                                                            s25=s25,
-                                                                            s22=s22,
-                                                                            s33=s33,
-                                                                            s34=s34,
-                                                                            s35=s35,
-                                                                            s44=s44,
-                                                                            s45=s45,
-                                                                            s13=s13,
-                                                                            s23=s23,
-                                                                            s14=s14,
-                                                                            s24=s24,
-                                                                            s55=s55),
-                                              columns=['X', 'PX', 'Y', 'PY', 'DPP']))
+        return cls(
+            distribution=_pd.DataFrame(
+                generate_from_5d_sigma_matrix(
+                    n=int(n),
+                    x=x.m_as("m"),
+                    px=px,
+                    y=y.m_as("m"),
+                    py=py,
+                    dpp=dpp,
+                    s11=s11,
+                    s12=s12,
+                    s15=s15,
+                    s25=s25,
+                    s22=s22,
+                    s33=s33,
+                    s34=s34,
+                    s35=s35,
+                    s44=s44,
+                    s45=s45,
+                    s13=s13,
+                    s23=s23,
+                    s14=s14,
+                    s24=s24,
+                    s55=s55,
+                ),
+                columns=["X", "PX", "Y", "PY", "DPP"],
+            ),
+        )

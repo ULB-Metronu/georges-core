@@ -13,9 +13,29 @@ simply import the module units:
     import georges_core
     from georges_core.units import ureg as _ureg
 
-The module is capable of determining the type of the quantity that you pass to the class.
-- Type of particles
-- Kinetic True / False
+The module is capable of determining the type of the quantity that you pass to
+the class. The syntax is as follow::
+
+    georges_core.Kinematics(quantity, particle, kinetic)
+
+* Quantity
+    * Total Energy
+    * Kinetic Energy
+    * Momentum
+    * Relativist Beta
+    * Relativist Gamma
+    * Magnetic rigidity
+    * Range: Only for protons
+    * pv
+* Type of particles
+    * Protons
+    * Electrons
+
+.. note::
+
+    The energy is the total energy by default. To have the kinetic energy instead, the argument
+    `kinetic = True` must be passed to the constructor. If the energy is below the mass energy
+    of the particles, the energy is the kinetic energy.
 
 .. jupyter-execute::
 

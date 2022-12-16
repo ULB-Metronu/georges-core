@@ -1,8 +1,9 @@
 """Utility functions."""
-from typing import Pattern as _Pattern, List, Any
 import re as _re
+from typing import Any, List
+from typing import Pattern as _Pattern
 
-_re_f_float_neg: _Pattern = _re.compile(r'(-?[0-9.]*)(-\d\d\d)')
+_re_f_float_neg: _Pattern = _re.compile(r"(-?[0-9.]*)(-\d\d\d)")
 """A regex pattern matching Fortran quasi-float format."""
 
 
@@ -32,7 +33,7 @@ def fortran_float(input_string: str) -> float:
     except ValueError:
         match = _re_f_float_neg.match(input_string.strip())
         if match:
-            processed_string: str = match.group(1) + 'E' + match.group(2)
+            processed_string: str = match.group(1) + "E" + match.group(2)
             fl = float(processed_string)
         else:
             raise ValueError(f"Failed to convert {input_string:s} to float")
@@ -48,7 +49,7 @@ def intersperse(lst: List, item: Any) -> List:
         item: the item to be interspersed
 
     Returns:
-        A new list list with the interspersed items.
+        A new list with the interspersed items.
 
     Example:
         >>> intersperse([1,2,3], 'a')

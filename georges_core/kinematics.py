@@ -18,12 +18,15 @@ Examples:
 """
 
 from __future__ import annotations
-from typing import TYPE_CHECKING, Union, Optional
+
 from functools import partial as _partial
+from typing import TYPE_CHECKING, Optional, Union
+
 import numpy as _np
-from georges_core.units import ureg as _ureg
-from georges_core.units import Q_ as _Q
+
 from georges_core.particles import Proton as _Proton
+from georges_core.units import Q_ as _Q
+from georges_core.units import ureg as _ureg
 
 if TYPE_CHECKING:
     from georges_core.particles import ParticuleType as _ParticuleType
@@ -37,9 +40,7 @@ class KinematicsException(Exception):
 
 
 class Kinematics:
-    """
-
-    """
+    """ """
 
     def __init__(self, q: Union[float, _Q], particle: _ParticuleType = _Proton, kinetic: Optional[bool] = None):
         """
@@ -54,26 +55,26 @@ class Kinematics:
         self._type: Optional[str] = None
 
         if _Q(q).dimensionality == _ureg.cm.dimensionality:
-            self._type = 'range'
+            self._type = "range"
         elif _Q(q).dimensionality == _ureg.eV.dimensionality:
             if kinetic is True:
-                self._type = 'ekin'
+                self._type = "ekin"
             elif kinetic is False:
-                self._type = 'etot'
+                self._type = "etot"
             else:
-                if _Q(q) < particle.M * _ureg.c ** 2:
-                    self._type = 'ekin'
+                if _Q(q) < particle.M * _ureg.c**2:
+                    self._type = "ekin"
                 else:
-                    self._type = 'etot'
+                    self._type = "etot"
         elif _Q(q).dimensionality == _ureg.eV_c.dimensionality:
-            self._type = 'momentum'
+            self._type = "momentum"
         elif _Q(q).dimensionality == (_ureg.tesla * _ureg.m).dimensionality:
-            self._type = 'brho'
+            self._type = "brho"
         elif _Q(q).dimensionless:
             if q < 1:
-                self._type = 'beta'
+                self._type = "beta"
             else:
-                self._type = 'gamma'
+                self._type = "gamma"
         else:
             raise KinematicsException("Invalid kinematic quantity.")
 
@@ -127,7 +128,7 @@ class Kinematics:
         """
         if self._p != _Proton:
             return 0.0
-        _ = self.to('range').to('cm')
+        _ = self.to("range").to("cm")
         if magnitude:
             return _.magnitude
         else:
@@ -148,7 +149,7 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to('ekin').to('MeV')
+        _ = self.to("ekin").to("MeV")
         if magnitude:
             return _.magnitude
         else:
@@ -169,7 +170,7 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to('etot').to('MeV')
+        _ = self.to("etot").to("MeV")
         if magnitude:
             return _.magnitude
         else:
@@ -190,7 +191,7 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to('momentum').to('MeV_c')
+        _ = self.to("momentum").to("MeV_c")
         if magnitude:
             return _.magnitude
         else:
@@ -211,7 +212,7 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to('brho').to('tesla meter')
+        _ = self.to("brho").to("tesla meter")
         if magnitude:
             return _.magnitude
         else:
@@ -229,7 +230,7 @@ class Kinematics:
         Returns:
 
         """
-        return self.to('pv')
+        return self.to("pv")
 
     pv = property(to_pv)
     """Provides *pv*."""
@@ -240,7 +241,7 @@ class Kinematics:
         Returns:
 
         """
-        return self.to('beta')
+        return self.to("beta")
 
     beta = property(to_beta)
     """Provides *beta*."""
@@ -251,7 +252,7 @@ class Kinematics:
         Returns:
 
         """
-        return self.to('gamma')
+        return self.to("gamma")
 
     gamma = property(to_gamma)
     """Provides *gamma*."""
@@ -271,7 +272,7 @@ def etot_to_ekin(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
          Kinetic energy of the particle
     """
-    return e - particle.M * _ureg.c ** 2
+    return e - particle.M * _ureg.c**2
 
 
 def etot_to_momentum(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -391,7 +392,7 @@ def ekin_to_etot(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
         Total energy of the particle
 
     """
-    return e + particle.M * _ureg.c ** 2
+    return e + particle.M * _ureg.c**2
 
 
 def ekin_to_momentum(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -410,7 +411,7 @@ def ekin_to_momentum(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Momentum of the particle
     """
-    return _np.sqrt(ekin_to_etot(e, particle) ** 2 - particle.M ** 2 * _ureg.c ** 4) / _ureg.c
+    return _np.sqrt(ekin_to_etot(e, particle) ** 2 - particle.M**2 * _ureg.c**4) / _ureg.c
 
 
 def ekin_to_brho(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -454,8 +455,8 @@ def ekin_to_range(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
     b = 0.008539
     c = 0.5271
     d = 3.4917
-    e = e.m_as('MeV')
-    return _np.exp((-c + _np.sqrt(c ** 2 - 4 * b * (d - _np.log(e)))) / (2 * b)) * _ureg.cm
+    e = e.m_as("MeV")
+    return _np.exp((-c + _np.sqrt(c**2 - 4 * b * (d - _np.log(e)))) / (2 * b)) * _ureg.cm
 
 
 def ekin_to_pv(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -472,7 +473,7 @@ def ekin_to_pv(e: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Relativistic pv of the particle
     """
-    return ((e + particle.M * _ureg.c ** 2) ** 2 - (particle.M * _ureg.c ** 2) ** 2) / (e + particle.M * _ureg.c ** 2)
+    return ((e + particle.M * _ureg.c**2) ** 2 - (particle.M * _ureg.c**2) ** 2) / (e + particle.M * _ureg.c**2)
 
 
 def ekin_to_beta(e: _Q, particle: _ParticuleType = _Proton) -> float:
@@ -489,8 +490,8 @@ def ekin_to_beta(e: _Q, particle: _ParticuleType = _Proton) -> float:
     Returns:
          Relativistic beta of the particle
     """
-    gamma = (particle.M * _ureg.c ** 2 + e) / (particle.M * _ureg.c ** 2)
-    return float((_np.sqrt((gamma ** 2 - 1) / gamma ** 2)).magnitude)
+    gamma = (particle.M * _ureg.c**2 + e) / (particle.M * _ureg.c**2)
+    return float((_np.sqrt((gamma**2 - 1) / gamma**2)).magnitude)
 
 
 def ekin_to_gamma(e: _Q, particle: _ParticuleType = _Proton) -> float:
@@ -507,7 +508,7 @@ def ekin_to_gamma(e: _Q, particle: _ParticuleType = _Proton) -> float:
     Returns:
          Relativistic gamma of the particle
     """
-    return float(((particle.M * _ureg.c ** 2 + e) / (particle.M * _ureg.c ** 2)).magnitude)
+    return float(((particle.M * _ureg.c**2 + e) / (particle.M * _ureg.c**2)).magnitude)
 
 
 def momentum_to_etot(p: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -524,7 +525,7 @@ def momentum_to_etot(p: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
          Total energy of the particle
     """
-    return _np.sqrt((p ** 2 * _ureg.c ** 2) + ((particle.M * _ureg.c ** 2) ** 2))
+    return _np.sqrt((p**2 * _ureg.c**2) + ((particle.M * _ureg.c**2) ** 2))
 
 
 def momentum_to_ekin(p: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -541,7 +542,7 @@ def momentum_to_ekin(p: _Q, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
          Kinetic energy of the particle
     """
-    return momentum_to_etot(p, particle) - particle.M * _ureg.c ** 2
+    return momentum_to_etot(p, particle) - particle.M * _ureg.c**2
 
 
 def momentum_to_brho(p: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -787,10 +788,8 @@ def range_to_ekin(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
     b = -0.00490
     c = 0.56137
     d = 3.46405
-    r = r.to('cm').magnitude
-    return _np.exp(
-        a * _np.log(r) ** 3 + b * _np.log(r) ** 2 + c * _np.log(r) + d
-    ) * _ureg.MeV
+    r = r.to("cm").magnitude
+    return _np.exp(a * _np.log(r) ** 3 + b * _np.log(r) ** 2 + c * _np.log(r) + d) * _ureg.MeV
 
 
 def range_to_momentum(r: _Q, particle: _ParticuleType = _Proton) -> _Q:
@@ -898,7 +897,7 @@ def beta_to_etot(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Total energy of the particle
     """
-    return beta_to_gamma(beta) * (particle.M * _ureg.c ** 2)
+    return beta_to_gamma(beta) * (particle.M * _ureg.c**2)
 
 
 def beta_to_ekin(beta: float, particle: _ParticuleType = _Proton) -> _Q:
@@ -917,7 +916,7 @@ def beta_to_ekin(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Kinetic energy of the particle
     """
-    return (beta_to_gamma(beta) - 1) * (particle.M * _ureg.c ** 2)
+    return (beta_to_gamma(beta) - 1) * (particle.M * _ureg.c**2)
 
 
 def beta_to_momentum(beta: float, particle: _ParticuleType = _Proton) -> _Q:
@@ -1011,7 +1010,7 @@ def beta_to_gamma(beta: float, **_) -> float:
     Returns:
         Relativistic gamma of the particle
     """
-    return 1 / (_np.sqrt(1 - beta ** 2))
+    return 1 / (_np.sqrt(1 - beta**2))
 
 
 def gamma_to_etot(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
@@ -1030,7 +1029,7 @@ def gamma_to_etot(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Total energy of the particle
     """
-    return gamma_to_ekin(gamma, particle) + particle.M * _ureg.c ** 2
+    return gamma_to_ekin(gamma, particle) + particle.M * _ureg.c**2
 
 
 def gamma_to_ekin(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
@@ -1047,7 +1046,7 @@ def gamma_to_ekin(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
     Returns:
         Kinetic energy of the particle
     """
-    return (gamma - 1) * (particle.M * _ureg.c ** 2)
+    return (gamma - 1) * (particle.M * _ureg.c**2)
 
 
 def gamma_to_momentum(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
