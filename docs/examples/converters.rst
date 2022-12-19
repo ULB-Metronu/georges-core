@@ -2,7 +2,13 @@
 Conversion of a sequence
 ************************
 
-Blabla.
+Georges-core can convert different output files into an object of type sequence.
+As an example, the user can provide an output file from:
+    * MAD-X
+    * MAD-NG
+    * TRANSPORT
+    * BDSIM
+    * CSV File (SURVEY)
 
 .. jupyter-execute::
     :hide-output:
@@ -54,7 +60,8 @@ Load a Transport file
 
 Load a CSV file (survey file)
 #############################
-Structure du fichier csv, ...
+A survey file is a `.csv` file containing the elements' information as the NAME or the TYPE of
+the element. The user can provide a survey in a global reference frame (`X, Y, Z`) or in a Frenet-Serret (`S, L`)
 
 .. jupyter-execute::
     :hide-output:

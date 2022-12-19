@@ -51,6 +51,10 @@ _BDSIM_TO_MAD_CONVENTION: Mapping[str, str] = {
     "Ecol": "EllipticalCollimator",
 }
 
+_BDSIM_PARTICLE_CONVENTION: Mapping[str, str] = {
+    "E-": "Electron",
+}
+
 
 class SequenceException(Exception):  # pragma: no cover
     """Exception raised for errors when using zgoubidoo.Sequence"""
@@ -1057,7 +1061,7 @@ class BDSIMSequence(Sequence):
         """
         # The pybdsim import is made inside the class init to avoid a pybdsim (and then ROOT)
         # dependence when it is not needed.
-        from pybdsim.Analysis import BDSimOutput
+        from pybdsim.DataUproot import BDSimOutput
 
         # Load the model
         bdsim_data = BDSimOutput(filename=filename, path=path)
@@ -1067,7 +1071,10 @@ class BDSIMSequence(Sequence):
 
         # Load the beam properties
         bdsim_beam = bdsim_data.beam.beam_base.pandas(branches=["beamEnergy", "particle"])
-        particle_name = bdsim_beam["particle"].values[0].capitalize()
+        particle_name = _BDSIM_PARTICLE_CONVENTION.get(
+            bdsim_beam["particle"].values[0].capitalize(),
+            bdsim_beam["particle"].values[0].capitalize(),
+        )
         particle_energy = bdsim_beam["beamEnergy"].values[0] * _ureg.GeV
         p = getattr(_particles, particle_name if particle_name != "Default" else "Proton")
         kin = _Kinematics(particle_energy, kinetic=False, particle=p)
