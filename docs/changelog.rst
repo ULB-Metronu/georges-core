@@ -4,6 +4,7 @@ Changelog
 
 * 2023-xx
 
+    * Write a README file
     * Fix small issues in sequences/BDSIMSequence
     * Update pybdsim in pyproject.toml
     * Fix in the documentation
@@ -17,4 +18,4 @@ Changelog
     * Refactor entire library
     * Implement tests
     * Add geometry module
-    * Improve bean distribution generation
+    * Improve beam distribution generation
