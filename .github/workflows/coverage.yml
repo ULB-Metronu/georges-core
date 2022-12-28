@@ -45,12 +45,14 @@ jobs:
       #----------------------------------------------
       #              run test suite with Sonar
       #----------------------------------------------
-      - name: Run tox
+      - name: Run pytest
         run: |
           source .venv/bin/activate
-          tox -e py
+          coverage run -m pytest
+          coverage xml
+
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Needed to get PR information, if any
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

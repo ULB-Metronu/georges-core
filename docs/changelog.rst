@@ -3,7 +3,7 @@ Changelog
 *********
 
 * 2023-xx
-
+    * Remove tox and add doctesting
     * Write a README file
     * Fix small issues in sequences/BDSIMSequence
     * Update pybdsim in pyproject.toml
@@ -13,7 +13,6 @@ Changelog
 
 
 * 2022-1
-
     * Write the documentation
     * Refactor entire library
     * Implement tests

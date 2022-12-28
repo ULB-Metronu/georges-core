@@ -5,7 +5,8 @@ concerns conversions between kinematic quantities. Full support for units (via `
 helper class (``Kinematics``) provides automatic construction and conversion of kinematics quantities.
 
 Examples:
-    >>> Kinematics(230 *_ureg.MeV)
+    >>> Kinematics(230 *_ureg.MeV) #doctest: +NORMALIZE_WHITESPACE
+    <BLANKLINE>
     Proton
     (.etot) Total energy: 1168.2720299999999 megaelectronvolt
     (.ekin) Kinetic energy: 230 megaelectronvolt
@@ -15,6 +16,7 @@ Examples:
     (.pv): Relativistic pv: 414.71945005821954 megaelectronvolt
     (.beta): Relativistic beta: 0.5958064663732595
     (.gamma): Relativistic gamma: 1.2451314678963625
+    <BLANKLINE>
 """
 
 from __future__ import annotations
