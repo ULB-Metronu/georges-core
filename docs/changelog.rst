@@ -3,6 +3,7 @@ Changelog
 *********
 
 * 2023-xx
+    * Add installation section for Conda
     * Remove tox and add doctesting
     * Write a README file
     * Fix small issues in sequences/BDSIMSequence

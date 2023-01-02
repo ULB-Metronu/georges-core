@@ -2,13 +2,13 @@
 Conversion of a sequence
 ************************
 
-Georges-core can convert different output files into an object of type sequence.
-As an example, the user can provide an output file from:
-    * MAD-X
-    * MAD-NG
-    * TRANSPORT
-    * BDSIM
-    * CSV File (SURVEY)
+Georges-core can convert different output files into an object of type sequence. As an example,
+the user can provide an output file from:
+* MAD-X
+* MAD-NG
+* TRANSPORT
+* BDSIM
+* CSV File (SURVEY)
 
 .. jupyter-execute::
     :hide-output:

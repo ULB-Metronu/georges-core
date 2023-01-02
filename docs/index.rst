@@ -3,7 +3,7 @@ Welcome to Georges-core's documentation!
 ****************************************
 
 |Actions Status| |Documentation Status| |Python version| |version| |Bugs| |Coverage| |Reliability|
-|License| |Code Style| |Gitter|
+|License| |Code Style|
 
 Introduction
 ############
@@ -85,8 +85,5 @@ Indices and tables
 .. |License| image:: https://img.shields.io/badge/License-GPLv3-blue.svg
    :target: https://www.gnu.org/licenses/gpl-3.0
 
-.. |Code Style| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+.. |Code Style| image:: https://img.shields.io/badge/codestyle-black-000000.svg
    :target: https://github.com/ambv/black
-
-.. |Gitter| image:: https://badges.gitter.im/ULB-Metronu/georges-core.svg?
-   :target: https://gitter.im/ULB-Metronu/georges-core?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge

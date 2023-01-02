@@ -19,7 +19,7 @@ RUN python3 -m venv $POETRY_VENV \
 ENV PATH="${PATH}:${POETRY_VENV}/bin"
 
 WORKDIR /home
-RUN git clone --recurse-submodules --branch develop https://github.com/rtesse/georges-core.git
+RUN git clone --recurse-submodules --branch develop https://github.com/ULB-Metronu/georges-core.git
 RUN poetry config virtualenvs.in-project true
 WORKDIR /home/georges-core
 RUN poetry install
