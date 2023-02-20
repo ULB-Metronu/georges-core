@@ -49,10 +49,10 @@ palette["SEXTUPOLE"] = palette["yellow"]
 palette["OCTUPOLE"] = palette["green"]
 palette["MULTIPOLE"] = palette["gray"]
 palette["DEGRADER"] = palette["base02"]
-palette["RECTANGULARCOLLIMATOR"] = palette["goldenrod"]
-palette["CIRCULARCOLLIMATOR"] = palette["orange"]
+palette["RECTANGULARCOLLIMATOR"] = palette["darkgreen"]
+palette["CIRCULARCOLLIMATOR"] = palette["magenta"]
 palette["ELLIPTICALCOLLIMATOR"] = palette["orange"]
-palette["COLLIMATOR"] = "gold"
+palette["COLLIMATOR"] = palette["magenta"]
 palette["HKICKER"] = palette["magenta"]
 palette["VKICKER"] = palette["violet"]
 palette["SCATTERER"] = palette["base02"]
@@ -70,7 +70,7 @@ class MatplotlibArtist(_Artist):
         Args:
             param ax: the matplotlib ax used for plotting. If None it will be created with `init_plot` (kwargs are
             forwarded).
-            with_frames: draw the entry and exit frames of each elements
+            with_frames: draw the entry and exit frames of each element
             with_centers: draw the center of each polar coordinate elements
             kwargs: forwarded to `Artist` and to `init_plot`.
         """
@@ -140,7 +140,13 @@ class MatplotlibArtist(_Artist):
     def beamline_get_ticks_labels(o):
         return list(o.index)
 
-    def plot_cartouche(self, beamline: _pd.DataFrame = None, print_label: bool = False, labels: _pd.DataFrame = None):
+    def plot_cartouche(
+        self,
+        beamline: _pd.DataFrame = None,
+        print_label: bool = False,
+        labels: _pd.DataFrame = None,
+        vertical_position: float = 1.15,
+    ):
         """
         Args:
             beamline:
@@ -155,11 +161,17 @@ class MatplotlibArtist(_Artist):
         self._ax2.set_ylim([0, 1])
         self._ax2.axis("off")
 
-        offset = 1.15
         self._ax2.axis("on")
         self._ax2.set_yticks([])
         self._ax2.set_ylim([0, 1])
-        self._ax2.hlines(offset, 0, beamline.iloc[-1]["AT_EXIT"].m_as("m"), clip_on=False, colors="black", lw=1)
+        self._ax2.hlines(
+            vertical_position,
+            0,
+            beamline.iloc[-1]["AT_EXIT"].m_as("m"),
+            clip_on=False,
+            colors="black",
+            lw=1,
+        )
         for i, e in beamline.iterrows():
             if e["CLASS"].upper() in ["DRIFT", "MARKER"]:
                 continue
@@ -167,7 +179,7 @@ class MatplotlibArtist(_Artist):
             if e["CLASS"].upper() in ["SBEND", "RBEND"]:
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
+                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
                         e["L"].m_as("m"),
                         0.1,
                         hatch="",
@@ -191,7 +203,7 @@ class MatplotlibArtist(_Artist):
             ]:
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
+                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
                         e["L"].m_as("m"),
                         0.1,
                         hatch="",
@@ -203,7 +215,7 @@ class MatplotlibArtist(_Artist):
             elif e["CLASS"].upper() in ["ELEMENT"]:
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
+                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
                         e["L"].m_as("m"),
                         0.1,
                         hatch="",
@@ -228,12 +240,12 @@ class MatplotlibArtist(_Artist):
                 ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
                 ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
 
+            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
+            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
             self._ax2.get_xaxis().set_tick_params(direction="out")
             self._ax2.tick_params(axis="both", which="major")
             self._ax2.tick_params(axis="x")
             plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
-            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
-            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     def plot_beamline(
         self,

@@ -24,6 +24,7 @@ PALETTE = {
         "cyan": "#2aa198",
         "green": "#859900",
         "goldenrod": "#fac205",
+        "darkgreen": "#1B8603",
     },
 }
 """Default color palette."""
