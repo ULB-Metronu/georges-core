@@ -27,12 +27,11 @@ def load_mad_twiss_headers(filename: str = "twiss.outx", path: str = ".", lines:
     _ = _pd.read_csv(
         os.path.join(path, filename),
         sep=r"\s+",
-        squeeze=True,
         index_col=0,
         names=["@", "KEY", "_", "VALUE"],
         usecols=["KEY", "VALUE"],
         nrows=lines - 1,
-    )
+    ).squeeze()
     _.index = list(map(str.upper, _.index))
     for c in _.index:
         try:

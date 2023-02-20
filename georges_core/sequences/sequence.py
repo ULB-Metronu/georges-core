@@ -12,7 +12,6 @@ from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Uni
 
 import numpy as _np
 import pandas as _pd
-import pandas as pd
 
 from .. import Q_ as _Q
 from .. import particles as _particles
@@ -77,6 +76,7 @@ class SequenceMetadata(metaclass=SequenceMetadataType):
     kinematics: _Kinematics = None
     particle: _ParticuleType = _Proton
     n_particles: int = 1
+    betablock: _BetaBlock = None
 
     def __getitem__(self, item):
         return self.data[item]
@@ -169,8 +169,8 @@ class Sequence(metaclass=SequenceType):
 
     @property
     def betablock(self) -> _BetaBlock:
-        """TODO"""
-        return _BetaBlock()
+        """Provide the BetaBlock associated with the sequence."""
+        return self.metadata.betablock
 
     def set_parameters(self, element: str, parameters: Dict):
         if isinstance(self._data, _pd.DataFrame):
@@ -717,14 +717,15 @@ class TwissSequence(Sequence):
             p = kinematics.particule
             k = kinematics
 
+        twiss_init = self.get_beta_block(twiss_headers, twiss_table)
+
         super().__init__(
             name=twiss_headers["NAME"],
             data=twiss_table,
-            metadata=SequenceMetadata(data=twiss_headers, kinematics=k, particle=p),
+            metadata=SequenceMetadata(betablock=twiss_init, kinematics=k, particle=p),
             element_keys=element_keys,
         )
         if with_beam:
-            twiss_init = self.betablock
             beam_distribution = _Distribution.from_twiss_parameters(
                 n=nparticles,
                 betax=twiss_init["BETA11"],
@@ -739,38 +740,41 @@ class TwissSequence(Sequence):
                 emity=twiss_init["EMIT2"],
                 dpp=twiss_headers["DELTAP"],
             ).distribution
-            beam_distribution["T"] = 0
-            self._metadata = SequenceMetadata(data=beam_distribution, kinematics=k, particle=p)
+            self._metadata = SequenceMetadata(data=beam_distribution, betablock=twiss_init, kinematics=k, particle=p)
 
-    @property
-    def betablock(self) -> _BetaBlock:
-        """TODO"""
+    @staticmethod
+    def get_beta_block(twiss_headers: _pd.DataFrame, twiss_table: _pd.DataFrame) -> _BetaBlock:
+        """
+
+        Returns: BetaBlock at the entrance of the line
+
+        """
         # Keep in this order
         try:  # For MAD-X
             return _BetaBlock(
-                BETA11=self.df.iloc[0]["BETX"] * _ureg.m,
-                ALPHA11=self.df.iloc[0]["ALFX"],
-                BETA22=self.df.iloc[0]["BETY"] * _ureg.m,
-                ALPHA22=self.df.iloc[0]["ALFY"],
-                DISP1=self.df.iloc[0]["DX"] * _ureg.m,
-                DISP2=self.df.iloc[0]["DPX"],
-                DISP3=self.df.iloc[0]["DY"] * _ureg.m,
-                DISP4=self.df.iloc[0]["DPY"],
-                EMIT1=self.metadata["EX"] * _ureg("m * radians"),
-                EMIT2=self.metadata["EY"] * _ureg("m * radians"),
-                EMIT3=self.metadata["ET"],
+                BETA11=twiss_table.iloc[0]["BETX"] * _ureg.m,
+                ALPHA11=twiss_table.iloc[0]["ALFX"],
+                BETA22=twiss_table.iloc[0]["BETY"] * _ureg.m,
+                ALPHA22=twiss_table.iloc[0]["ALFY"],
+                DISP1=twiss_table.iloc[0]["DX"] * _ureg.m,
+                DISP2=twiss_table.iloc[0]["DPX"],
+                DISP3=twiss_table.iloc[0]["DY"] * _ureg.m,
+                DISP4=twiss_table.iloc[0]["DPY"],
+                EMIT1=twiss_headers["EX"] * _ureg("m * radians"),
+                EMIT2=twiss_headers["EY"] * _ureg("m * radians"),
+                EMIT3=twiss_headers["ET"],
             )
         except KeyError:
             try:  # For MAD-NG
                 return _BetaBlock(
-                    BETA11=self.df.iloc[0]["BETA11"] * _ureg.m,
-                    ALPHA11=self.df.iloc[0]["ALFA11"],
-                    BETA22=self.df.iloc[0]["BETA22"] * _ureg.m,
-                    ALPHA22=self.df.iloc[0]["ALFA22"],
-                    DISP1=self.df.iloc[0]["DX"] * _ureg.m,
-                    DISP2=self.df.iloc[0]["DPX"],
-                    DISP3=self.df.iloc[0]["DY"] * _ureg.m,
-                    DISP4=self.df.iloc[0]["DPY"],
+                    BETA11=twiss_table.iloc[0]["BETA11"] * _ureg.m,
+                    ALPHA11=twiss_table.iloc[0]["ALFA11"],
+                    BETA22=twiss_table.iloc[0]["BETA22"] * _ureg.m,
+                    ALPHA22=twiss_table.iloc[0]["ALFA22"],
+                    DISP1=twiss_table.iloc[0]["DX"] * _ureg.m,
+                    DISP2=twiss_table.iloc[0]["DPX"],
+                    DISP3=twiss_table.iloc[0]["DY"] * _ureg.m,
+                    DISP4=twiss_table.iloc[0]["DPY"],
                     EMIT1=1e-9 * _ureg("m * radians"),  # self.metadata['EMIT1'] * _ureg('m * radians') not yet in MADNG
                     EMIT2=1e-9 * _ureg("m * radians"),  # self.metadata['EMIT2'] * _ureg('m * radians'),
                     EMIT3=1e-9 * _ureg("m * radians"),  # self.metadata['EMIT3'] * _ureg('m * radians')
@@ -864,7 +868,7 @@ class TransportSequence(Sequence):
         t = [not isinstance(val, _Element.Face) for val in line]
         return list(compress(line, t))
 
-    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> pd.DataFrame:
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         dicts = list(map(dict, self._data))
         counters = {}
         for d in dicts:
