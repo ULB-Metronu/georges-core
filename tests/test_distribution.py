@@ -331,7 +331,7 @@ def test_from_sigma_matrix(
     ],
 )
 def test_from_matrix(x, px, y, py, dpp, matrix):
-    matrix = _np.dot(matrix, matrix.transpose())
+    matrix = _np.dot(matrix, matrix.transpose())  # For covariance
     beam_distribution = Distribution.from_5d_sigma_matrix(n=int(1e7), x=x, px=px, y=y, py=py, dpp=dpp, matrix=matrix)
 
     mean_distribution = beam_distribution.mean

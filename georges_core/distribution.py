@@ -117,7 +117,7 @@ def generate_from_5d_sigma_matrix(
     s53 = s35
     s54 = s45
 
-    if matrix:
+    if matrix is not None:
         assert matrix.shape == (5, 5)
         return generator([x, px, y, py, dpp], matrix, int(n))
 
@@ -414,6 +414,7 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
+        print(matrix)
         return cls(
             distribution=_pd.DataFrame(
                 generate_from_5d_sigma_matrix(
