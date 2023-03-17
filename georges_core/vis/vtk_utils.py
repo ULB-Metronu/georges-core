@@ -17,7 +17,6 @@ def expand_values_for_paraview(histogram3d):
     for x in range(nx + 1):
         for y in range(ny + 1):
             for z in range(nz + 1):
-
                 x_old = 0
                 y_old = 0
                 z_old = 0
@@ -174,9 +173,7 @@ def beam_to_vtk(
     mb_index = 0
 
     for i in range(len(tracks)):
-
         for j in range(len(tracks[i])):
-
             run = False
 
             if option_iso and j == 0 and s_tracks[i].tolist()[j][-1] > 15.42:
@@ -208,7 +205,6 @@ def beam_to_vtk(
                 line0.GetPointIds().SetId(0, 0)
 
                 for k in range(1, len(steps) - 1):
-
                     if k % 2 == 0:
                         lines.InsertNextCell(line0)
                         colors.InsertNextTuple(color)

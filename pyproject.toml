@@ -27,9 +27,23 @@ max-line-length = 120
 count = true
 exclude = ['docs/**', '.tox/**', '.venv/**']
 
+[tool.pylint]
+max-line-length = 120
+disable = ['C0103', 'R0914', 'R0913']
+
+[tool.mypy]
+ignore_missing_imports = true
+scripts_are_modules = true
+warn_unused_ignores = true
+show_error_codes = true
+enable_error_code = "ignore-without-code"
+strict = true
+# TODO: Remove this once pytest has annotations
+disallow_untyped_decorators = false
+
 [tool.poetry]
 name = "georges-core"
-version = "2022.1"
+version = "2023.1"
 description = "Georges' accelerator physics library - Core"
 authors = ["Cédric Hernalsteens <cedric.hernalsteens@ulb.be>",
            "Robin Tesse <robin.tesse@ulb.be>",
@@ -39,30 +53,30 @@ authors = ["Cédric Hernalsteens <cedric.hernalsteens@ulb.be>",
 
 [tool.poetry.dependencies]
 python = ">3.8.1 <3.11"
-boost-histogram = "1.3.2"
-matplotlib = "3.6.3"
-numpy = "1.22.3"
-Pint = "0.20.1"
-uproot = "5.0.2"
-vtk = "9.2.5"
-plotly = "5.13.0"
-pandas = "1.5.1"
-numpy-quaternion = "2022.4.2"
-numba = "0.56.3"
-scipy = "1.7.3"
-PyYAML = "6.0"
-mergedeep = "1.3.4"
 awkward = "2.0.7"
 awkward-pandas = "2022.12a1"
-pyarrow = "11.0.0"
-fastparquet = "2023.2.0"
+boost-histogram = "1.3.2"
 cpymad = "1.10.0"
-pybdsim = { git = "https://bitbucket.org/jairhul/pybdsim"}
-jupyterlab-code-formatter = "1.5.3"
-nbdime = "3.1.1"
+fastparquet = "2023.2.0"
+ipykernel = "6.21.1"
 ipyparallel = "8.4.1"
 jupyterlab = "3.6.1"
-ipykernel = "6.21.1"
+jupyterlab-code-formatter = "1.5.3"
+matplotlib = "3.6.3"
+mergedeep = "1.3.4"
+nbdime = "3.1.1"
+numba = "0.56.3"
+numpy = "1.22.3"
+numpy-quaternion = "2022.4.2"
+pandas = "1.5.1"
+Pint = "0.20.1"
+plotly = "5.13.0"
+pyarrow = "11.0.0"
+pybdsim = { git = "https://bitbucket.org/jairhul/pybdsim"}
+PyYAML = "6.0"
+scipy = "1.7.3"
+uproot = "5.0.2"
+vtk = "9.2.5"
 
 [tool.poetry.group.docs]
 optional = true
@@ -71,17 +85,23 @@ optional = true
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pytest = "7.2.0"
 black = {extras = ["jupyter"], version = "22.10.0"}
-pylint = "2.15.2"
-flake8 = "6.0.0"
-isort = "5.10.1"
-flake8-pyproject = "1.2.2"
-mypy = "0.991"
 coverage = {extras = ["toml"], version = "6.5.0"}
+flake8 = "6.0.0"
+flake8-pyproject = "1.2.2"
+isort = "5.12.0"
+mypy = "0.991"
 pre-commit = "2.21.0"
+pylint = "2.15.2"
+pytest = "7.2.0"
 
 [tool.poetry.group.docs.dependencies]
+cairosvg = "2.5.2"
+jupyter-sphinx = "0.4.0"
+jupyter-server-mathjax = "0.2.6"
+m2r2 =  "0.2.8"
+nbsphinx =  "0.8.2"
+pandoc =  "1.1.0"
 sphinx = "5.3.0"
 sphinx-material =  "0.0.35"
 sphinx-automodapi =  "0.14.1"
@@ -89,12 +109,6 @@ sphinxcontrib-bibtex =  "2.2.0"
 sphinx-copybutton =  "0.5.1"
 sphinx-autobuild =  "2021.3.14"
 sphinx-rtd-theme = "1.1.1"
-m2r2 =  "0.2.8"
-pandoc =  "1.1.0"
-nbsphinx =  "0.8.2"
-jupyter-sphinx = "0.4.0"
-jupyter-server-mathjax = "0.2.6"
-cairosvg = "2.5.2"
 sphinxcontrib-svg2pdfconverter = {extras = ["cairosvg"], version = "1.2.1"}
 
 [tool.coverage.run]

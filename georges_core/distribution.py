@@ -1,10 +1,17 @@
+"""
+Georges-core beam distribution module.
+
+This module provides a collection of functions and classes to deal with a beam distribution. After loading or
+generating a distribution, methods are available to compute beam properties, such as mean, standard deviation,
+Twiss parameters, emittance or the beam halo.
+"""
+
 import logging
 import os
 from typing import Dict
 
 import numpy as _np
 import pandas as _pd
-import pandas as pd
 from numba import njit
 
 from .units import Q_ as _Q
@@ -12,15 +19,27 @@ from .units import ureg as _ureg
 
 PARTICLE_TYPES = {"proton", "antiproton", "electron", "positron"}
 PHASE_SPACE_DIMENSIONS = ["X", "PX", "Y", "PY", "DPP"]
-DEFAULT_N_PARTICLES = 1e5
+DEFAULT_N_PARTICLES = int(1e5)
 
 
 # Define all methods to generate the beam
-def load_from_file(path: str = "", filename="", file_format="csv") -> _pd.DataFrame:
+def load_from_file(path: str = "", filename: str = "", file_format: str = "csv") -> _pd.DataFrame:
+    """Load a distribution from a file
+
+    Args:
+        path (str, optional): Path to the file. Defaults to "".
+        filename (str, optional): Name of the file. Defaults to "".
+        file_format (str, optional): Format of the file. Defaults to "csv".
+
+    Returns:
+        _pd.DataFrame: Pandas dataframe with the distributions.
+    """
     if file_format == "csv":
         return _pd.read_csv(os.path.join(path, filename))
-    if file_format == "parquet":
+    elif file_format == "parquet":
         return _pd.read_parquet(os.path.join(path, filename))
+    else:
+        raise DistributionException("Format of the file is incorrect. Only csv or parquet are available.")
 
 
 def generate_from_5d_sigma_matrix(
@@ -45,7 +64,7 @@ def generate_from_5d_sigma_matrix(
     s44: float = 0,
     s45: float = 0,
     s55: float = 0,
-    matrix=None,
+    matrix: _np.ndarray = None,
 ):
     """
 
@@ -98,29 +117,29 @@ def generate_from_5d_sigma_matrix(
     s53 = s35
     s54 = s45
 
-    if matrix is not None:
+    if matrix:
         assert matrix.shape == (5, 5)
         return generator([x, px, y, py, dpp], matrix, int(n))
-    else:
-        return generator(
-            [x, px, y, py, dpp],
-            _np.array(
-                [
-                    [s11, s12, s13, s14, s15],
-                    [s21, s22, s23, s24, s25],
-                    [s31, s32, s33, s34, s35],
-                    [s41, s42, s43, s44, s45],
-                    [s51, s52, s53, s54, s55],
-                ],
-            ),
-            int(n),
-        )
+
+    return generator(
+        [x, px, y, py, dpp],
+        _np.array(
+            [
+                [s11, s12, s13, s14, s15],
+                [s21, s22, s23, s24, s25],
+                [s31, s32, s33, s34, s35],
+                [s41, s42, s43, s44, s45],
+                [s51, s52, s53, s54, s55],
+            ],
+        ),
+        int(n),
+    )
 
 
 class DistributionException(Exception):
     """Exception raised for errors in the Beam module."""
 
-    def __init__(self, m):
+    def __init__(self, m: str = ""):
         self.message = m
 
 
@@ -149,7 +168,7 @@ class Distribution:
         self._halo = None  # To force the first computation of the halo
 
     @property
-    def distribution(self) -> pd.DataFrame:
+    def distribution(self) -> _pd.DataFrame:
         """Return a dataframe containing the beam's particles distribution."""
         return self.__distribution
 
@@ -204,7 +223,7 @@ class Distribution:
         }
 
     @property
-    def halo(self, dimensions=None) -> pd.DataFrame:
+    def halo(self, dimensions=None) -> _pd.DataFrame:
         """Return a dataframe containing the 1st, 5th, 95th and 99th percentiles of each dimensions."""
         if dimensions is None:
             dimensions = ["X", "Y", "PX", "PY"]
@@ -238,7 +257,7 @@ class Distribution:
         if self.__dims < 4 or self.__dims > len(PHASE_SPACE_DIMENSIONS):
             missing_key = list({"X", "Y", "PX", "PY"} - set(distribution.columns.values))
             logging.warning(
-                f"Trying to initialize a beam distribution with invalid dimensions. "
+                "Trying to initialize a beam distribution with invalid dimensions. "
                 f"{missing_key} are missing. Generate a default beam",
             )
             raise DistributionException("")
@@ -247,6 +266,14 @@ class Distribution:
 
     @staticmethod
     def compute_twiss(beam: _np.ndarray) -> _np.array:
+        """Compute Twiss parameters of a beam
+
+        Args:
+            beam (_np.ndarray): beam input distribution
+
+        Returns:
+            _np.array: An array with the Twiss parameters
+        """
 
         s11 = _np.var(beam[:, 0])
         s22 = _np.var(beam[:, 1])

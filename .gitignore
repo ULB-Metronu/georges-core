@@ -12,3 +12,4 @@ docs/build
 docs/jupyter_execute
 .vscode/
 .conda_config
+dist/
