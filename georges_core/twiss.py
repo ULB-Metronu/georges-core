@@ -218,8 +218,8 @@ class Twiss(Parametrization):
             dp0 = twiss["DISP4"]
         r11: _pd.Series = m[f"R{p}{p}"]
         r12: _pd.Series = m[f"R{p}{p + 1}"]
-        r15: _pd.Series = m[f"R{p}6"]
-        return d0 * r11 + dp0 * r12 + r15
+        r16: _pd.Series = m[f"R{p}6"]
+        return d0 * r11 + dp0 * r12 + r16
 
     @staticmethod
     def compute_dispersion_prime_from_matrix(m: _pd.DataFrame, twiss: _BetaBlock, plane: int = 1) -> _pd.Series:
@@ -247,8 +247,8 @@ class Twiss(Parametrization):
             dp0 = twiss["DISP4"]
         r21: _pd.Series = m[f"R{p + 1}{p}"]
         r22: _pd.Series = m[f"R{p + 1}{p + 1}"]
-        r25: _pd.Series = m[f"R{p + 1}6"]
-        return d0 * r21 + dp0 * r22 + r25
+        r26: _pd.Series = m[f"R{p + 1}6"]
+        return d0 * r21 + dp0 * r22 + r26
 
     @staticmethod
     def compute_periodic_twiss(matrix: _pd.DataFrame, end: Union[int, str] = -1) -> _BetaBlock:
@@ -319,7 +319,7 @@ class Twiss(Parametrization):
             .apply(float)
             .values.reshape(4, 4)
         )
-        r6 = m[["R15", "R25", "R35", "R45"]].apply(float).values.reshape(4, 1)
+        r6 = m[["R16", "R26", "R36", "R46"]].apply(float).values.reshape(4, 1)
         disp = _np.dot(_np.linalg.inv(_np.identity(4) - m44), r6).reshape(4)
         twiss["DY"] = disp[0] * _ureg.m
         twiss["DYP"] = disp[1]

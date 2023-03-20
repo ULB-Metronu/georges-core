@@ -300,7 +300,6 @@ class Distribution:
             disp_yp = 0
 
         else:
-
             a_xxp = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 1] - _np.mean(beam[:, 1])))
             a_xd = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 4] - _np.mean(beam[:, 4])))
             a_xpd = _np.mean((beam[:, 1] - _np.mean(beam[:, 1])) * (beam[:, 4] - _np.mean(beam[:, 4])))
