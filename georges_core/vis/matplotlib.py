@@ -200,6 +200,7 @@ class MatplotlibArtist(_Artist):
                 "ELLIPTICALCOLLIMATOR",
                 "MATRIX",
                 "SCATTERER",
+                "ELEMENT",
             ]:
                 self._ax2.add_patch(
                     patches.Rectangle(
@@ -212,19 +213,6 @@ class MatplotlibArtist(_Artist):
                         clip_on=False,
                     ),
                 )
-            elif e["CLASS"].upper() in ["ELEMENT"]:
-                self._ax2.add_patch(
-                    patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
-                        e["L"].m_as("m"),
-                        0.1,
-                        hatch="",
-                        facecolor=palette[e["CLASS"].upper()],
-                        ec=palette[e["CLASS"].upper()],
-                        clip_on=False,
-                    ),
-                )
-
             else:
                 logging.warning(f"colors are not implemented for {e['CLASS']}")
 

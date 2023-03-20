@@ -73,10 +73,10 @@ class SequenceMetadata(metaclass=SequenceMetadataType):
     """TODO"""
 
     data: _pd.Series = None
-    kinematics: _Kinematics = None
+    kinematics: Optional[_Kinematics] = None
     particle: _ParticuleType = _Proton
     n_particles: int = 1
-    betablock: _BetaBlock = None
+    betablock: Optional[_BetaBlock] = None
 
     def __getitem__(self, item):
         return self.data[item]
@@ -961,9 +961,7 @@ class SurveySequence(PlacementSequence):
                 sequence.at[i, "AT_CENTER"] = at
                 at += j["L"].m_as("m") / 2
 
-        elif sequence.get(["AT_CENTER"]) is not None and sequence.get(["X", "Y", "Z"]) is None:
-            pass
-        else:
+        if sequence.get(["AT_CENTER"]) is None and sequence.get(["X", "Y", "Z"]) is None:
             raise SequenceException("Sequence must be (AT_CENTER, L) or (X,Y,Z)")
 
         sequence["AT_CENTER"] = sequence["AT_CENTER"].apply(lambda e: e * _ureg.meter)
