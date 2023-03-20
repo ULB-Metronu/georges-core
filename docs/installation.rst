@@ -72,7 +72,7 @@ for your operating system.
 4. Activate the environment and update manually llvmlite::
 
     conda activate georges-core
-    pip install --ignore-installed llvmlite
+    pip install -I --force-reinstall llvmlite
 
 5. Install Georges-core using `poetry` from the `conda` environment::
 

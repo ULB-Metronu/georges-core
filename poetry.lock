@@ -494,13 +494,13 @@ test = ["cloudpickle", "hypothesis (>=6.0)", "pytest (>=6.0)", "pytest-benchmark
 
 [[package]]
 name = "cairocffi"
-version = "1.4.0"
+version = "1.5.0"
 description = "cffi-based cairo bindings for Python"
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "cairocffi-1.4.0.tar.gz", hash = "sha256:509339b32ccd8d7b00c2204c32736cde78db53a32e6a162d312478d25626cd9a"},
+    {file = "cairocffi-1.5.0.tar.gz", hash = "sha256:d105b49009d9b4970a459e38ff030cb5dfc8c8ee231e867d28f77ee9df44495e"},
 ]
 
 [package.dependencies]
@@ -1471,14 +1471,14 @@ files = [
 
 [[package]]
 name = "importlib-metadata"
-version = "6.0.0"
+version = "6.1.0"
 description = "Read metadata from Python packages"
 category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
-    {file = "importlib_metadata-6.0.0-py3-none-any.whl", hash = "sha256:7efb448ec9a5e313a57655d35aa54cd3e01b7e1fbcf72dce1bf06119420f5bad"},
-    {file = "importlib_metadata-6.0.0.tar.gz", hash = "sha256:e354bedeb60efa6affdcc8ae121b73544a7aa74156d047311948f6d711cd378d"},
+    {file = "importlib_metadata-6.1.0-py3-none-any.whl", hash = "sha256:ff80f3b5394912eb1b108fcfd444dc78b7f1f3e16b16188054bd01cb9cb86f09"},
+    {file = "importlib_metadata-6.1.0.tar.gz", hash = "sha256:43ce9281e097583d758c2c708c4376371261a02c34682491a8e98352365aad20"},
 ]
 
 [package.dependencies]
@@ -3516,28 +3516,32 @@ numpy = ">=1.16.6"
 
 [[package]]
 name = "pybdsim"
-version = "2.4.0"
+version = "3.0.0"
 description = "Python utilities for the Monte Carlo Particle accelerator code BDSIM."
 category = "main"
 optional = false
 python-versions = ">=3.7"
-files = []
-develop = false
+files = [
+    {file = "pybdsim-3.0.0-py3-none-any.whl", hash = "sha256:3433a778c060ee21427e727d60b64f7bd69499a1b1d72fcaff31981de6c4d73b"},
+    {file = "pybdsim-3.0.0.tar.gz", hash = "sha256:bd3a47638d55b4fc71a0f3f32c94d8ced3b2dd80c27339a83af4f0bf0336dbb1"},
+]
 
 [package.dependencies]
 fortranformat = "*"
-matplotlib = "*"
-numpy = "*"
+importlib-metadata = "*"
+matplotlib = ">=3.0"
+numpy = ">=1.14"
 pymad8 = "*"
 pymadx = "*"
 pytransport = "*"
 scipy = "*"
 
-[package.source]
-type = "git"
-url = "https://bitbucket.org/jairhul/pybdsim"
-reference = "HEAD"
-resolved_reference = "3c6a51c24697a027f8e495c349f0ed3a1ec5af84"
+[package.extras]
+boost-histogram = ["boost-histogram"]
+cpymad = ["cpymad"]
+dev = ["pytest", "sphinx", "sphinx-rtd-theme"]
+pysad = ["pysad"]
+uproot = ["pandas", "pint", "uproot"]
 
 [[package]]
 name = "pybtex"
@@ -3655,20 +3659,24 @@ testutils = ["gitpython (>3)"]
 
 [[package]]
 name = "pymad8"
-version = "1.6.1"
+version = "2.0.0"
 description = "Write MAD8 models and load MAD8 output."
 category = "main"
 optional = false
-python-versions = ">=2.7.*"
+python-versions = ">=3.7"
 files = [
-    {file = "pymad8-1.6.1-py3-none-any.whl", hash = "sha256:5d77b94040726e3f3ee2b0fb4f9b5addc9dfab4548186ad1a210f43ed1e423bf"},
-    {file = "pymad8-1.6.1.tar.gz", hash = "sha256:44225964bcfa214dd23a7b71cda977687b3446635c1411c5804ed59be86ab381"},
+    {file = "pymad8-2.0.0-py3-none-any.whl", hash = "sha256:e5de75646ee9492ed21999ac95f040caf53d533452d4a19305bf3df06de67428"},
+    {file = "pymad8-2.0.0.tar.gz", hash = "sha256:9fc793c9b0c3dd9505bf8e5bb9644dcd271423347b76172eb115037893aca8fb"},
 ]
 
 [package.dependencies]
-fortranformat = ">=0.2.5"
-matplotlib = ">=1.7.1"
-numpy = ">=1.4.0"
+fortranformat = "*"
+importlib-metadata = "*"
+matplotlib = ">=3.0"
+numpy = ">=1.14"
+
+[package.extras]
+dev = ["pytest", "sphinx", "sphinx-rtd-theme"]
 
 [[package]]
 name = "pymadx"
@@ -3814,20 +3822,25 @@ unidecode = ["Unidecode (>=1.1.1)"]
 
 [[package]]
 name = "pytransport"
-version = "1.5.0"
+version = "2.0.0"
 description = "Convert TRANSPORT models and load TRANSPORT output."
 category = "main"
 optional = false
-python-versions = ">=2.7.*"
+python-versions = ">=3.7"
 files = [
-    {file = "pytransport-1.5.0-py3-none-any.whl", hash = "sha256:2e20d355e114badbcc6719a6f06561736051a8dadc72588125b23b54554b16c0"},
-    {file = "pytransport-1.5.0.tar.gz", hash = "sha256:8767f819691d6d98eef653c6c4cda7e56b1e1f87fb5fee676dc0d34da13cdcbf"},
+    {file = "pytransport-2.0.0-py3-none-any.whl", hash = "sha256:6c79530182462b52d082f7303ac93cfddce1367965205e00bb5b0ce9bf64d112"},
+    {file = "pytransport-2.0.0.tar.gz", hash = "sha256:355d16480954fda5959a250dcd4ad73c1a58712c346bd01a7139fe68277ae76b"},
 ]
 
 [package.dependencies]
-matplotlib = "*"
-numpy = "*"
+importlib-metadata = "*"
+matplotlib = ">=3.0"
+numpy = ">=1.14"
 scipy = "*"
+
+[package.extras]
+dev = ["pytest", "sphinx", "sphinx-rtd-theme"]
+root-numpy = ["root-numpy"]
 
 [[package]]
 name = "pytz"
@@ -5054,4 +5067,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = ">3.8.1 <3.11"
-content-hash = "056b1ce27079101076873cfa0987dabe6e9aa0b776d6290fb2bb26f11f57a484"
+content-hash = "6dc046abc6737874814553fd16d666b720d67608b7f92c36e915cad1629934f8"

@@ -1065,10 +1065,10 @@ class BDSIMSequence(Sequence):
         """
         # The pybdsim import is made inside the class init to avoid a pybdsim (and then ROOT)
         # dependence when it is not needed.
-        from pybdsim.DataUproot import BDSimOutput
+        from pybdsim.DataUproot import BDSIMOutput
 
         # Load the model
-        bdsim_data = BDSimOutput(filename=filename, path=path)
+        bdsim_data = BDSIMOutput(filename=filename, path=path)
         bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
         bdsim_model.rename(columns={"TYPE": "KEYWORD"}, inplace=True)
         self.set_units(bdsim_model)

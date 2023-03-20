@@ -72,7 +72,7 @@ pandas = "1.5.1"
 Pint = "0.20.1"
 plotly = "5.13.0"
 pyarrow = "11.0.0"
-pybdsim = { git = "https://bitbucket.org/jairhul/pybdsim"}
+pybdsim = "3.0.0"
 PyYAML = "6.0"
 scipy = "1.7.3"
 uproot = "5.0.2"
@@ -131,6 +131,34 @@ exclude_lines = [
     'class .*\bProtocol\):',
     '@(abc\.)?abstractmethod',
     ]
+
+[tool.poetry2conda]
+name = "some-name-env"
+
+[tool.poetry2conda.dependencies]
+numpy = { channel = "intel" }
+numba = { channel = "intel" }
+pandas = {channel = "intel"}
+
+Pint = {channel = "pip"}
+vtk = { channel = "pip" }
+uproot = { channel = "pip" }
+plotly = { channel = "pip" }
+jupyterlab-code-formatter = { channel = "pip" }
+pyarrow = { channel = "pip" }
+awkward = { channel = "pip" }
+jupyterlab = { channel = "pip" }
+nbdime = { channel = "pip" }
+numpy-quaternion = { channel = "pip" }
+mergedeep = { channel = "pip" }
+cpymad = { channel = "pip" }
+boost-histogram = { channel = "pip" }
+pybdsim = { channel = "pip" }
+ipykernel = { channel = "pip" }
+awkward-pandas = { channel = "pip" }
+fastparquet = { channel = "pip" }
+matplotlib = { channel = "pip" }
+
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
