@@ -267,6 +267,7 @@ class Distribution:
     @staticmethod
     def compute_twiss(beam: _np.ndarray) -> _np.array:
         """Compute Twiss parameters of a beam
+        From http://nicadd.niu.edu/~syphers/tutorials/analyzeTrack.html
 
         Args:
             beam (_np.ndarray): beam input distribution
@@ -277,21 +278,37 @@ class Distribution:
 
         s11 = _np.var(beam[:, 0])
         s22 = _np.var(beam[:, 1])
-
         s33 = _np.var(beam[:, 2])
         s44 = _np.var(beam[:, 3])
-
         s55 = _np.var(beam[:, 4])
 
-        a_xxp = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 1] - _np.mean(beam[:, 1])))
-        a_xd = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 4] - _np.mean(beam[:, 4])))
-        a_xpd = _np.mean((beam[:, 1] - _np.mean(beam[:, 1])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+        if s55 == 0:
+            s12 = _np.cov(beam[:, 0], beam[:, 1])[0, 1]
+            s34 = _np.cov(beam[:, 2], beam[:, 3])[0, 1]
 
-        a_yyp = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 3] - _np.mean(beam[:, 3])))
-        a_yd = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 4] - _np.mean(beam[:, 4])))
-        a_ypd = _np.mean((beam[:, 3] - _np.mean(beam[:, 3])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+            emit_x = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 0], beam[:, 1])))
+            emit_y = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 2], beam[:, 3])))
 
-        if s55 > 0:
+            beta_x = s11 / emit_x
+            alpha_x = -s12 / emit_x
+            disp_x = 0
+            disp_xp = 0
+
+            beta_y = s33 / emit_y
+            alpha_y = -s34 / emit_y
+            disp_y = 0
+            disp_yp = 0
+
+        else:
+
+            a_xxp = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 1] - _np.mean(beam[:, 1])))
+            a_xd = _np.mean((beam[:, 0] - _np.mean(beam[:, 0])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+            a_xpd = _np.mean((beam[:, 1] - _np.mean(beam[:, 1])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+
+            a_yyp = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 3] - _np.mean(beam[:, 3])))
+            a_yd = _np.mean((beam[:, 2] - _np.mean(beam[:, 2])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+            a_ypd = _np.mean((beam[:, 3] - _np.mean(beam[:, 3])) * (beam[:, 4] - _np.mean(beam[:, 4])))
+
             disp_x = a_xd / s55
             disp_xp = a_xpd / s55
 
@@ -313,23 +330,6 @@ class Distribution:
             emit_y = _np.sqrt(ebeta_y * egamma_y - ealpha_y**2)
             beta_y = ebeta_y / emit_y
             alpha_y = ealpha_y / emit_y
-
-        else:
-            s12 = _np.cov(beam[:, 0], beam[:, 1])[0, 1]
-            s34 = _np.cov(beam[:, 2], beam[:, 3])[0, 1]
-
-            emit_x = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 0], beam[:, 1])))
-            emit_y = _np.sqrt(_np.linalg.det(_np.cov(beam[:, 2], beam[:, 3])))
-
-            beta_x = s11 / emit_x
-            alpha_x = -s12 / emit_x
-            disp_x = 0
-            disp_xp = 0
-
-            beta_y = s33 / emit_y
-            alpha_y = -s34 / emit_y
-            disp_y = 0
-            disp_yp = 0
 
         return _np.array([emit_x, beta_x, alpha_x, disp_x, disp_xp, emit_y, beta_y, alpha_y, disp_y, disp_yp])
 
