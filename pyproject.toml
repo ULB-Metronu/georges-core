@@ -53,30 +53,30 @@ authors = ["Cédric Hernalsteens <cedric.hernalsteens@ulb.be>",
 
 [tool.poetry.dependencies]
 python = ">3.8.1 <3.11"
-awkward = "2.0.7"
+awkward = "2.1.1"
 awkward-pandas = "2022.12a1"
 boost-histogram = "1.3.2"
-cpymad = "1.10.0"
+cpymad = "1.13.0"
 fastparquet = "2023.2.0"
-ipykernel = "6.21.1"
-ipyparallel = "8.4.1"
-jupyterlab = "3.6.1"
+ipykernel = "6.22.0"
+ipyparallel = "8.5.0"
+jupyterlab = "3.6.2"
 jupyterlab-code-formatter = "1.5.3"
-matplotlib = "3.6.3"
+matplotlib = "3.7.1"
 mergedeep = "1.3.4"
 nbdime = "3.1.1"
-numba = "0.56.3"
-numpy = "1.22.3"
-numpy-quaternion = "2022.4.2"
-pandas = "1.5.1"
+numba = "0.56.3" # DO NOT CHANGE THE VERSION (FOR INTEL-MKL)
+numpy = "1.22.3" # DO NOT CHANGE THE VERSION (FOR INTEL-MKL)
+numpy-quaternion = "2022.4.3"
+pandas = "1.5.1" # DO NOT CHANGE THE VERSION (FOR INTEL-MKL)
 Pint = "0.20.1"
-plotly = "5.13.0"
+plotly = "5.13.1"
 pyarrow = "11.0.0"
-pybdsim = "3.0.0"
+pybdsim = "3.0.1"
 PyYAML = "6.0"
-scipy = "1.7.3"
-uproot = "5.0.2"
-vtk = "9.2.5"
+scipy = "1.7.3" # DO NOT CHANGE THE VERSION (FOR INTEL-MKL)
+uproot = "5.0.5"
+vtk = "9.2.6"
 
 [tool.poetry.group.docs]
 optional = true
@@ -131,33 +131,6 @@ exclude_lines = [
     'class .*\bProtocol\):',
     '@(abc\.)?abstractmethod',
     ]
-
-[tool.poetry2conda]
-name = "some-name-env"
-
-[tool.poetry2conda.dependencies]
-numpy = { channel = "intel" }
-numba = { channel = "intel" }
-pandas = {channel = "intel"}
-
-Pint = {channel = "pip"}
-vtk = { channel = "pip" }
-uproot = { channel = "pip" }
-plotly = { channel = "pip" }
-jupyterlab-code-formatter = { channel = "pip" }
-pyarrow = { channel = "pip" }
-awkward = { channel = "pip" }
-jupyterlab = { channel = "pip" }
-nbdime = { channel = "pip" }
-numpy-quaternion = { channel = "pip" }
-mergedeep = { channel = "pip" }
-cpymad = { channel = "pip" }
-boost-histogram = { channel = "pip" }
-pybdsim = { channel = "pip" }
-ipykernel = { channel = "pip" }
-awkward-pandas = { channel = "pip" }
-fastparquet = { channel = "pip" }
-matplotlib = { channel = "pip" }
 
 
 [build-system]

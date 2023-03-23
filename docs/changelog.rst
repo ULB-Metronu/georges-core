@@ -3,6 +3,9 @@ Changelog
 *********
 
 * 2023-xx
+
+    * Write the documentation for Twiss module
+    * Adapt the Twiss module for 13 particles
     * Add installation section for Conda
     * Remove tox and add doctesting
     * Write a README file

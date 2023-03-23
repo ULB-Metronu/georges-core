@@ -413,7 +413,6 @@ class Distribution:
         Returns:
             An instance of the class with the distribution
         """
-        print(matrix)
         return cls(
             distribution=_pd.DataFrame(
                 generate_from_5d_sigma_matrix(
