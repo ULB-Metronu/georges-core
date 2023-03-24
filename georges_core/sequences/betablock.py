@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 import pandas as _pd
 
@@ -44,19 +44,19 @@ class BetaBlock(metaclass=BetaBlockType):
     DZ: float = 0.0
     DZP: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         if self.GAMMA11 is None:
             self.GAMMA11 = (1 + self.ALPHA11**2) / self.BETA11
         if self.GAMMA22 is None:
             self.GAMMA22 = (1 + self.ALPHA22**2) / self.BETA22
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: Any) -> Any:
         return getattr(self, item)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value: Any) -> None:
         setattr(self, key, value)
 
-    def to_df(self):  # pragma: no cover
+    def to_df(self) -> _pd.Series:  # pragma: no cover
         return _pd.Series(
             data={
                 "BETA11": self.BETA11,
@@ -87,5 +87,5 @@ class BetaBlock(metaclass=BetaBlockType):
 
     df = property(to_df)
 
-    def __repr__(self):
+    def __repr__(self) -> _pd.Series:
         return self.to_df().__repr__()

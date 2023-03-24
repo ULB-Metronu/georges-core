@@ -8,7 +8,7 @@ import logging
 import os
 from dataclasses import dataclass
 from itertools import compress
-from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Mapping, Optional, Tuple, Type, Union
 
 import numpy as _np
 import pandas as _pd
@@ -58,7 +58,7 @@ _BDSIM_PARTICLE_CONVENTION: Mapping[str, str] = {
 class SequenceException(Exception):  # pragma: no cover
     """Exception raised for errors when using zgoubidoo.Sequence"""
 
-    def __init__(self, m):
+    def __init__(self, m: str = "") -> None:
         self.message = m
 
 
@@ -78,10 +78,10 @@ class SequenceMetadata(metaclass=SequenceMetadataType):
     n_particles: int = 1
     betablock: Optional[_BetaBlock] = None
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> Any:
         return self.data[item]
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Try to infer the particle type from the metadata
         if self.data is None:
             return
@@ -122,7 +122,7 @@ class Sequence(metaclass=SequenceType):
     def __init__(
         self,
         name: str = "",
-        data=None,
+        data: Any = None,
         metadata: Optional[SequenceMetadata] = None,
         element_keys: Optional[Mapping[str, str]] = None,
     ):
@@ -144,7 +144,7 @@ class Sequence(metaclass=SequenceType):
             ]
         }
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return repr(self._data)
 
     @property
@@ -158,7 +158,7 @@ class Sequence(metaclass=SequenceType):
         return self._metadata
 
     @property
-    def kinematics(self) -> _Kinematics:
+    def kinematics(self) -> Optional[_Kinematics]:
         """Provides the kinematics data associated with the sequence metadata."""
         return self.metadata.kinematics
 
@@ -168,11 +168,11 @@ class Sequence(metaclass=SequenceType):
         return self.metadata.particle
 
     @property
-    def betablock(self) -> _BetaBlock:
+    def betablock(self) -> Optional[_BetaBlock]:
         """Provide the BetaBlock associated with the sequence."""
         return self.metadata.betablock
 
-    def set_parameters(self, element: str, parameters: Dict):
+    def set_parameters(self, element: str, parameters: Dict[str, Dict[str, float]]) -> None:
         if isinstance(self._data, _pd.DataFrame):
             self._data.loc[element, parameters.keys()] = parameters.values()
         else:
@@ -181,7 +181,7 @@ class Sequence(metaclass=SequenceType):
                     for param in parameters.keys():
                         el[0][param] = parameters[param]
 
-    def set_position(self, elements: str, value: _Q):
+    def set_position(self, elements: str, value: _Q) -> None:
         """
         Set a new position of the center for an element. The parameter at_entry and at_exit are re-computed.
         Args:
@@ -199,7 +199,7 @@ class Sequence(metaclass=SequenceType):
                 at[3] = at[2] + 0.5 * at[0]["L"]
                 self._data[k] = tuple(at)
 
-    def get_parameters(self, element: str, parameters: List):
+    def get_parameters(self, element: str, parameters: List[str]) -> Dict[str, Any]:  # type: ignore
         if isinstance(self._data, _pd.DataFrame):
             return dict(self._data.loc[element, parameters])
         else:
@@ -207,7 +207,7 @@ class Sequence(metaclass=SequenceType):
                 if el[0]["NAME"] == element:
                     return dict(zip(parameters, list(map(el[0].get, parameters))))
 
-    def get_value(self, elements: List[str]):
+    def get_value(self, elements: List[str]) -> Any:
         for el in self._data:
             if el[0]["NAME"] in elements:
                 return el
@@ -220,8 +220,8 @@ class Sequence(metaclass=SequenceType):
             df = df if df is not None else _pd.DataFrame(self._data)
             if strip_units:
 
-                def safe_convert(unit: str):
-                    def do(_):
+                def safe_convert(unit: str):  # type:ignore[no-untyped-def]
+                    def do(_):  # type:ignore[no-untyped-def]
                         if _np.isnan(_):
                             return _
                         else:
@@ -270,6 +270,7 @@ class Sequence(metaclass=SequenceType):
                 except KeyError:
                     pass
                 try:
+                    # type:ignore
                     aperture = map(lambda e: list(map(lambda j: j.m_as("meter"), e)), df["APERTURE"].values)
                     df["APERTURE"] = list(aperture)
                 except KeyError:
@@ -279,7 +280,7 @@ class Sequence(metaclass=SequenceType):
 
     df = property(to_df)
 
-    def apply(self, func, axis=0):
+    def apply(self, func: Any, axis: int = 0) -> Any:
         """
 
         Args:
@@ -295,11 +296,11 @@ class Sequence(metaclass=SequenceType):
     def from_madx_twiss(
         filename: str = "twiss.outx",
         path: str = ".",
-        kinematics: _Kinematics = None,
-        lines: int = None,
+        kinematics: Optional[_Kinematics] = None,
+        lines: Optional[int] = None,
         with_units: bool = True,
-        from_element: str = None,
-        to_element: str = None,
+        from_element: Union[Optional[str], Optional[int]] = None,
+        to_element: Union[Optional[str], Optional[int]] = None,
         element_keys: Optional[Mapping[str, str]] = None,
     ) -> Sequence:
         """
@@ -308,7 +309,7 @@ class Sequence(metaclass=SequenceType):
         Args:
             element_keys:
             lines:
-            kinematics:
+            kinematics: Kinematics of the line
             with_units:
             filename: name of the Twiss table file
             path: path to the Twiss table file
@@ -335,7 +336,7 @@ class Sequence(metaclass=SequenceType):
     def from_transport(
         filename: str = "transport.txt",
         path: str = ".",
-    ) -> Sequence:
+    ) -> TransportSequence:
         """
         TODO
 
@@ -349,7 +350,9 @@ class Sequence(metaclass=SequenceType):
         return TransportSequence(filename=filename, path=path)
 
     @staticmethod
-    def from_survey(filename: str = "survey.csv", path: str = ".", kinematics: _Kinematics = None, **kwargs):
+    def from_survey(
+        filename: str = "survey.csv", path: str = ".", kinematics: Optional[_Kinematics] = None, **kwargs: Any
+    ) -> SurveySequence:
         """
         TODO
 
@@ -362,7 +365,7 @@ class Sequence(metaclass=SequenceType):
     def from_bdsim(
         filename: str = "output.root",
         path: str = ".",
-    ) -> Sequence:
+    ) -> BDSIMSequence:
         """
         TODO
 
@@ -395,21 +398,21 @@ class PlacementSequence(Sequence):
         super().__init__(name=name, data=data or [], metadata=metadata, element_keys=element_keys)
         self._reference_placement = reference_placement
         self._betablock: Optional[_BetaBlock] = None
-        self._expanded = False
+        self._expanded: bool = False
 
     @property
-    def expanded(self):
+    def expanded(self) -> bool:
         return self._expanded
 
     @property
-    def betablock(self) -> _BetaBlock:
+    def betablock(self) -> Optional[_BetaBlock]:
         return self._betablock
 
     @betablock.setter
-    def betablock(self, betablock: _BetaBlock):
+    def betablock(self, betablock: _BetaBlock) -> None:
         self._betablock = betablock
 
-    def add(self, element_or_sequence: Union[_Element, Sequence]):
+    def add(self, element_or_sequence: Union[_Element, Sequence]) -> None:
         """
 
         Args:
@@ -459,11 +462,11 @@ class PlacementSequence(Sequence):
                     for k in ats:
                         if k.startswith("at") and ats[k] is not None:
                             ats[k] *= -1
-                            ats[k] += e[1] - element_or_sequence.data["L"]
+                            ats[k] += e[1] - element_or_sequence.data["L"]  # type: ignore
         if ats["at"] is not None:
             ats[f"at_{self._reference_placement.lower()}"] = ats["at"]
 
-        def compute(d):
+        def compute(d: Dict[str, Any]) -> Dict[str, Any]:
             """Compute placement quantities."""
             if d["at_entry"] is None:
                 if d["at_center"] is not None:
@@ -627,7 +630,7 @@ class PlacementSequence(Sequence):
         self._data.sort(key=lambda e: e[2], reverse=reverse)
         return self
 
-    def join(self, other):
+    def join(self, other: Any) -> None:
         pass
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
@@ -642,12 +645,12 @@ class PlacementSequence(Sequence):
         """
         if len(self._data) == 0:
             return _pd.DataFrame()
-        df = _pd.DataFrame(
+        dff = _pd.DataFrame(
             [{**e[0].data, **{"AT_ENTRY": e[1], "AT_CENTER": e[2], "AT_EXIT": e[3]}} for e in self._data],
         )
-        df.name = self.name
-        df.set_index("NAME", inplace=True)
-        return super().to_df(df=df, strip_units=strip_units)
+        dff.name = self.name
+        dff.set_index("NAME", inplace=True)
+        return super().to_df(df=dff, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -662,11 +665,11 @@ class TwissSequence(Sequence):
         filename: str = "twiss.outx",
         path: str = ".",
         *,
-        kinematics: _Kinematics = None,
-        lines: int = None,
+        kinematics: Optional[_Kinematics] = None,
+        lines: Optional[int] = None,
         with_units: bool = True,
-        from_element: str = None,
-        to_element: str = None,
+        from_element: Union[Optional[str], Optional[int]] = None,
+        to_element: Union[Optional[str], Optional[int]] = None,
         with_beam: bool = False,
         nparticles: int = 1,
         refer: str = "center",
@@ -714,8 +717,8 @@ class TwissSequence(Sequence):
             k = _Kinematics(float(twiss_headers["PC"]) * _ureg.GeV_c, particle=p)
         except KeyError:  # For MAD-NG
             # TODO check with MAD-NG changes.
-            p = kinematics.particule
-            k = kinematics
+            p = kinematics.particule  # type: ignore
+            k = kinematics  # type: ignore
 
         twiss_init = self.get_beta_block(twiss_headers, twiss_table)
 
@@ -799,7 +802,7 @@ class TransportSequence(Sequence):
         self,
         filename: str,
         path: str = ".",
-        flavor: TransportInputFlavor = TransportInputOriginalFlavor,
+        flavor: Type[TransportInputOriginalFlavor] = TransportInputOriginalFlavor,
     ):
         """
 
@@ -839,7 +842,7 @@ class TransportSequence(Sequence):
         )
 
     @staticmethod
-    def process_element(ele, brho, at_entry):
+    def process_element(ele: _pd.DataFrame, brho: _Q, at_entry: float) -> _pd.DataFrame:
         ele["AT_ENTRY"] = at_entry
         ele["AT_CENTER"] = at_entry + 0.5 * ele["L"]
         ele["AT_EXIT"] = at_entry + ele["L"]
@@ -853,7 +856,7 @@ class TransportSequence(Sequence):
         return ele
 
     @staticmethod
-    def process_face_angle(line):
+    def process_face_angle(line: List[Any]) -> List[Any]:
         for idx in range(len(line) - 1):
             element = line[idx]
             previous = line[idx - 1]
@@ -870,9 +873,9 @@ class TransportSequence(Sequence):
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
         dicts = list(map(dict, self._data))
-        counters = {}
+        counters = {}  # type: ignore
         for d in dicts:
-            if d["NAME"] is None:
+            if d["NAME"] is None:  # type: ignore
                 counters[d["KEYWORD"]] = counters.get(d["KEYWORD"], 0) + 1
                 d["NAME"] = f"{d['KEYWORD']}_{counters[d['KEYWORD']]}"
         return super().to_df(_pd.DataFrame(dicts).set_index("NAME"), strip_units=strip_units)
@@ -885,9 +888,9 @@ class SurveySequence(PlacementSequence):
         self,
         filename: str,
         path: str = ".",
-        from_element: str = None,
-        to_element: str = None,
-        kinematics: _Kinematics = None,
+        from_element: Union[Optional[str], Optional[int]] = None,
+        to_element: Union[Optional[str], Optional[int]] = None,
+        kinematics: Optional[_Kinematics] = None,
         metadata: Optional[SequenceMetadata] = None,
     ):
         """
@@ -899,7 +902,7 @@ class SurveySequence(PlacementSequence):
             metadata: metadata of the sequence
         """
 
-        def get_entrance_exit_frame(e):
+        def get_entrance_exit_frame(e: _pd.Series) -> Tuple[Frame, Frame]:
             center_frame = Frame().translate([e["X"] * _ureg.meter, e["Y"] * _ureg.meter, e["Z"] * _ureg.meter])
             if e["TYPE"] == "SBEND":
                 # TODO This is not working in 3D and avoid copy.
@@ -998,7 +1001,7 @@ class SurveySequence(PlacementSequence):
         idx = sequence.query("TYPE == 'COLLIMATOR'").index
         sequence.loc[idx, "TYPE"] = [f"{sequence.loc[i, 'APERTYPE'].upper()}COLLIMATOR" for i in idx]
 
-        def check_apertures(e):
+        def check_apertures(e: Union[float, List[_Q]]) -> Union[_Q, List[_Q]]:
             if isinstance(e, float):
                 return [e * _ureg.m]
             else:
@@ -1008,7 +1011,6 @@ class SurveySequence(PlacementSequence):
         data = []
         # FIXME if no kinematics is provided this will raise an error.
         sequence_metadata = metadata or SequenceMetadata(kinematics=kinematics, particle=kinematics.particule)
-
         extra_columns = list(
             set(sequence.columns.values)
             - {
@@ -1037,11 +1039,11 @@ class SurveySequence(PlacementSequence):
             data.append((ele, element[1]["AT_ENTRY"], element[1]["AT_CENTER"], element[1]["AT_EXIT"]))
         super().__init__(name="SURVEY", data=data, metadata=sequence_metadata)
 
-    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units=False):
-        df = _pd.DataFrame([{**e[0], **{"AT_ENTRY": e[1], "AT_CENTER": e[2], "AT_EXIT": e[3]}} for e in self._data])
-        df.name = self.name
-        df.set_index("NAME", inplace=True)
-        return super().to_df(df=df, strip_units=strip_units)
+    def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
+        dff = _pd.DataFrame([{**e[0], **{"AT_ENTRY": e[1], "AT_CENTER": e[2], "AT_EXIT": e[3]}} for e in self._data])
+        dff.name = self.name
+        dff.set_index("NAME", inplace=True)
+        return super().to_df(df=dff, strip_units=strip_units)
 
     df = property(to_df)
 
@@ -1051,8 +1053,8 @@ class BDSIMSequence(Sequence):
         self,
         filename: str = "output.root",
         path: str = ".",
-        from_element: str = None,
-        to_element: str = None,
+        from_element: Union[Optional[str], Optional[int]] = None,
+        to_element: Union[Optional[str], Optional[int]] = None,
     ):
         """
         Args:
@@ -1067,7 +1069,7 @@ class BDSIMSequence(Sequence):
 
         # Load the model
         bdsim_data = BDSIMOutput(filename=filename, path=path)
-        bdsim_model = bdsim_data.model.df.loc[from_element:to_element]
+        bdsim_model = bdsim_data.model.df.loc[from_element:to_element]  # type: ignore
         bdsim_model.rename(columns={"TYPE": "KEYWORD"}, inplace=True)
         self.set_units(bdsim_model)
 
@@ -1104,7 +1106,7 @@ class BDSIMSequence(Sequence):
         )
 
     @staticmethod
-    def set_units(model: _pd.DataFrame = None):
+    def set_units(model: _pd.DataFrame = None) -> None:
         # Specify the units
         for c in model.columns:
             try:
@@ -1137,4 +1139,4 @@ class BDSIMSequence(Sequence):
         model["B"] = model["B"].apply(lambda e: e * _ureg.T)
 
     def to_df(self, df: Optional[_pd.DataFrame] = None, strip_units: bool = False) -> _pd.DataFrame:
-        return self._data
+        return super().to_df(df=self._data, strip_units=strip_units)

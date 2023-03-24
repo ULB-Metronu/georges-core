@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from abc import ABCMeta
 from collections import UserDict
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Type, Union
 
 from .. import ureg as _ureg
 
@@ -47,18 +47,22 @@ class Element(UserDict, metaclass=ElementClass):
     parameters = {}
     metaclass = ElementClass
 
-    def __init__(self, name: Optional[str] = None, **kwargs):
+    def __init__(self, name: Optional[str] = None, **kwargs: Any):
         super().__init__(**{**kwargs, **{"NAME": name, "CLASS": self.__class__.__name__, "L": 0 * _ureg.m}})
         self.data = {**self.data, **self.__class__.parameters, **kwargs}
 
-    def __getattr__(self, k: str):
+    def __getattr__(self, k: str) -> Any:
         """Provides attribute-like access to the dictionary elements."""
         return self.get(k)
 
     @classmethod
     def make_subclass(
-        cls, name: str, bases: Optional[Union[type, Tuple[type]]] = None, dct: Optional[Dict[str, Any]] = None, **kwargs
-    ):
+        cls,
+        name: str,
+        bases: Optional[Union[type, Tuple[type]]] = None,
+        dct: Optional[Dict[str, Any]] = None,
+        **kwargs: Any,
+    ) -> Type[ElementClass]:
         """
 
         Args:

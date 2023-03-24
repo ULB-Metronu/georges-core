@@ -1,5 +1,8 @@
+"""
+Interface with cpymad to run a sequence with MAD-X
+"""
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 import cpymad.madx
 
@@ -12,12 +15,28 @@ APERTURE_CONVENTION = {
 }
 
 
-class MadX(cpymad.madx.Madx):
-    def __init__(self, sequence: Optional[_Sequence] = None, kinematics: Optional[_Kinematics] = None, *args, **kwargs):
+class MadX(cpymad.madx.Madx):  # type: ignore[misc]
+    """
+    TODO
+
+    Args:
+        cpymad (_type_): cpymad instance
+    """
+
+    def __init__(
+        self, sequence: Optional[_Sequence] = None, kinematics: Optional[_Kinematics] = None, *args: Any, **kwargs: Any
+    ):
+        """
+        TODO
+
+        Args:
+            sequence (Optional[_Sequence], optional): sequence to run. Defaults to None.
+            kinematics (Optional[_Kinematics], optional): kinematics of the sequence. Defaults to None.
+        """
         super().__init__(*args, **kwargs)
         self.send_sequence(sequence, kinematics)
 
-    def send_sequence(self, sequence: Optional[_Sequence] = None, kinematics: Optional[_Kinematics] = None):
+    def send_sequence(self, sequence: Optional[_Sequence] = None, kinematics: Optional[_Kinematics] = None) -> None:
         if sequence is None:
             return
         if kinematics is None:
@@ -49,7 +68,7 @@ class MadX(cpymad.madx.Madx):
                             set(
                                 list(
                                     map(
-                                        lambda _: _.upper(),
+                                        lambda _: _.upper(),  # type: ignore[no-any-return]
                                         self._libmadx.get_defined_command(element["CLASS"].lower())["data"].keys(),
                                     ),
                                 ),

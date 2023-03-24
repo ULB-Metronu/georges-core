@@ -34,7 +34,7 @@ _AXES = {"X": 0, "Y": 1, "Z": 2}
 class FrameException(Exception):
     """Exception raised for errors in the Frame module."""
 
-    def __init__(self, m):
+    def __init__(self, m: str = ""):
         self.message = m
 
 

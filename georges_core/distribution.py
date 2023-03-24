@@ -6,11 +6,14 @@ generating a distribution, methods are available to compute beam properties, suc
 Twiss parameters, emittance or the beam halo.
 """
 
+from __future__ import annotations
+
 import logging
 import os
-from typing import Dict
+from typing import Any, Dict, List, Optional, Union
 
 import numpy as _np
+import numpy.typing as _npt
 import pandas as _pd
 from numba import njit
 
@@ -36,10 +39,9 @@ def load_from_file(path: str = "", filename: str = "", file_format: str = "csv")
     """
     if file_format == "csv":
         return _pd.read_csv(os.path.join(path, filename))
-    elif file_format == "parquet":
+    if file_format == "parquet":
         return _pd.read_parquet(os.path.join(path, filename))
-    else:
-        raise DistributionException("Format of the file is incorrect. Only csv or parquet are available.")
+    raise DistributionException("Format of the file is incorrect. Only csv or parquet are available.")
 
 
 def generate_from_5d_sigma_matrix(
@@ -64,8 +66,8 @@ def generate_from_5d_sigma_matrix(
     s44: float = 0,
     s45: float = 0,
     s55: float = 0,
-    matrix: _np.ndarray = None,
-):
+    matrix: Optional[_npt.NDArray[_np.float_]] = None,
+) -> _npt.NDArray[_np.float_]:
     """
 
     Args:
@@ -119,9 +121,9 @@ def generate_from_5d_sigma_matrix(
 
     if matrix is not None:
         assert matrix.shape == (5, 5)
-        return generator([x, px, y, py, dpp], matrix, int(n))
+        return generator([x, px, y, py, dpp], matrix, int(n))  # type: ignore[no-any-return]
 
-    return generator(
+    return generator(  # type: ignore[no-any-return]
         [x, px, y, py, dpp],
         _np.array(
             [
@@ -149,7 +151,7 @@ class Distribution:
     The internal representation is essentially a `pandas` `DataFrame`.
     """
 
-    def __init__(self, distribution=None):
+    def __init__(self, distribution: Optional[_pd.DataFrame] = None):
         """
         Initialize a beam object from various sources of particle beam distribution.
         Args:
@@ -157,7 +159,7 @@ class Distribution:
         """
         try:
             self.__initialize_distribution(distribution)
-            self.__dims = self.__distribution.shape[1]
+            self.__dims = self.__distribution.shape[1]  # type: ignore[has-type]
         except DistributionException:
             self.__dims = len(PHASE_SPACE_DIMENSIONS)
             self.__distribution = _pd.DataFrame(_np.zeros((1, self.__dims)))
@@ -175,38 +177,38 @@ class Distribution:
     @property
     def dims(self) -> int:
         """Return the dimensions of the beam's phase-space."""
-        return self.__dims
+        return self.__dims  # type: ignore[no-any-return]
 
     @property
     def n_particles(self) -> int:
         """Return the number of particles in the beam's distribution."""
-        return self.__n_particles
+        return self.__n_particles  # type: ignore[no-any-return]
 
     @property
-    def mean(self):
+    def mean(self) -> _pd.Series:
         """Return a dataframe containing the first order moments of each dimension."""
         return self.__distribution.mean()
 
     @property
-    def std(self):
+    def std(self) -> _pd.Series:
         """Return a dataframe containing the second order moments of each dimension."""
         return self.__distribution.std()
 
     @property
-    def emit(self) -> Dict:
+    def emit(self) -> Dict[str, float]:
         """Return the emittance of the beam in both planes"""
         tw = njit(self.compute_twiss)(self.__distribution.values)
         return {"X": tw[0], "Y": tw[5]}
 
     @property
-    def sigma(self):
+    def sigma(self) -> _pd.Series:
         """Return the sigma matrix of the beam"""
         return self.__distribution.cov()
 
     covariance = sigma
 
     @property
-    def twiss(self) -> Dict:
+    def twiss(self) -> Dict[str, float]:
         """Return the Twiss parameters of the beam"""
         tw = njit(self.compute_twiss)(self.__distribution.values)
         return {
@@ -223,7 +225,7 @@ class Distribution:
         }
 
     @property
-    def halo(self, dimensions=None) -> _pd.DataFrame:
+    def halo(self, dimensions: Optional[Union[str, List[str]]] = None) -> _pd.DataFrame:
         """Return a dataframe containing the 1st, 5th, 95th and 99th percentiles of each dimensions."""
         if dimensions is None:
             dimensions = ["X", "Y", "PX", "PY"]
@@ -241,12 +243,12 @@ class Distribution:
             ).rename(columns={0.01: "1%", 0.05: "5%", 0.2: "20%", 0.8: "80%", 0.95: "95%", 0.99: "99%"})
         return self._halo
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: str) -> _pd.Series:
         if item not in PHASE_SPACE_DIMENSIONS[: self.__dims]:
             raise DistributionException("Trying to access an invalid data from a beam.")
         return self.__distribution[item]
 
-    def __initialize_distribution(self, distribution=None):
+    def __initialize_distribution(self, distribution: _pd.DataFrame = None) -> None:
         """Try setting the internal pandas.DataFrame with a distribution."""
         if distribution is not None:
             self.__distribution = distribution
@@ -261,11 +263,10 @@ class Distribution:
                 f"{missing_key} are missing. Generate a default beam",
             )
             raise DistributionException("")
-        else:
-            self.__distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(self.__distribution.columns.values))] = 0
+        self.__distribution[list(set(PHASE_SPACE_DIMENSIONS) - set(self.__distribution.columns.values))] = 0
 
     @staticmethod
-    def compute_twiss(beam: _np.ndarray) -> _np.array:
+    def compute_twiss(beam: _npt.NDArray[_np.float_]) -> _npt.NDArray[_np.float_]:
         """Compute Twiss parameters of a beam
         From http://nicadd.niu.edu/~syphers/tutorials/analyzeTrack.html
 
@@ -333,7 +334,7 @@ class Distribution:
         return _np.array([emit_x, beta_x, alpha_x, disp_x, disp_xp, emit_y, beta_y, alpha_y, disp_y, disp_yp])
 
     @classmethod
-    def from_csv(cls, path: str = "", filename: str = ""):
+    def from_csv(cls, path: str = "", filename: str = "") -> Distribution:
         """
 
         Args:
@@ -346,7 +347,7 @@ class Distribution:
         return cls(distribution=load_from_file(path, filename, file_format="csv"))
 
     @classmethod
-    def from_parquet(cls, path: str = "", filename: str = ""):
+    def from_parquet(cls, path: str = "", filename: str = "") -> Distribution:
         """
 
         Args:
@@ -382,8 +383,8 @@ class Distribution:
         s44: float = 0,
         s45: float = 0,
         s55: float = 0,
-        matrix=None,
-    ):
+        matrix: Optional[Any] = None,
+    ) -> Distribution:
         """
         Initialize a beam with a 5D particle distribution from a Sigma matrix.
         Args:
@@ -456,8 +457,8 @@ class Distribution:
         pxrms: float = 0,
         yrms: _Q = 0 * _ureg.m,
         pyrms: float = 0,
-        dpprms=0,
-    ):
+        dpprms: float = 0,
+    ) -> Distribution:
         """
         Initialize a beam with a 5D particle distribution from rms quantities.
         Args:
@@ -517,7 +518,7 @@ class Distribution:
         dispxp: float = 0,
         dispyp: float = 0,
         dpprms: float = 0,
-    ):
+    ) -> Distribution:
         """
         Initialize a beam with a 5D particle distribution from Twiss parameters.
         Args:

@@ -15,7 +15,14 @@ from . import ureg as _ureg
 from .sequences import BetaBlock as _BetaBlock
 
 
-def _get_matrix_elements_block(m: _pd.DataFrame, twiss: Optional[_BetaBlock], block: int = 1) -> Tuple:
+def _get_matrix_elements_block(
+    m: _pd.DataFrame,
+    twiss: Optional[_BetaBlock],
+    block: int = 1,
+) -> Union[
+    Tuple[_pd.Series, _pd.Series, _pd.Series, _pd.Series],
+    Tuple[_pd.Series, _pd.Series, _pd.Series, _pd.Series, Optional[float], Optional[float], Optional[float]],
+]:
     """Extract parameters from the DataFrame."""
     p = 1 if block == 1 else 3
     v = 1 if block == 1 else 2
@@ -83,7 +90,7 @@ class Twiss(Parametrization):
         matrix["DISP3"] = self.compute_dispersion_from_matrix(matrix, twiss_init, plane=2)
         matrix["DISP4"] = self.compute_dispersion_prime_from_matrix(matrix, twiss_init, plane=2)
 
-        def phase_unrolling(phi):
+        def phase_unrolling(phi: _np.ndarray) -> _np.ndarray:  # type: ignore[type-arg]
             """TODO"""
             if phi[0] < 0:
                 phi[0] += 2 * _np.pi
@@ -98,7 +105,7 @@ class Twiss(Parametrization):
             from numba import njit
 
             phase_unrolling = njit(phase_unrolling)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError:  # pragma: no cover
             pass
 
         if self._with_phase_unrolling:
@@ -120,7 +127,7 @@ class Twiss(Parametrization):
         Returns:
             a Pandas Series with the alpha values computed at all steps of the input step-by-step transfer matrix
         """
-        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
+        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)  # type: ignore[misc]
         return -r11 * r21 * beta + (r11 * r22 + r12 * r21) * alpha - r12 * r22 * gamma
 
     @staticmethod
@@ -142,9 +149,9 @@ class Twiss(Parametrization):
         Returns:
             a Pandas Series with the beta values computed at all steps of the input step-by-step transfer matrix
         """
-        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
+        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)  # type: ignore[misc]
         _ = r11**2 * beta - 2.0 * r11 * r12 * alpha + r12**2 * gamma
-        if strict:
+        if strict:  # pragma: no cover
             assert (_ > 0).all(), "Not all computed beta are positive."
         return _
 
@@ -161,7 +168,7 @@ class Twiss(Parametrization):
         Returns:
             a Pandas Series with the gamma values computed at all steps of the input step-by-step transfer matrix
         """
-        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
+        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)  # type: ignore[misc]
         return r21**2 * beta - 2.0 * r21 * r22 * alpha + r22**2 * gamma
 
     @staticmethod
@@ -177,7 +184,7 @@ class Twiss(Parametrization):
         Returns:
             a Pandas Series with the phase advance computed at all steps of the input step-by-step transfer matrix
         """
-        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)
+        r11, r12, r21, r22, alpha, beta, gamma = _get_matrix_elements_block(m, twiss, plane)  # type: ignore[misc]
         return _np.arctan2(r12, r11 * beta - r12 * alpha)
 
     @staticmethod
@@ -192,7 +199,7 @@ class Twiss(Parametrization):
         Returns:
             a Pandas Series with the jacobian computed at all steps of the input step-by-step transfer matrix
         """
-        r11, r12, r21, r22 = _get_matrix_elements_block(m, None, plane)
+        r11, r12, r21, r22 = _get_matrix_elements_block(m, None, plane)  # type: ignore[misc]
         return r11 * r22 - r12 * r21
 
     @staticmethod
@@ -273,14 +280,14 @@ class Twiss(Parametrization):
                 "CMU2": (m["R33"] + m["R44"]) / 2.0,
             },
         )
-        if twiss["CMU1"] < -1.0 or twiss["CMU1"] > 1.0:
+        if twiss["CMU1"] < -1.0 or twiss["CMU1"] > 1.0:  # pragma: no cover
             warning(f"Horizontal motion is unstable; proceed with caution (cos(mu) = {twiss['CMU1']}).")
-        with warnings.catch_warnings():
+        with warnings.catch_warnings():  # pragma: no cover
             warnings.simplefilter("ignore")
             twiss["MU1"] = _np.arccos(twiss["CMU1"])
-        if twiss["CMU2"] < -1.0 or twiss["CMU2"] > 1.0:
+        if twiss["CMU2"] < -1.0 or twiss["CMU2"] > 1.0:  # pragma: no cover
             warning(f"Vertical motion is unstable; proceed with caution (cos(mu) = {twiss['CMU2']}).")
-        with warnings.catch_warnings():
+        with warnings.catch_warnings():  # pragma: no cover
             warnings.simplefilter("ignore")
             twiss["MU2"] = _np.arccos(twiss["CMU2"])
         twiss["BETA11"] = m["R12"] / _np.sin(twiss["MU1"]) * _ureg.m
@@ -342,8 +349,8 @@ class RipkenTwiss(Parametrization):
 
 
 class WolskiTwiss(Parametrization):
-    def __init__(self):
+    def __init__(self):  # type: ignore[no-untyped-def]
         ...
 
-    def __call__(self):
+    def __call__(self):  # type: ignore[no-untyped-def]
         ...
