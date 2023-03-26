@@ -102,6 +102,21 @@ class Parametrization(metaclass=ParametrizationType):
                 phi[i:] += 1 * _np.pi
         return phi
 
+    @staticmethod
+    def compute_turned_eigvec(v1: _np.ndarray, v1_: _np.ndarray, plane: int = 1):
+        j = 1j
+
+        phi_v1 = _np.arctan(_np.imag(v1[plane * 2 - 2]) / _np.real(v1[plane * 2 - 2]))
+        theta_1 = - phi_v1
+        v1 = v1 * (_np.cos(theta_1) + j * _np.sin(theta_1))
+        v1_ = v1_ * (_np.cos(theta_1) - j * _np.sin(theta_1))
+
+        if _np.real(v1[plane * 2 - 2] < 0):  # Permet d'assurer le signe du beta pour la propagation
+            v1 = v1 * (_np.cos(_np.pi) + j * _np.sin(_np.pi))
+            v1_ = v1_ * (_np.cos(_np.pi) - j * _np.sin(_np.pi))
+
+        return v1, v1_
+
 
 class Twiss(Parametrization):
     def __init__(self,
@@ -531,6 +546,17 @@ class Parzen(Parametrization):
         if _np.round(_np.real(lambda1), 2) != _np.round(_np.real(lambda1_0), 2):
             v1, v1_, v2, v2_ = v2, v2_, v1, v1_
 
+        v1, v1_ = self.compute_turned_eigvec(v1, v1_)
+        v2, v2_ = self.compute_turned_eigvec(v2, v2_, plane=2)
+
+        u1 = -_np.imag(v1[1] * v1[0])
+        if u1 > 0:
+            v1, v1_ = v1_, v1
+
+        u4 = -_np.imag(v2[3] * v2[2])
+        if u4 > 0:
+            v2, v2_ = v2_, v2
+
         # On normalise les vecteurs propres avec la condition donnée dans Parzen
         v1, v1_ = self.compute_normalized_eigenvectors(v1, v1_)
         v2, v2_ = self.compute_normalized_eigenvectors(v2, v2_)
@@ -860,21 +886,6 @@ class LebedevTwiss(Parametrization):
         matrix_row['Normalisation_matrix'] = V2_ok
 
         return matrix_row
-
-    @staticmethod
-    def compute_turned_eigvec(v1: _np.ndarray, v1_: _np.ndarray, plane: int = 1):
-        j = 1j
-
-        phi_v1 = _np.arctan(_np.imag(v1[plane * 2 - 2]) / _np.real(v1[plane * 2 - 2]))
-        theta_1 = - phi_v1
-        v1 = v1 * (_np.cos(theta_1) + j * _np.sin(theta_1))
-        v1_ = v1_ * (_np.cos(theta_1) - j * _np.sin(theta_1))
-
-        if _np.real(v1[plane * 2 - 2] < 0):  # Permet d'assurer le signe du beta pour la propagation
-            v1 = v1 * (_np.cos(_np.pi) + j * _np.sin(_np.pi))
-            v1_ = v1_ * (_np.cos(_np.pi) - j * _np.sin(_np.pi))
-
-        return v1, v1_
 
     @staticmethod
     def compute_normalized_eigenvectors(v1, v1_):
