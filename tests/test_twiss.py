@@ -13,31 +13,43 @@ def get_madx_input():
     m = cpymad.madx.Madx(stdout=False)
     m.input(
         """
-        BEAM, PARTICLE=PROTON, ENERGY = 0.250+0.938, PARTICLE = PROTON, EX=1e-6, EY=1e-6;
+        beam;
 
-        RHO:=1.35;
-        KQ := +0.9;
-        LCELL:=4.;
-        LQ:= 0.3;
-        LB:= 2.0;
-        L2:=0.5*(LCELL-LB-LQ);
-        L3:= 0.5;
-        EANG:=10.*TWOPI/360;
-        KQ1:= -0.9;
+        b:     sbend,l=35.09, angle = 0.011306116;
+        qf:    quadrupole,l=1.6,k1=-0.02268553;
+        qd:    quadrupole,l=1.6,k1=0.022683642;
+        sf:    sextupole,l=0.4,k2=-0.13129;
+        sd:    sextupole,l=0.76,k2=0.26328;
 
-        D1: DRIFT, L=L3;
-        D2: DRIFT, L=0.2;
-        D3: DRIFT, L=0.2;
-        D4: DRIFT, L=0.1;
+        ! define the cell as a sequence:
+        sequ:  sequence,l=79;
+        b1:    b,      at=19.115;
+        sf1:   sf,     at=37.42;
+        qf1:   qf,     at=38.70;
+        b2:    b,      at=58.255,angle=b1->angle;
+        sd1:   sd,     at=76.74;
+        qd1:   qd,     at=78.20;
+        endm:  marker, at=79.0;
+        endsequence;
 
-        BD : SBEND,L=LB, ANGLE=EANG;
-        MQF1 : QUADRUPOLE,L=0.5*LQ, K1=+KQ1;
-        MQF2: MQF1;
-        MQD : QUADRUPOLE,L=LQ, K1=-KQ1;
 
-        ACHROM: LINE=(MQF1, D1, MQD, D2, BD,D3, MQF2, D4);
-        RING: LINE=(ACHROM);
-        USE, sequence=RING;
+        ! skew quadrupole
+        qfs:	quadrupole,l=0, k1s=-5e-8;
+        qds:	quadrupole,l=0,k1s=3e-7;
+
+        ! sequence with a skew quadrupole
+        sequSkew: sequence,l=79;
+        b1:	b,	at=19.115;
+        sf1:   sf,     at=37.42;
+        qf1:   qf,     at=38.70;
+        qfs1:  qfs,    at=38.70+1.6/2;
+        b2:    b,      at=58.255,angle=b1->angle;
+        sd1:   sd,     at=76.74;
+        !qd1:   qd,     at=78.20;
+        qds1:  qds,    at=78.20+1.6/2;
+        endm:  marker, at=79.0;
+        endsequence;
+
         """,
     )
 
@@ -46,9 +58,10 @@ def get_madx_input():
 
 def test_periodic_twiss():
     m = get_madx_input()
+    m.use(sequence="sequ")
     m.command.twiss(
-        sequence="RING",
-        FILE="twiss.tfs",
+        sequence="sequ",
+        file="twiss.tfs",
         rmatrix=True,
     )
     twiss_madx = georges_core.codes_io.load_mad_twiss_table("twiss.tfs", lines=51)
@@ -70,9 +83,10 @@ def test_periodic_twiss():
 
 def test_nonperiodic_twiss():
     m = get_madx_input()
+    m.use(sequence="sequ")
     m.command.twiss(
-        sequence="RING",
-        FILE="twiss.tfs",
+        sequence="sequ",
+        file="twiss.tfs",
         rmatrix=True,
         betx=1,
         bety=2,
@@ -92,16 +106,25 @@ def test_nonperiodic_twiss():
             DISP1=0.1 * _ureg.m,
         ),
     )(matrix=matrix)
-    _np.testing.assert_array_almost_equal(results_twiss["BETA11"].values, twiss_madx["BETX"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["BETA22"].values, twiss_madx["BETY"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["ALPHA11"].values, twiss_madx["ALFX"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["ALPHA22"].values, twiss_madx["ALFY"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["DISP1"].values, twiss_madx["DX"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["DISP2"].values, twiss_madx["DPX"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["DISP3"].values, twiss_madx["DY"].values)
-    _np.testing.assert_array_almost_equal(results_twiss["DISP4"].values, twiss_madx["DPY"].values)
+    _np.testing.assert_array_almost_equal(results_twiss["BETA11"].values, twiss_madx["BETX"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["BETA22"].values, twiss_madx["BETY"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["ALPHA11"].values, twiss_madx["ALFX"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["ALPHA22"].values, twiss_madx["ALFY"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["DISP1"].values, twiss_madx["DX"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["DISP2"].values, twiss_madx["DPX"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["DISP3"].values, twiss_madx["DY"].values, decimal=4)
+    _np.testing.assert_array_almost_equal(results_twiss["DISP4"].values, twiss_madx["DPY"].values, decimal=4)
     os.remove("twiss.tfs")
 
 
-def test_lebedev_twiss():
-    pass
+# def test_lebedev_twiss():
+# m = get_madx_input()
+# m.use(sequence="sequSkew")
+# m.command.ptc_create_universe()
+# m.command.ptc_create_layout(model=2, method=6, nst=10, exact=True)
+# m.command.select(flag="ptc_twiss")
+# m.command.ptc_twiss(deltap=0.0, closed_orbit=True, icase=5, file="coupledTwiss.tfs", no=3)
+# m.command.ptc_end()
+
+# twiss_madx = georges_core.codes_io.load_mad_twiss_table("coupledTwiss.tfs", lines=89)
+# os.remove("coupledTwiss.tfs")

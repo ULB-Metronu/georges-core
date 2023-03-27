@@ -452,7 +452,7 @@ class Parzen(Parametrization):
     def __call__(
         self,
         matrix: _pd.DataFrame,
-        t: _pd.DataFrame,
+        tracks: _pd.DataFrame,
         kin: _Kinematics,
     ) -> _pd.DataFrame:
         """
@@ -462,12 +462,12 @@ class Parzen(Parametrization):
 
         Args:
             matrix: the input step-by-step transfer matrix
-            t: tracks_global for the centered particle 'O' of the BeamTwiss
+            tracks: tracks_global for the centered particle 'O' of the BeamTwiss
             kin : Kinematics object
         Returns:
             the same DataFrame as the matrix input DataFrame, but with added columns for the computed quantities.
         """
-        matrix["BX"] = t["BX"]
+        matrix["BX"] = tracks["BX"]
 
         # Calculation of the matrix for the transformation of geometric coordinates into the canonical ones
         matrix = matrix.apply(lambda row: self.compute_canonical_transformation_matrix(row, kin), axis=1)
@@ -825,18 +825,6 @@ class Parzen(Parametrization):
 EdwardsTengTwiss = Parzen
 
 
-class RipkenTwiss(Parametrization):
-    ...
-
-
-class WolskiTwiss(Parametrization):
-    def __init__(self):  # type: ignore[no-untyped-def]
-        ...
-
-    def __call__(self):  # type: ignore[no-untyped-def]
-        ...
-
-
 class LebedevTwiss(Parametrization):
     def __init__(
         self,
@@ -858,7 +846,7 @@ class LebedevTwiss(Parametrization):
     def __call__(
         self,
         matrix: _pd.DataFrame,
-        t: _pd.DataFrame,
+        tracks: _pd.DataFrame,
         kin: _Kinematics,
     ) -> _pd.DataFrame:
         """
@@ -867,7 +855,7 @@ class LebedevTwiss(Parametrization):
 
         Args:
             matrix: the input step-by-step transfer matrix
-            t: tracks_global for the centered particle 'O' of the BeamTwiss
+            tracks: tracks_global for the centered particle 'O' of the BeamTwiss
         Returns:
             the same DataFrame as the matrix input DataFrame, but with added columns for the computed quantities.
         """
@@ -875,7 +863,11 @@ class LebedevTwiss(Parametrization):
             twiss_init = self._twiss_init
 
         else:
-            periodic_twiss = self.compute_periodic_LebedevTwiss(copy.deepcopy(matrix).iloc[-1].to_frame().T, t, kin)
+            periodic_twiss = self.compute_periodic_LebedevTwiss(
+                copy.deepcopy(matrix).iloc[-1].to_frame().T,
+                tracks,
+                kin,
+            )
             periodic_twiss.rename(
                 columns={
                     "BETA1X": "BETA11",
@@ -913,10 +905,10 @@ class LebedevTwiss(Parametrization):
             twiss_init = _BetaBlock(**periodic_twiss)
 
         if self._all_periodic:
-            matrix = self.compute_periodic_LebedevTwiss(matrix, t, kin)
+            matrix = self.compute_periodic_LebedevTwiss(matrix, tracks, kin)
 
         else:
-            matrix["BX"] = t["BX"]
+            matrix["BX"] = tracks["BX"]
             V1 = self.get_initial_normalisation_matix(twiss_init)
 
             # Calculation of the matrix for the transformation of geometric coordinates into the canonical ones
@@ -1183,21 +1175,21 @@ class LebedevTwiss(Parametrization):
     def compute_periodic_LebedevTwiss(
         self,
         matrix: _pd.DataFrame,
-        t: _pd.DataFrame,
+        tracks: _pd.DataFrame,
         kin: _Kinematics,
     ) -> _pd.DataFrame:
         """
         Args:
             matrix: the input step-by-step transfer matrix
-            t: tracks_global for the centered particle 'O' of the BeamTwiss
+            tracks: tracks_global for the centered particle 'O' of the BeamTwiss
         Returns:
             the same DataFrame as the matrix input DataFrame, but with added columns for the computed quantities.
         """
-        matrix["BX"] = t["BX"]
-        matrix["BY"] = t["BY"]
-        matrix["BZ"] = t["BZ"]
-        matrix["P"] = t["P"]
-        matrix["T"] = t["T"]
+        matrix["BX"] = tracks["BX"]
+        matrix["BY"] = tracks["BY"]
+        matrix["BZ"] = tracks["BZ"]
+        matrix["P"] = tracks["P"]
+        matrix["T"] = tracks["T"]
 
         # Calculation of the matrix for the transformation of geometric coordinates into the canonical ones
         matrix = matrix.apply(lambda row: self.compute_canonical_transformation_matrix(row, kin), axis=1)
@@ -1229,3 +1221,15 @@ class LebedevTwiss(Parametrization):
         )
 
         return matrix
+
+
+class RipkenTwiss(Parametrization):
+    ...
+
+
+class WolskiTwiss(Parametrization):
+    def __init__(self):  # type: ignore[no-untyped-def]
+        ...
+
+    def __call__(self):  # type: ignore[no-untyped-def]
+        ...
