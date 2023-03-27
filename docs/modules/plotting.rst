@@ -29,4 +29,15 @@ Gnuplot
 
 vtk
 ###
-Experimental feature,
+
+This module contains three functions that allow the export of 3D histogram values in vtk format, their expansion for Paraview visualization, and the exportation of the particle trajectories in vtk format.
+
+:code:`expand_values_for_Paraview` is a function receiving and pybdsim 3D histogram instance. From the [nx, ny, nz] values of the 3D histogram, this function returns an [nx+1, ny+1,nz+1] array to allow the results visualisation in Paraview. Indeed, the Paraview histogram values representation uses the center of the bins as corners for its visual representation, an expansion of the results is therefore required to allow a classical visualisation.
+
+:code:`histogram3d_to_vtk` is a function receiving and pybdsim 3D histogram instance and allows its conversion to vtk format with the choice to use the origin from the pybdsim 3D histogram or not and to expand or not the results for a Paraview representation.
+
+:code:`beam_to_vtk` is a function receiving a BDSIM output file. This function allows extracting the particle trajectory and creating a vtk file with the particle and their correct color code.
+
+..note::
+
+ These functions are still in development but already give the main ingredients for further developments
