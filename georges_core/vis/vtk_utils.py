@@ -6,7 +6,7 @@ import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
 
 
-def expand_values_for_paraview(histogram3d):
+def expand_values_for_paraview(histogram3d):  # pragma: no cover
     nx = histogram3d.xnumbins
     ny = histogram3d.ynumbins
     nz = histogram3d.znumbins
@@ -83,7 +83,7 @@ def expand_values_for_paraview(histogram3d):
     return new_values
 
 
-def histogram3d_to_vtk(
+def histogram3d_to_vtk(  # pragma: no cover
     histogram3d,
     filename="histogram.vti",
     path=".",
@@ -169,6 +169,7 @@ def beam_to_vtk(
 
     green = [0, 255, 0]
     blue = [0, 0, 255]
+    red = [255, 0, 0]
 
     mb_index = 0
 
@@ -189,11 +190,14 @@ def beam_to_vtk(
                 color = blue
             elif part_id_tracks[i][j] == 2112:
                 color = green
+            elif part_id_tracks[i][j] == 11:
+                color = red
             else:
                 run = False
 
             if run:
                 steps = tracks[i].tolist()[j]
+                print(steps)
 
                 lines = _vtk.vtkCellArray()
                 pts = _vtk.vtkPoints()
@@ -234,7 +238,6 @@ def beam_to_vtk(
                 mb.SetBlock(mb_index, lines_polydata)
                 mb_index += 1
 
-        print(mb_index)
         print(f"Progress: {i / len(tracks) * 100}%")
 
     writer = _vtk.vtkXMLMultiBlockDataWriter()

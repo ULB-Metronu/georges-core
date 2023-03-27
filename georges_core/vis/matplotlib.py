@@ -301,6 +301,7 @@ class MatplotlibArtist(_Artist):
         planes = kwargs.get("plane", "X")
 
         # Set the y aperture for circular apertype
+        # TODO this raises an error if the option DontSplitSBends = 0
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
             bl.at[idx, "APERTURE"][0:] = [bl.at[idx, "APERTURE"][0], bl.at[idx, "APERTURE"][0]]
 

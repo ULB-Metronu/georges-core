@@ -37,3 +37,11 @@ in a unique format (`georges-core.Sequence`). This object serves as an input for
 Twiss computation is also provided especially in coupled Twiss computation.
 
 Support tools are also provided, notably a plotting library (based on *Matplotlib* or *Plotly*)
+
+## Installation
+
+`georges-core` is available from PyPI with pip::
+
+    pip install georges-core
+
+For a custom installation, please read the installation section in the [documentation](https://ulb-metronu.github.io/georges-core/installation.html).

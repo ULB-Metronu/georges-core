@@ -2,7 +2,11 @@
 Installation
 ************
 
-Georges-core is hosted on Github and can be downloaded using the following::
+You can install :code:`georges-core` from PyPI with pip::
+
+    pip install georges-core
+
+For development purposes you can copy the source code on your computer. Georges-core is hosted on Github and can be downloaded using the following::
 
     git clone https://github.com/ULB-Metronu/georges-core.git
 

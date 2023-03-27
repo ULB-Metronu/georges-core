@@ -2,7 +2,7 @@
 Twiss module
 ************
 
-This module allows to calculate the different parameters of Twiss as well as the dispersion based on a propagation matrix. It is possible either to compute the periodic Twiss function of a lattice or to compute the propagation of an initial :code:`BetaBlock`. The standard uncoupled Twiss parametrization (including off-momentum effects, aka. dispersion) is the default option. Additional formalisms for the parametrization of fully coupled transfer matrices are also available (Teng, Ripken, etc.). The implementation of the coupled transfert matrix is detailed in this paper <link URL>`_
+This module allows to calculate the different parameters of Twiss as well as the dispersion based on a propagation matrix. It is possible either to compute the periodic Twiss function of a lattice or to compute the propagation of an initial :code:`BetaBlock`. The standard uncoupled Twiss parametrization (including off-momentum effects, aka. dispersion) is the default option. Additional formalisms for the parametrization of fully coupled transfer matrices are also available (Parzen, Lebedev and Bogacz). More details about the coupled parametrizations can be found in this `paper <https://arxiv.org/abs/2210.11866>`_
 
 Herebelow, there is some examples on how to use the Twiss module.
 
