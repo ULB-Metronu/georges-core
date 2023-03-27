@@ -3,9 +3,10 @@
 """
 from typing import Optional
 
+import scipy.constants
+
 from . import Q_ as _Q
 from . import ureg as _ureg
-import scipy.constants
 
 
 class ParticuleType(type):
@@ -66,9 +67,10 @@ class Proton(Particule):
 
 class AntiMuon(Particule):
     """An anti-muon particle."""
-    M =  scipy.constants.physical_constants['muon mass'][0] * _ureg.kg
+
+    M = scipy.constants.physical_constants["muon mass"][0] * _ureg.kg
     Q = scipy.constants.elementary_charge * _ureg.coulomb
-    G = (scipy.constants.physical_constants['muon g factor'][0] - 2) / 2
+    G = (scipy.constants.physical_constants["muon g factor"][0] - 2) / 2
     tau = 2.197029e-6 * _ureg.s
 
 

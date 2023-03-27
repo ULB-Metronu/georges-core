@@ -153,8 +153,7 @@ def beam_to_vtk(
     option_primaries=False,
     option_secondaries=False,
 ):
-    file = uproot.open(filename)
-    evt = file.get("Event")
+    evt = uproot.open(filename).get("Event")
 
     part_id_tracks = evt.arrays(["Trajectory.partID"], library="np")["Trajectory.partID"]
     s_tracks = evt.arrays(["Trajectory.S"], library="np")["Trajectory.S"]

@@ -4,12 +4,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Optional
 
+import numpy as _np
 import pandas as _pd
 
 from .. import Q_ as _Q
 from .. import ureg as _ureg
-from .. import Q_ as _Q
-import numpy as _np
 
 
 class BetaBlockType(type):
@@ -28,6 +27,10 @@ class BetaBlock(metaclass=BetaBlockType):
     BETA22: _Q = 1.0 * _ureg.m
     ALPHA22: float = 0.0
     GAMMA22: Optional[float] = None
+    BETA12: float = 0.0 * _ureg.m
+    BETA21: float = 0.0 * _ureg.m
+    ALPHA12: float = 0.0
+    ALPHA21: float = 0.0
     DISP1: _Q = 0.0 * _ureg.m
     DISP2: float = 0.0
     DISP3: _Q = 0.0 * _ureg.m
@@ -37,6 +40,8 @@ class BetaBlock(metaclass=BetaBlockType):
     EMIT3: float = 1e-9
     MU1: float = 0.0
     MU2: float = 0.0
+    NU1: float = 0.0
+    NU2: float = 0.0
     CMU1: float = 1.0
     CMU2: float = 1.0
     DY: float = 0.0
@@ -45,12 +50,6 @@ class BetaBlock(metaclass=BetaBlockType):
     DXP: float = 0.0
     DZ: float = 0.0
     DZP: float = 0.0
-    BETA12: float = 0.0 * _ureg.m
-    BETA21: float = 0.0 * _ureg.m
-    ALPHA12: float = 0.0
-    ALPHA21: float = 0.0
-    NU1: float = 0.0
-    NU2: float = 0.0
     U: float = 0.0
     R: _np.ndarray = _np.identity(4)
 
@@ -75,6 +74,10 @@ class BetaBlock(metaclass=BetaBlockType):
                 "BETA22": self.BETA22,
                 "ALPHA22": self.ALPHA22,
                 "GAMMA22": self.GAMMA22,
+                "BETA12": self.BETA12,
+                "BETA21": self.BETA21,
+                "ALPHA12": self.ALPHA12,
+                "ALPHA21": self.ALPHA21,
                 "DISP1": self.DISP1,
                 "DISP2": self.DISP2,
                 "DISP3": self.DISP3,
@@ -84,6 +87,8 @@ class BetaBlock(metaclass=BetaBlockType):
                 "EMIT3": self.EMIT3,
                 "MU1": self.MU1,
                 "MU2": self.MU2,
+                "NU1": self.NU1,
+                "NU2": self.NU2,
                 "CMU1": self.CMU1,
                 "CMU2": self.CMU2,
                 "DY": self.DY,
@@ -92,6 +97,8 @@ class BetaBlock(metaclass=BetaBlockType):
                 "DXP": self.DXP,
                 "DZ": self.DZ,
                 "DZP": self.DZP,
+                "U": self.U,
+                "R": self.R,
             },
         )
 
