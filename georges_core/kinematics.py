@@ -5,7 +5,8 @@ concerns conversions between kinematic quantities. Full support for units (via `
 helper class (``Kinematics``) provides automatic construction and conversion of kinematics quantities.
 
 Examples:
-    >>> Kinematics(230 *_ureg.MeV)
+    >>> Kinematics(230 *_ureg.MeV) #doctest: +NORMALIZE_WHITESPACE
+    <BLANKLINE>
     Proton
     (.etot) Total energy: 1168.2720299999999 megaelectronvolt
     (.ekin) Kinetic energy: 230 megaelectronvolt
@@ -15,12 +16,13 @@ Examples:
     (.pv): Relativistic pv: 414.71945005821954 megaelectronvolt
     (.beta): Relativistic beta: 0.5958064663732595
     (.gamma): Relativistic gamma: 1.2451314678963625
+    <BLANKLINE>
 """
 
 from __future__ import annotations
 
 from functools import partial as _partial
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 import numpy as _np
 
@@ -35,12 +37,12 @@ if TYPE_CHECKING:
 class KinematicsException(Exception):
     """Exception raised for errors in the Kinematics module."""
 
-    def __init__(self, m):
+    def __init__(self, m: str = "") -> None:
         self.message = m
 
 
 class Kinematics:
-    """ """
+    """TODO"""
 
     def __init__(self, q: Union[float, _Q], particle: _ParticuleType = _Proton, kinetic: Optional[bool] = None):
         """
@@ -78,10 +80,10 @@ class Kinematics:
         else:
             raise KinematicsException("Invalid kinematic quantity.")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return str(self)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"""
         {self._p.__name__}
         (.etot) Total energy: {self.etot}
@@ -95,7 +97,7 @@ class Kinematics:
         """
 
     @property
-    def particule(self):
+    def particule(self) -> _ParticuleType:
         """Associated particle type."""
         return self._p
 
@@ -110,12 +112,11 @@ class Kinematics:
         """
         if self._type == quantity:
             return self._q
-        else:
-            c = f"{self._type}_to_{quantity}"
-            try:
-                return globals()[c](self._q, particle=self._p)
-            except KeyError:
-                raise KinematicsException(f"Invalid conversion attempted: {c}.")
+        c = f"{self._type}_to_{quantity}"
+        try:
+            return globals()[c](self._q, particle=self._p)
+        except KeyError:
+            raise KinematicsException(f"Invalid conversion attempted: {c}.")
 
     def to_range(self, magnitude: bool = False) -> Union[float, _Q]:
         """
@@ -128,11 +129,10 @@ class Kinematics:
         """
         if self._p != _Proton:
             return 0.0
-        _ = self.to("range").to("cm")
+        _ = self.to("range").to("cm")  # type: ignore[union-attr]
         if magnitude:
             return _.magnitude
-        else:
-            return _
+        return _
 
     range = property(to_range)
     """TODO"""
@@ -149,11 +149,10 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to("ekin").to("MeV")
+        _ = self.to("ekin").to("MeV")  # type: ignore[union-attr]
         if magnitude:
             return _.magnitude
-        else:
-            return _
+        return _
 
     ekin = property(to_ekin)
     """TODO"""
@@ -170,11 +169,10 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to("etot").to("MeV")
+        _ = self.to("etot").to("MeV")  # type: ignore[union-attr]
         if magnitude:
             return _.magnitude
-        else:
-            return _
+        return _
 
     etot = property(to_etot)
     """TODO"""
@@ -191,11 +189,10 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to("momentum").to("MeV_c")
+        _ = self.to("momentum").to("MeV_c")  # type: ignore[union-attr]
         if magnitude:
             return _.magnitude
-        else:
-            return _
+        return _
 
     momentum = property(to_momentum)
     """Provides the *momentum*."""
@@ -212,11 +209,10 @@ class Kinematics:
         Returns:
 
         """
-        _ = self.to("brho").to("tesla meter")
+        _ = self.to("brho").to("tesla meter")  # type: ignore[union-attr]
         if magnitude:
             return _.magnitude
-        else:
-            return _
+        return _
 
     brho = property(to_brho)
     """Provides *brho*."""
@@ -995,7 +991,7 @@ def beta_to_pv(beta: float, particle: _ParticuleType = _Proton) -> _Q:
     return ekin_to_pv(beta_to_ekin(beta), particle=particle)
 
 
-def beta_to_gamma(beta: float, **_) -> float:
+def beta_to_gamma(beta: float, **_) -> float:  # type: ignore[no-untyped-def]
     """
     Converts relativistic beta to relativistic gamma.
 
@@ -1010,7 +1006,7 @@ def beta_to_gamma(beta: float, **_) -> float:
     Returns:
         Relativistic gamma of the particle
     """
-    return 1 / (_np.sqrt(1 - beta**2))
+    return 1 / (_np.sqrt(1 - beta**2))  # type: ignore[no-any-return]
 
 
 def gamma_to_etot(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
@@ -1117,7 +1113,7 @@ def gamma_to_pv(gamma: float, particle: _ParticuleType = _Proton) -> _Q:
     return ekin_to_pv(gamma_to_ekin(gamma, particle), particle)
 
 
-def gamma_to_beta(gamma: float, **_) -> float:
+def gamma_to_beta(gamma: float, **_: Any) -> float:
     """
     Converts relativistic gamma to relativistic beta.
 
@@ -1130,4 +1126,4 @@ def gamma_to_beta(gamma: float, **_) -> float:
     Returns:
         Relativistic beta of the particle
     """
-    return _np.sqrt((gamma**2 - 1) / gamma**2)
+    return _np.sqrt((gamma**2 - 1) / gamma**2)  # type: ignore[no-any-return]

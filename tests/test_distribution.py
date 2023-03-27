@@ -129,7 +129,7 @@ def test_from_twiss(
     emit_distribution = beam_distribution.emit
 
     _np.testing.assert_equal(1e7, beam_distribution.n_particles)
-    _np.testing.assert_equal(7, beam_distribution.dims)
+    _np.testing.assert_equal(5, beam_distribution.dims)
     _np.testing.assert_allclose(
         beam_distribution.compute_twiss(beam_distribution.distribution.values),
         _np.array(
@@ -188,7 +188,7 @@ def test_from_multigaussian_distribution(x, px, y, py, dpp, xrms, pxrms, yrms, p
     std_distribution = beam_distribution.std
 
     _np.testing.assert_equal(1e7, beam_distribution.n_particles)
-    _np.testing.assert_equal(7, beam_distribution.dims)
+    _np.testing.assert_equal(5, beam_distribution.dims)
     _np.testing.assert_allclose(x.m_as("m"), mean_distribution["X"], atol=1e-4)
     _np.testing.assert_allclose(y.m_as("m"), mean_distribution["Y"], atol=1e-4)
     _np.testing.assert_allclose(px, mean_distribution["PX"], atol=1e-4)
@@ -300,7 +300,7 @@ def test_from_sigma_matrix(
     sigma_distribution = beam_distribution.sigma
 
     _np.testing.assert_equal(1e7, beam_distribution.n_particles)
-    _np.testing.assert_equal(7, beam_distribution.dims)
+    _np.testing.assert_equal(5, beam_distribution.dims)
     _np.testing.assert_allclose(x.m_as("m"), mean_distribution["X"], atol=5e-3)
     _np.testing.assert_allclose(y.m_as("m"), mean_distribution["Y"], atol=5e-3)
     _np.testing.assert_allclose(px, mean_distribution["PX"], atol=5e-3)
@@ -331,14 +331,14 @@ def test_from_sigma_matrix(
     ],
 )
 def test_from_matrix(x, px, y, py, dpp, matrix):
-    matrix = _np.dot(matrix, matrix.transpose())
+    matrix = _np.dot(matrix, matrix.transpose())  # For covariance
     beam_distribution = Distribution.from_5d_sigma_matrix(n=int(1e7), x=x, px=px, y=y, py=py, dpp=dpp, matrix=matrix)
 
     mean_distribution = beam_distribution.mean
-    sigma_matrix = beam_distribution.sigma.drop(labels=["PT", "DT"], axis=0).drop(labels=["PT", "DT"], axis=1).values
+    sigma_matrix = beam_distribution.sigma
 
     _np.testing.assert_equal(1e7, beam_distribution.n_particles)
-    _np.testing.assert_equal(7, beam_distribution.dims)
+    _np.testing.assert_equal(5, beam_distribution.dims)
     _np.testing.assert_allclose(x.m_as("m"), mean_distribution["X"], atol=5e-3)
     _np.testing.assert_allclose(y.m_as("m"), mean_distribution["Y"], atol=5e-3)
     _np.testing.assert_allclose(px, mean_distribution["PX"], atol=5e-3)
@@ -358,10 +358,10 @@ def test_from_file():
     os.remove("beam.csv")
     os.remove("beam.tar.gz")
     _np.testing.assert_equal(100, distrib_csv.n_particles)
-    _np.testing.assert_equal(7, distrib_csv.dims)
+    _np.testing.assert_equal(5, distrib_csv.dims)
     _pd.testing.assert_frame_equal(distrib.distribution, distrib_csv.distribution, check_dtype=False)
     _np.testing.assert_equal(100, distrib_parquet.n_particles)
-    _np.testing.assert_equal(7, distrib_parquet.dims)
+    _np.testing.assert_equal(5, distrib_parquet.dims)
     _pd.testing.assert_frame_equal(distrib.distribution, distrib_parquet.distribution, check_dtype=False)
 
 
@@ -401,12 +401,12 @@ def test_halo():
 def test_exceptions():
     # distribution is None
     dist = Distribution()
-    _np.testing.assert_equal(dist.distribution, _np.zeros((1, 7)))
+    _np.testing.assert_equal(dist.distribution, _np.zeros((1, 5)))
 
     # Missing columns
     beam = _pd.DataFrame({"X": [1], "Y": [2]})
     dist = Distribution(distribution=beam)
-    _np.testing.assert_equal(dist.distribution, _np.zeros((1, 7)))
+    _np.testing.assert_equal(dist.distribution, _np.zeros((1, 5)))
 
     # Acces to invalid date
     distrib = Distribution.from_5d_multigaussian_distribution(n=100, xrms=0.1 * _ureg.m, yrms=0.1 * _ureg.m)

@@ -3,7 +3,7 @@ TODO
 """
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Mapping, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import numpy as _np
 import plotly.graph_objs as go
@@ -22,12 +22,12 @@ class PlotlyArtist(_Artist):
 
     def __init__(
         self,
-        config: Optional[Mapping] = None,
-        layout: Optional[Mapping] = None,
+        config: Optional[Dict[str, Any]] = None,
+        layout: Optional[Dict[str, Any]] = None,
         width: Optional[float] = None,
         height: Optional[float] = None,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
 
         Args:
@@ -38,14 +38,14 @@ class PlotlyArtist(_Artist):
             **kwargs:
         """
         super().__init__(**kwargs)
-        self._data = []
+        self._data: List[Any] = []
         self._config = config or {
             "showLink": False,
             "scrollZoom": True,
             "displayModeBar": False,
             "editable": False,
         }
-        self._layout: Mapping[Any, Any] = layout or {
+        self._layout: Dict[str, Any] = layout or {
             "font": {"family": "serif", "size": 18},
             "plot_bgcolor": "rgba(0,0,0,0)",
             "xaxis": {
@@ -71,14 +71,14 @@ class PlotlyArtist(_Artist):
             self._layout["height"] = height
         if width is not None:
             self._layout["width"] = width
-        self._shapes = []
+        self._shapes: List[Any] = []
         self._n_y_axis = len([ax for ax in self._layout.keys() if ax.startswith("yaxis")])
 
-    def _init_plot(self):
+    def _init_plot(self) -> None:
         pass
 
     @property
-    def fig(self):  # pragma: no cover
+    def fig(self) -> Dict[str, Any]:  # pragma: no cover
         """Provides the plotly figure."""
         return {
             "data": self.data,
@@ -86,28 +86,28 @@ class PlotlyArtist(_Artist):
         }
 
     @property
-    def config(self):  # pragma: no cover
+    def config(self) -> Dict[str, Any]:  # pragma: no cover
         return self._config
 
     @property
-    def data(self):  # pragma: no cover
+    def data(self) -> List[Any]:  # pragma: no cover
         return self._data
 
     @property
-    def layout(self):  # pragma: no cover
+    def layout(self) -> Dict[str, Any]:  # pragma: no cover
         self._layout["shapes"] = self._shapes
         return self._layout
 
     @property
-    def shapes(self):  # pragma: no cover
+    def shapes(self) -> List[Any]:  # pragma: no cover
         return self._shapes
 
-    def __iadd__(self, other):  # pragma: no cover
+    def __iadd__(self, other: Any) -> PlotlyArtist:  # pragma: no cover
         """Add a trace to the figure."""
         self._data.append(other)
         return self
 
-    def add_axis(self, title: str = "", axis: Optional[Mapping] = None):
+    def add_axis(self, title: str = "", axis: Optional[Dict[str, Any]] = None) -> None:
         """
 
         Args:
@@ -128,7 +128,7 @@ class PlotlyArtist(_Artist):
             "side": "left",
         }
 
-    def add_secondary_axis(self, title: str = "", axis: Optional[Mapping] = None):
+    def add_secondary_axis(self, title: str = "", axis: Optional[Dict[str, Any]] = None) -> None:
         """
 
         Args:
@@ -149,45 +149,45 @@ class PlotlyArtist(_Artist):
             "side": "right",
         }
 
-    def render(self):  # pragma: no cover
+    def render(self) -> None:  # pragma: no cover
         if len(self._data) == 0:
             self._data.append(go.Scatter(x=[0.0], y=[0.0]))
         plotly.offline.iplot(self.fig, config=self.config)
 
-    def save(self, file: str, file_format: str = "png"):  # pragma: no cover
+    def save(self, file: str, file_format: str = "png") -> None:  # pragma: no cover
         plotly.io.write_image(self.fig, file=file, format=file_format)
 
-    def save_html(self, file: str):  # pragma: no cover
+    def save_html(self, file: str) -> Any:  # pragma: no cover
         return plotly.offline.plot(self.fig, config=self.config, auto_open=False, filename=file)
 
-    def histogram(self, *args, **kwargs):  # pragma: no cover
+    def histogram(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Histogram"""
         self._data.append(go.Histogram(*args, **kwargs))
 
-    def uproot_histogram(self, histogram, **kwargs):  # pragma: no cover
+    def uproot_histogram(self, histogram: Any, **kwargs: Any) -> None:  # pragma: no cover
         _ = histogram.numpy()
         self.bar(x=_[1], y=_[0], error_y={"array": _np.sqrt(histogram.variances)}, **kwargs)
 
-    def histogram2d(self, *args, **kwargs):  # pragma: no cover
+    def histogram2d(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Histogram2d"""
         self._data.append(go.Histogram2d(*args, **kwargs))
 
-    def bar(self, *args, **kwargs):  # pragma: no cover
+    def bar(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         self._data.append(go.Bar(*args, **kwargs))
 
-    def scatter(self, *args, **kwargs):  # pragma: no cover
+    def scatter(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Scatter ."""
         self._data.append(go.Scatter(*args, **kwargs))
 
-    def scatter3d(self, *args, **kwargs):  # pragma: no cover
+    def scatter3d(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Scatter3d ."""
         self._data.append(go.Scatter3d(*args, **kwargs))
 
-    def surface(self, *args, **kwargs):  # pragma: no cover
+    def surface(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Surface ."""
         self._data.append(go.Surface(*args, **kwargs))
 
-    def heatmap(self, *args, **kwargs):  # pragma: no cover
+    def heatmap(self, *args: Any, **kwargs: Any) -> None:  # pragma: no cover
         """A proxy for plotly.graph_objs.Surface ."""
         self._data.append(go.Heatmap(*args, **kwargs))
 
@@ -196,8 +196,8 @@ class PlotlyArtist(_Artist):
         beamline_survey: _pd.DataFrame,
         vertical_position: float = 1.2,
         unsplit_bends: bool = True,
-        skip_elements: Optional[list] = None,
-    ):
+        skip_elements: Optional[List[str]] = None,
+    ) -> None:
         """
 
         Args:
@@ -211,7 +211,7 @@ class PlotlyArtist(_Artist):
         """
         skip_elements = skip_elements or []
 
-        def do_sbend(at_entry: float, at_exit: float, polarity: float):
+        def do_sbend(at_entry: float, at_exit: float, polarity: float) -> None:
             length = at_exit - at_entry
             if polarity >= 0.0:
                 path = (
@@ -259,7 +259,7 @@ class PlotlyArtist(_Artist):
             },
         )
         accumulate = False
-        accumulator = {}
+        accumulator: Dict[str, Any] = {}
         for i, e in beamline_survey.iterrows():
             if e["CLASS"].upper() not in ("QUADRUPOLE", "SBEND", "ELEMENT", "RCOL", "ECOL"):
                 continue
@@ -327,11 +327,15 @@ class PlotlyArtist(_Artist):
                     if accumulate is False:
                         accumulate = True
                         accumulator["name"] = i
-                        accumulator["polarity"] = _np.sign(e["ANGLE"])
+                        accumulator["polarity"] = _np.sign(e["ANGLE"].m_as("radians"))
                         accumulator["at_entry"] = e["AT_ENTRY"].m_as("m")
                         accumulator["at_exit"] = e["AT_EXIT"].m_as("m")
                         continue
                     if accumulate is True:
                         accumulator["at_exit"] = e["AT_EXIT"].m_as("m")
                 else:
-                    do_sbend(e["AT_ENTRY"].m_as("m"), e["AT_EXIT"].m_as("m"), polarity=_np.sign(e["ANGLE"]))
+                    do_sbend(
+                        e["AT_ENTRY"].m_as("m"),
+                        e["AT_EXIT"].m_as("m"),
+                        polarity=_np.sign(e["ANGLE"].m_as("radians")),
+                    )

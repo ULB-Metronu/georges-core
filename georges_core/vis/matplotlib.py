@@ -2,6 +2,7 @@
 TODO
 """
 import logging
+from typing import Any, List, Optional, Tuple
 
 import matplotlib.colors
 import matplotlib.patches as patches
@@ -49,10 +50,10 @@ palette["SEXTUPOLE"] = palette["yellow"]
 palette["OCTUPOLE"] = palette["green"]
 palette["MULTIPOLE"] = palette["gray"]
 palette["DEGRADER"] = palette["base02"]
-palette["RECTANGULARCOLLIMATOR"] = palette["goldenrod"]
-palette["CIRCULARCOLLIMATOR"] = palette["orange"]
+palette["RECTANGULARCOLLIMATOR"] = palette["darkgreen"]
+palette["CIRCULARCOLLIMATOR"] = palette["magenta"]
 palette["ELLIPTICALCOLLIMATOR"] = palette["orange"]
-palette["COLLIMATOR"] = "gold"
+palette["COLLIMATOR"] = palette["magenta"]
 palette["HKICKER"] = palette["magenta"]
 palette["VKICKER"] = palette["violet"]
 palette["SCATTERER"] = palette["base02"]
@@ -65,12 +66,12 @@ class MatplotlibArtist(_Artist):
     TODO
     """
 
-    def __init__(self, ax=None, **kwargs):
+    def __init__(self, ax: Optional[plt.Axes] = None, **kwargs: Any):
         """
         Args:
             param ax: the matplotlib ax used for plotting. If None it will be created with `init_plot` (kwargs are
             forwarded).
-            with_frames: draw the entry and exit frames of each elements
+            with_frames: draw the entry and exit frames of each element
             with_centers: draw the center of each polar coordinate elements
             kwargs: forwarded to `Artist` and to `init_plot`.
         """
@@ -84,7 +85,7 @@ class MatplotlibArtist(_Artist):
         self._ax2 = None
 
     @property
-    def ax(self):
+    def ax(self) -> plt.Axes:
         """Current Matplotlib ax.
 
         Returns:
@@ -93,7 +94,7 @@ class MatplotlibArtist(_Artist):
         return self._ax
 
     @property
-    def ax2(self):
+    def ax2(self) -> plt.Axes:
         """
 
         Returns:
@@ -102,7 +103,7 @@ class MatplotlibArtist(_Artist):
         return self._ax2
 
     @property
-    def figure(self):
+    def figure(self) -> plt.figure:
         """Current Matplotlib figure.
 
         Returns:
@@ -110,11 +111,11 @@ class MatplotlibArtist(_Artist):
         """
         return self._fig
 
-    @ax.setter
-    def ax(self, ax):
+    @ax.setter  # type:ignore[no-redef]
+    def ax(self, ax: plt.Axes) -> None:
         self._ax = ax
 
-    def init_plot(self, figsize=(12, 8), subplots=111):
+    def init_plot(self, figsize: Tuple[int, int] = (12, 8), subplots: int = 111) -> None:
         """
         Initialize the Matplotlib figure and ax.
 
@@ -125,7 +126,7 @@ class MatplotlibArtist(_Artist):
         self._fig = plt.figure(figsize=figsize)
         self._ax = self._fig.add_subplot(subplots)
 
-    def plot(self, *args, **kwargs):
+    def plot(self, *args: Any, **kwargs: Any) -> None:
         """Proxy for matplotlib.pyplot.plot
 
         Same as `matplotlib.pyplot.plot`, forwards all arguments.
@@ -133,14 +134,20 @@ class MatplotlibArtist(_Artist):
         self._ax.plot(*args, **kwargs)
 
     @staticmethod
-    def beamline_get_ticks_locations(o):
+    def beamline_get_ticks_locations(o: _pd.DataFrame) -> List[float]:
         return list(o["AT_CENTER"].apply(lambda e: e.m_as("m")).values)
 
     @staticmethod
-    def beamline_get_ticks_labels(o):
+    def beamline_get_ticks_labels(o: _pd.DataFrame) -> List[str]:
         return list(o.index)
 
-    def plot_cartouche(self, beamline: _pd.DataFrame = None, print_label: bool = False, labels: _pd.DataFrame = None):
+    def plot_cartouche(
+        self,
+        beamline: Optional[_pd.DataFrame] = None,
+        print_label: bool = False,
+        labels: Optional[_pd.DataFrame] = None,
+        vertical_position: float = 1.15,
+    ) -> None:
         """
         Args:
             beamline:
@@ -150,16 +157,24 @@ class MatplotlibArtist(_Artist):
         Returns:
 
         """
+        if beamline is None:
+            raise _ArtistException("No beamline provided")
 
         self._ax2 = self._ax.twinx()
         self._ax2.set_ylim([0, 1])
         self._ax2.axis("off")
 
-        offset = 1.15
         self._ax2.axis("on")
         self._ax2.set_yticks([])
         self._ax2.set_ylim([0, 1])
-        self._ax2.hlines(offset, 0, beamline.iloc[-1]["AT_EXIT"].m_as("m"), clip_on=False, colors="black", lw=1)
+        self._ax2.hlines(
+            vertical_position,
+            0,
+            beamline.iloc[-1]["AT_EXIT"].m_as("m"),
+            clip_on=False,
+            colors="black",
+            lw=1,
+        )
         for i, e in beamline.iterrows():
             if e["CLASS"].upper() in ["DRIFT", "MARKER"]:
                 continue
@@ -167,7 +182,7 @@ class MatplotlibArtist(_Artist):
             if e["CLASS"].upper() in ["SBEND", "RBEND"]:
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
+                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
                         e["L"].m_as("m"),
                         0.1,
                         hatch="",
@@ -188,10 +203,11 @@ class MatplotlibArtist(_Artist):
                 "ELLIPTICALCOLLIMATOR",
                 "MATRIX",
                 "SCATTERER",
+                "ELEMENT",
             ]:
                 self._ax2.add_patch(
                     patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
+                        (e["AT_ENTRY"].m_as("m"), vertical_position - 0.05),
                         e["L"].m_as("m"),
                         0.1,
                         hatch="",
@@ -200,19 +216,6 @@ class MatplotlibArtist(_Artist):
                         clip_on=False,
                     ),
                 )
-            elif e["CLASS"].upper() in ["ELEMENT"]:
-                self._ax2.add_patch(
-                    patches.Rectangle(
-                        (e["AT_ENTRY"].m_as("m"), offset - 0.05),
-                        e["L"].m_as("m"),
-                        0.1,
-                        hatch="",
-                        facecolor=palette[e["CLASS"].upper()],
-                        ec=palette[e["CLASS"].upper()],
-                        clip_on=False,
-                    ),
-                )
-
             else:
                 logging.warning(f"colors are not implemented for {e['CLASS']}")
 
@@ -228,21 +231,21 @@ class MatplotlibArtist(_Artist):
                 ticks_locations_short = self.beamline_get_ticks_locations(bl_short)
                 ticks_labels_short = self.beamline_get_ticks_labels(bl_short)
 
+            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
+            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
             self._ax2.get_xaxis().set_tick_params(direction="out")
             self._ax2.tick_params(axis="both", which="major")
             self._ax2.tick_params(axis="x")
             plt.setp(self._ax2.xaxis.get_majorticklabels(), rotation=-90)
-            self._ax2.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
-            self._ax2.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
     def plot_beamline(
         self,
-        beamline: _pd.DataFrame = None,
+        beamline: Optional[_pd.DataFrame] = None,
         print_label: bool = False,
         with_aperture: bool = True,
-        labels: _pd.DataFrame = None,
-        **kwargs,
-    ):
+        labels: Optional[_pd.DataFrame] = None,
+        **kwargs: Any,
+    ) -> None:
         """
         Args:
             beamline ():
@@ -254,6 +257,9 @@ class MatplotlibArtist(_Artist):
         Returns:
 
         """
+
+        if beamline is None:
+            raise _ArtistException("No beamline provided")
 
         bl_short = beamline.reset_index()
         bl_short = bl_short[[not a for a in bl_short["NAME"].str.contains("DRIFT")]]
@@ -280,7 +286,7 @@ class MatplotlibArtist(_Artist):
             self._ax.xaxis.set_major_locator(FixedLocator(ticks_locations_short))
             self._ax.xaxis.set_major_formatter(FixedFormatter(ticks_labels_short))
 
-    def draw_aperture(self, bl, **kwargs):
+    def draw_aperture(self, bl: _pd.DataFrame, **kwargs: Any) -> None:
         bl = bl.copy()
         if "APERTURE" not in bl:
             logging.warning("No APERTURE defined in the beamline")
@@ -295,6 +301,7 @@ class MatplotlibArtist(_Artist):
         planes = kwargs.get("plane", "X")
 
         # Set the y aperture for circular apertype
+        # TODO this raises an error if the option DontSplitSBends = 0
         for idx in bl.query("APERTYPE == 'CIRCULAR'").index:
             bl.at[idx, "APERTURE"][0:] = [bl.at[idx, "APERTURE"][0], bl.at[idx, "APERTURE"][0]]
 
@@ -324,7 +331,7 @@ class MatplotlibArtist(_Artist):
         bl.query("CLASS == 'SBEND'").apply(lambda e: self.draw_bend(e), axis=1)
         bl.query("CLASS == 'RBEND'").apply(lambda e: self.draw_bend(e), axis=1)
 
-    def draw_quad(self, e):
+    def draw_quad(self, e: _pd.DataFrame) -> None:
         self._ax.add_patch(
             patches.Rectangle(
                 (e["AT_ENTRY"].m_as("m"), e["APERTURE_UP"] + e["CHAMBER_UP"]),  # (x,y)
@@ -344,7 +351,7 @@ class MatplotlibArtist(_Artist):
         )
         self.draw_chamber(self._ax, e)
 
-    def draw_coll(self, e):
+    def draw_coll(self, e: _pd.DataFrame) -> None:
         self._ax.add_patch(
             patches.Rectangle(
                 (e["AT_ENTRY"].m_as("m"), e["APERTURE_UP"]),  # (x,y)
@@ -363,7 +370,7 @@ class MatplotlibArtist(_Artist):
             ),
         )
 
-    def draw_bend(self, e):
+    def draw_bend(self, e: _pd.DataFrame) -> None:
         tmp = e["APERTURE_UP"] + e["CHAMBER_UP"]
         if tmp > 55:
             logging.warning(f"Aperture are bigger than 55 mm for {e.name}.")
@@ -390,7 +397,7 @@ class MatplotlibArtist(_Artist):
         self.draw_chamber(self._ax, e)
 
     @staticmethod
-    def draw_chamber(ax, e):
+    def draw_chamber(ax: plt.Axes, e: _pd.DataFrame) -> None:
         ax.add_patch(
             patches.Rectangle(
                 (e["AT_ENTRY"].m_as("m"), (e["APERTURE_UP"])),  # (x,y)

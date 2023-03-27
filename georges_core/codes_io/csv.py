@@ -1,5 +1,6 @@
-import georges_core
-import georges_core.sequences
+from typing import Any, Dict
+
+from georges_core.sequences import Element
 
 from .. import ureg as _ureg
 
@@ -9,10 +10,10 @@ MANZONI_FLAVOR = {
     "Vkicker": "VKicker",
 }
 
-CSV_TO_SEQUENCE = {
-    "MARKER": (lambda _: georges_core.sequences.Element.Marker(_[0], APERTYPE=None)),
+CSV_TO_SEQUENCE: Dict[str, Any] = {
+    "MARKER": (lambda _: Element.Marker(_[0], APERTYPE=None)),
     "DRIFT": (
-        lambda _: georges_core.sequences.Element.Drift(
+        lambda _: Element.Drift(
             _[0],
             L=_[1]["L"],
             APERTYPE=_[1]["APERTYPE"],
@@ -20,7 +21,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "QUADRUPOLE": (
-        lambda _: georges_core.sequences.Element.Quadrupole(
+        lambda _: Element.Quadrupole(
             _[0],
             L=_[1]["L"],
             K1=_[1]["K1"],
@@ -30,7 +31,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "SBEND": (
-        lambda _: georges_core.sequences.Element.SBend(
+        lambda _: Element.SBend(
             _[0],
             L=_[1]["L"],
             K1=_[1]["K1"],
@@ -43,7 +44,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "CIRCULARCOLLIMATOR": (
-        lambda _: georges_core.sequences.Element.CircularCollimator(
+        lambda _: Element.CircularCollimator(
             _[0],
             L=_[1]["L"],
             APERTURE=_[1]["APERTURE"],
@@ -51,7 +52,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "RECTANGULARCOLLIMATOR": (
-        lambda _: georges_core.sequences.Element.RectangularCollimator(
+        lambda _: Element.RectangularCollimator(
             _[0],
             L=_[1]["L"],
             APERTURE=_[1]["APERTURE"],
@@ -59,7 +60,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "ELLIPTICALCOLLIMATOR": (
-        lambda _: georges_core.sequences.Element.EllipticalCollimator(
+        lambda _: Element.EllipticalCollimator(
             _[0],
             L=_[1]["L"],
             APERTURE=_[1]["APERTURE"],
@@ -67,7 +68,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "SCATTERER": (
-        lambda _: georges_core.sequences.Element.Scatterer(
+        lambda _: Element.Scatterer(
             _[0],
             L=_[1]["L"],
             MATERIAL=_[1]["MATERIAL"] if isinstance(_[1]["MATERIAL"], str) else "Air",
@@ -76,7 +77,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "DEGRADER": (
-        lambda _: georges_core.sequences.Element.Degrader(
+        lambda _: Element.Degrader(
             _[0],
             L=_[1]["L"],
             KINETIC_ENERGY=0 * _ureg.MeV,
@@ -84,9 +85,9 @@ CSV_TO_SEQUENCE = {
             APERTYPE=None,
         )
     ),
-    "SROTATION": (lambda _: georges_core.sequences.Element.SRotation(_[0], ANGLE=0 * _ureg.radians, APERTYPE=None)),
+    "SROTATION": (lambda _: Element.SRotation(_[0], ANGLE=0 * _ureg.radians, APERTYPE=None)),
     "HKICKER": (
-        lambda _: georges_core.sequences.Element.HKicker(
+        lambda _: Element.HKicker(
             _[0],
             L=_[1]["L"],
             KICK=0,
@@ -96,7 +97,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "VKICKER": (
-        lambda _: georges_core.sequences.Element.VKicker(
+        lambda _: Element.VKicker(
             _[0],
             L=_[1]["L"],
             KICK=0,
@@ -106,7 +107,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "FRINGEIN": (
-        lambda _: georges_core.sequences.Element.Fringein(
+        lambda _: Element.Fringein(
             _[0],
             L=_[1]["L"],
             KICK=0,
@@ -117,7 +118,7 @@ CSV_TO_SEQUENCE = {
         )
     ),
     "FRINGEOUT": (
-        lambda _: georges_core.sequences.Element.Fringeout(
+        lambda _: Element.Fringeout(
             _[0],
             L=_[1]["L"],
             KICK=0,
@@ -130,12 +131,12 @@ CSV_TO_SEQUENCE = {
 }
 
 
-def csv_element_factory(d):
+def csv_element_factory(d: Any) -> Any:
     if d[1]["TYPE"] in CSV_TO_SEQUENCE.keys():
         res = CSV_TO_SEQUENCE[d[1]["TYPE"]](d)
     else:
         element_class = MANZONI_FLAVOR.get(d[1]["TYPE"].capitalize(), d[1]["TYPE"].capitalize())
-        res = georges_core.sequences.Element.make_subclass(element_class)(
+        res = Element.make_subclass(element_class)(
             d[0],
             L=d[1]["L"],
             APERTURE=d[1]["APERTURE"],

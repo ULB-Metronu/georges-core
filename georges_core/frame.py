@@ -34,7 +34,7 @@ _AXES = {"X": 0, "Y": 1, "Z": 2}
 class FrameException(Exception):
     """Exception raised for errors in the Frame module."""
 
-    def __init__(self, m):
+    def __init__(self, m: str = ""):
         self.message = m
 
 
@@ -52,12 +52,12 @@ class Frame:
 
     >>> f1 = Frame()
     >>> f1.translate_y(10 * _ureg.cm) #doctest: +ELLIPSIS
-    <zgoubidoo.frame.Frame object at 0x...>
+    <georges_core.frame.Frame object at 0x...>
     >>> f2 = Frame(parent=f1)
     >>> f2.parent == f1
     True
     >>> f2.translate_x(1 * _ureg.cm) #doctest: +ELLIPSIS
-    <zgoubidoo.frame.Frame object at 0x...>
+    <georges_core.frame.Frame object at 0x...>
     >>> f2.get_origin(f1)
     [<Quantity(0.01, 'meter')>, <Quantity(0.0, 'meter')>, <Quantity(0.0, 'meter')>]
     >>> f2.o == f2.origin == f2.get_origin(None)
@@ -96,11 +96,11 @@ class Frame:
             >>> f1 = Frame()
             >>> f2 = Frame()
             >>> f1.rotate_x(10 * _ureg.degree) #doctest: +ELLIPSIS
-            <zgoubidoo.frame.Frame object at 0x...>
+            <georges_core.frame.Frame object at 0x...>
             >>> f1 == f2
             False
             >>> f2.rotate_x(10 * _ureg.degree) #doctest: +ELLIPSIS
-            <zgoubidoo.frame.Frame object at 0x...>
+            <georges_core.frame.Frame object at 0x...>
             >>> f1 == f2
             True
         """
@@ -462,7 +462,10 @@ class Frame:
 
         Example:
             >>> f1 = Frame().rotate_x(10 * _ureg.degree).get_rotation_matrix()
-            1.0
+            >>> f1 #doctest: +NORMALIZE_WHITESPACE
+            array([[ 1.        ,  0.        ,  0.        ],
+            [ 0.        ,  0.98480775, -0.17364818],
+            [ 0.        ,  0.17364818,  0.98480775]])
 
         Args:
             ref: reference frame with respect to which the rotation matrix is returned
@@ -827,14 +830,14 @@ class Frame:
             >>> f1.translate([1.0 * _ureg.meter, 2.0 * _ureg.meter, 3.0 * _ureg.meter]).o
             [<Quantity(1.0, 'meter')>, <Quantity(2.0, 'meter')>, <Quantity(3.0, 'meter')>]
             >>> f2 = Frame(parent=f1)
-            >>> f2.translate([-1.0 * _ureg.meter, -2.0 * _ureg.meter, -3.0 * _ureg.meter]).o
-            [<Quantity(0.0, 'meter')>, <Quantity(0.0, 'meter')>, <Quantity(0.0, 'meter')>]
+            >>> f2.translate([1.0 * _ureg.meter, 2.0 * _ureg.meter, -3.0 * _ureg.meter]).o
+            [<Quantity(2.0, 'meter')>, <Quantity(4.0, 'meter')>, <Quantity(0.0, 'meter')>]
             >>> f2.get_origin(f1)
-            [<Quantity(-1.0, 'meter')>, <Quantity(-2.0, 'meter')>, <Quantity(-3.0, 'meter')>]
+            [<Quantity(1.0, 'meter')>, <Quantity(2.0, 'meter')>, <Quantity(-3.0, 'meter')>]
             >>> f2.rotate_x(180 * _ureg.degree).o
-            [<Quantity(0.0, 'meter')>, <Quantity(4.0, 'meter')>, <Quantity(6.0, 'meter')>]
+            [<Quantity(2.0, 'meter')>, <Quantity(4.0, 'meter')>, <Quantity(0.0, 'meter')>]
             >>> f2.get_origin(f1)
-            [<Quantity(-1.0, 'meter')>, <Quantity(-2.0, 'meter')>, <Quantity(-3.0, 'meter')>]
+            [<Quantity(1.0, 'meter')>, <Quantity(2.0, 'meter')>, <Quantity(-3.0, 'meter')>]
 
         Args:
             offset: a list representing the offset (elements of the list must be quantities of dimension [LENGTH])
@@ -974,7 +977,7 @@ class Frame:
         Examples:
             >>> f1 = Frame().rotate_x(1 * _ureg.radian)
             >>> f1.get_angles() #doctest: +ELLIPSIS
-            [<Quantity(0.0, 'radian')>, <Quantity(0.999..., 'radian')>, <Quantity(0.999..., 'radian')>]
+            [<Quantity(0.0, 'radian')>, <Quantity(1.0..., 'radian')>, <Quantity(1.0..., 'radian')>]
             >>> f1.reset().get_angles()
             [<Quantity(0.0, 'radian')>, <Quantity(0.0, 'radian')>, <Quantity(0.0, 'radian')>]
 

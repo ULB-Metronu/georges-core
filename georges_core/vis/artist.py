@@ -3,7 +3,7 @@
 """
 from __future__ import annotations
 
-from typing import Mapping, Union
+from typing import Dict, Union
 
 PALETTE = {
     "solarized": {
@@ -24,6 +24,7 @@ PALETTE = {
         "cyan": "#2aa198",
         "green": "#859900",
         "goldenrod": "#fac205",
+        "darkgreen": "#1B8603",
     },
 }
 """Default color palette."""
@@ -34,7 +35,7 @@ PALETTE["solarized"]["gray"] = PALETTE["solarized"]["base03"]
 class ArtistException(Exception):  # pragma: no cover
     """Exception raised for errors in the beam plotting module."""
 
-    def __init__(self, m):
+    def __init__(self, m: str = "") -> None:
         self.message = m
 
 
@@ -43,6 +44,8 @@ class Artist:
     TODO
     """
 
-    def __init__(self, palette: Union[str, Mapping] = None, **kwargs):
-        palette = palette or "solarized"
-        self._palette = PALETTE.get(palette, palette)
+    def __init__(self, palette: Union[Dict[str, str], str] = "solarized") -> None:
+        if isinstance(palette, str):
+            self._palette = PALETTE.get(palette, palette)
+        else:
+            self._palette = palette

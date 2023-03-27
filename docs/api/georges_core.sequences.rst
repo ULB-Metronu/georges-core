@@ -15,7 +15,7 @@ georges\_core.sequences.betablock module
 georges\_core.sequences.elements module
 ---------------------------------------
 
-.. automodule:: georges_core.sequences.elements
+.. automodule:: Elements
    :members:
    :undoc-members:
    :show-inheritance:

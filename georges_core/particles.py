@@ -1,6 +1,11 @@
 """TODO
 
 """
+from typing import Optional
+
+import scipy.constants
+
+from . import Q_ as _Q
 from . import ureg as _ureg
 
 
@@ -11,33 +16,33 @@ class ParticuleType(type):
 class Particule(metaclass=ParticuleType):
     """Particle characteristics."""
 
-    M = None
-    Q = None
-    G = None
-    tau = None
+    M: Optional[_Q] = None
+    Q: Optional[_Q] = None
+    G: Optional[float] = None
+    tau: Optional[float] = None
 
     @property
-    def mass(self):
+    def mass(self) -> Optional[_Q]:
         """Mass of the particle."""
         return self.M
 
     @property
-    def charge(self):
+    def charge(self) -> Optional[_Q]:
         """Charge of the particle."""
         return self.Q
 
     @property
-    def lifetime(self):
+    def lifetime(self) -> Optional[float]:
         """Lifetime constant of the particle."""
         return self.tau
 
     @property
-    def gyro(self):
+    def gyro(self) -> Optional[float]:
         """Gyromagnetic factor of the particle."""
         return self.G
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Gyromagnetic factor of the particle."""
         return self.name
 
@@ -58,3 +63,15 @@ class Proton(Particule):
     Q = 1.602176487e-19 * _ureg.coulomb
     G = (5.585694701 - 2) / 2
     name = "Proton"
+
+
+class AntiMuon(Particule):
+    """An anti-muon particle."""
+
+    M = scipy.constants.physical_constants["muon mass"][0] * _ureg.kg
+    Q = scipy.constants.elementary_charge * _ureg.coulomb
+    G = (scipy.constants.physical_constants["muon g factor"][0] - 2) / 2
+    tau = 2.197029e-6 * _ureg.s
+
+
+Posmuon = AntiMuon

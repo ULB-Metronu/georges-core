@@ -15,7 +15,7 @@ class Patchable:
     at the location of the placement frame and all other frames are set to the entrance frame ('point-like' element).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initializes a un-patched patchable element."""
         self._entry: Optional[_Frame] = None
         self._entry_patched: Optional[_Frame] = None
@@ -24,7 +24,7 @@ class Patchable:
         self._center: Optional[_Frame] = None
         self._reference_trajectory: Optional[_pd.DataFrame] = None
 
-    def place(self, frame: _Frame):
+    def place(self, frame: _Frame) -> None:
         """Place the element with a reference frame.
 
         All the frames of the element are reset and the entrance frame is then placed with respect to the reference
@@ -36,7 +36,7 @@ class Patchable:
         self.clear_placement()
         self._entry = _Frame(frame)
 
-    def clear_placement(self):
+    def clear_placement(self) -> None:
         """Clears all the frames."""
         self._entry = None
         self._entry_patched = None
@@ -54,7 +54,7 @@ class Patchable:
         return 0.0 * _ureg.cm
 
     @property
-    def entry(self) -> _Frame:
+    def entry(self) -> Optional[_Frame]:
         """Entrance frame.
 
         Returns:
@@ -116,7 +116,7 @@ class Patchable:
         return self._reference_trajectory
 
     @reference_trajectory.setter
-    def reference_trajectory(self, ref):
+    def reference_trajectory(self, ref: _pd.DataFrame) -> None:
         """
 
         Args:

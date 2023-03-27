@@ -3,7 +3,7 @@ import re as _re
 from typing import Any, List
 from typing import Pattern as _Pattern
 
-_re_f_float_neg: _Pattern = _re.compile(r"(-?[0-9.]*)(-\d\d\d)")
+_re_f_float_neg: _Pattern = _re.compile(r"(-?[0-9.]*)(-\d\d\d)")  # type: ignore[type-arg]
 """A regex pattern matching Fortran quasi-float format."""
 
 
@@ -40,7 +40,7 @@ def fortran_float(input_string: str) -> float:
     return fl
 
 
-def intersperse(lst: List, item: Any) -> List:
+def intersperse(lst: List[Any], item: Any) -> List[Any]:
     """
     Inserts an item in-between every element of a list.
 

@@ -3,16 +3,18 @@ Import sequence that can be generated using MAD-X or MAD-NG.
 """
 
 import os
+from typing import Optional
 
 import pandas as _pd
 
+from .. import Q_ as _Q
 from .. import ureg as _ureg
 
 MADX_TWISS_TABLE_HEADER_ROWS: int = 47
 """MAD-X Twiss table header rows (lines to be skipped when reading the table's content."""
 
 
-def load_mad_twiss_headers(filename: str = "twiss.outx", path: str = ".", lines: int = None) -> _pd.Series:
+def load_mad_twiss_headers(filename: str = "twiss.outx", path: str = ".", lines: Optional[int] = None) -> _pd.Series:
     """
 
     Args:
@@ -27,12 +29,11 @@ def load_mad_twiss_headers(filename: str = "twiss.outx", path: str = ".", lines:
     _ = _pd.read_csv(
         os.path.join(path, filename),
         sep=r"\s+",
-        squeeze=True,
         index_col=0,
         names=["@", "KEY", "_", "VALUE"],
         usecols=["KEY", "VALUE"],
         nrows=lines - 1,
-    )
+    ).squeeze()
     _.index = list(map(str.upper, _.index))
     for c in _.index:
         try:
@@ -45,7 +46,7 @@ def load_mad_twiss_headers(filename: str = "twiss.outx", path: str = ".", lines:
 def load_mad_twiss_table(
     filename: str = "twiss.outx",
     path: str = ".",
-    lines: int = None,
+    lines: Optional[int] = None,
     with_units: bool = True,
 ) -> _pd.DataFrame:
     """
@@ -91,7 +92,7 @@ def load_mad_twiss_table(
 
     if with_units:
 
-        def set_unit(df, column, unit):
+        def set_unit(df: _pd.DataFrame, column: str, unit: _Q) -> _pd.DataFrame:
             try:
                 df[column] = df[column].apply(lambda e: e * unit)
             except KeyError:

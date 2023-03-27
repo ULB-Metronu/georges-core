@@ -6,7 +6,7 @@ import vtk as _vtk
 import vtk.util.numpy_support as _vtk_np
 
 
-def expand_values_for_paraview(histogram3d):
+def expand_values_for_paraview(histogram3d):  # pragma: no cover
     nx = histogram3d.xnumbins
     ny = histogram3d.ynumbins
     nz = histogram3d.znumbins
@@ -17,7 +17,6 @@ def expand_values_for_paraview(histogram3d):
     for x in range(nx + 1):
         for y in range(ny + 1):
             for z in range(nz + 1):
-
                 x_old = 0
                 y_old = 0
                 z_old = 0
@@ -84,7 +83,7 @@ def expand_values_for_paraview(histogram3d):
     return new_values
 
 
-def histogram3d_to_vtk(
+def histogram3d_to_vtk(  # pragma: no cover
     histogram3d,
     filename="histogram.vti",
     path=".",
@@ -154,8 +153,7 @@ def beam_to_vtk(
     option_primaries=False,
     option_secondaries=False,
 ):
-    file = uproot.open(filename)
-    evt = file.get("Event")
+    evt = uproot.open(filename).get("Event")
 
     part_id_tracks = evt.arrays(["Trajectory.partID"], library="np")["Trajectory.partID"]
     s_tracks = evt.arrays(["Trajectory.S"], library="np")["Trajectory.S"]
@@ -170,13 +168,12 @@ def beam_to_vtk(
 
     green = [0, 255, 0]
     blue = [0, 0, 255]
+    red = [255, 0, 0]
 
     mb_index = 0
 
     for i in range(len(tracks)):
-
         for j in range(len(tracks[i])):
-
             run = False
 
             if option_iso and j == 0 and s_tracks[i].tolist()[j][-1] > 15.42:
@@ -192,11 +189,14 @@ def beam_to_vtk(
                 color = blue
             elif part_id_tracks[i][j] == 2112:
                 color = green
+            elif part_id_tracks[i][j] == 11:
+                color = red
             else:
                 run = False
 
             if run:
                 steps = tracks[i].tolist()[j]
+                print(steps)
 
                 lines = _vtk.vtkCellArray()
                 pts = _vtk.vtkPoints()
@@ -208,7 +208,6 @@ def beam_to_vtk(
                 line0.GetPointIds().SetId(0, 0)
 
                 for k in range(1, len(steps) - 1):
-
                     if k % 2 == 0:
                         lines.InsertNextCell(line0)
                         colors.InsertNextTuple(color)
@@ -238,7 +237,6 @@ def beam_to_vtk(
                 mb.SetBlock(mb_index, lines_polydata)
                 mb_index += 1
 
-        print(mb_index)
         print(f"Progress: {i / len(tracks) * 100}%")
 
     writer = _vtk.vtkXMLMultiBlockDataWriter()

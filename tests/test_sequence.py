@@ -56,19 +56,16 @@ def test_transport_sequence():
 
 
 def test_bdsim_sequence():
-    # TODO Fix error when importing root: use conda env ?
+    bdsim_line = georges_core.sequences.BDSIMSequence(
+        path=f"{os.path.join(os.getcwd(), 'externals')}",
+        filename="bdsim_output.root",
+    )
+    artist = georges_core.vis.MatplotlibArtist()
+    artist.plot_cartouche(bdsim_line.df)
+    artist.plot_beamline(bdsim_line.df)
 
-    # bdsim_line = georges_core.sequences.BDSIMSequence(
-    #     path=f"{os.path.join(os.getcwd(), 'externals')}",
-    #     filename="bdsim_output.root",
-    # )
-    # artist = georges_core.vis.MatplotlibArtist()
-    # artist.plot_cartouche(bdsim_line.df)
-    # artist.plot_beamline(bdsim_line.df)
-    #
-    # artist = georges_core.vis.PlotlyArtist()
-    # artist.plot_cartouche(bdsim_line.df)
-    pass
+    artist = georges_core.vis.PlotlyArtist()
+    artist.plot_cartouche(bdsim_line.df)
 
 
 def test_survey_sequence():

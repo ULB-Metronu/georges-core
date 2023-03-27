@@ -23,8 +23,41 @@ A beam distribution can be defined from his parameters. Different methods are im
 * *from_5d_sigma_matrix*
 
 .. jupyter-execute::
+    :hide-output:
+    :hide-code:
 
-    pass
+    import numpy as np
+
+    x = 0.0 * _ureg.cm
+    px = 0
+    y = 0.0 * _ureg.cm
+    py = 0
+    dpp = 0
+
+    sigma = np.random.rand(5, 5)
+    sigma = np.dot(sigma,sigma.T) # This ensure a positive covariance
+
+    sigma_matrix = {
+        "s11": sigma[0][0] * _ureg.m**2,
+        "s12": sigma[0][1],
+        "s13": sigma[0][2],
+        "s14": sigma[0][3],
+        "s15": sigma[0][4],
+        "s22": sigma[1][1],
+        "s23": sigma[1][2],
+        "s24": sigma[1][3],
+        "s25": sigma[1][4],
+        "s33": sigma[2][2] * _ureg.m**2,
+        "s34": sigma[2][3],
+        "s35": sigma[2][4],
+        "s44": sigma[3][3],
+        "s45": sigma[3][4],
+        "s55": sigma[4][4],
+    }
+
+    beam_distribution = Distribution.from_5d_sigma_matrix(
+        n=int(1e3), x=x, px=px, y=y, py=py, dpp=dpp, **sigma_matrix
+    )
 
 * *from_5d_multigaussian_distribution*
 
