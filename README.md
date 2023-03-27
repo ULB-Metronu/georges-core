@@ -3,7 +3,7 @@
 [![ci](https://github.com/ULB-Metronu/georges-core/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/ULB-Metronu/georges-core/actions/workflows/ci.yml)
 [![documentation](https://github.com/ULB-Metronu/georges-core/actions/workflows/documentation.yml/badge.svg?branch=master)](https://github.com/ULB-Metronu/georges-core/actions/workflows/documentation.yml)
 ![Python](docs/_static/python_versions.svg)
-![version](https://img.shields.io/badge/version-2022.1-blue)
+![version](https://img.shields.io/badge/version-2023.2-blue)
 
 [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=ULB-Metronu_georges-core&metric=bugs)](https://sonarcloud.io/summary/new_code?id=ULB-Metronu_georges-core)
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=ULB-Metronu_georges-core&metric=coverage)](https://sonarcloud.io/summary/new_code?id=ULB-Metronu_georges-core)

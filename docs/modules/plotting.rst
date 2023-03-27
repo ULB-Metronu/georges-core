@@ -38,6 +38,6 @@ This module contains three functions that allow the export of 3D histogram value
 
 :code:`beam_to_vtk` is a function receiving a BDSIM output file. This function allows extracting the particle trajectory and creating a vtk file with the particle and their correct color code.
 
-..note::
+.. note ::
 
- These functions are still in development but already give the main ingredients for further developments
+    These functions are still in development but already give the main ingredients for further developments
