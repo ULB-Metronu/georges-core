@@ -8,6 +8,8 @@ import pandas as _pd
 
 from .. import Q_ as _Q
 from .. import ureg as _ureg
+from .. import Q_ as _Q
+import numpy as _np
 
 
 class BetaBlockType(type):
@@ -43,6 +45,14 @@ class BetaBlock(metaclass=BetaBlockType):
     DXP: float = 0.0
     DZ: float = 0.0
     DZP: float = 0.0
+    BETA12: float = 0.0 * _ureg.m
+    BETA21: float = 0.0 * _ureg.m
+    ALPHA12: float = 0.0
+    ALPHA21: float = 0.0
+    NU1: float = 0.0
+    NU2: float = 0.0
+    U: float = 0.0
+    R: _np.ndarray = _np.identity(4)
 
     def __post_init__(self) -> None:
         if self.GAMMA11 is None:

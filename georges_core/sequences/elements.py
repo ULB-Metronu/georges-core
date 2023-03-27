@@ -83,6 +83,7 @@ class Element(UserDict, metaclass=ElementClass):
 
 Element.make_subclass("Marker")
 Element.make_subclass("Instrument")
+Element.make_subclass('Solenoid')
 Element.make_subclass("Drift")
 Element.make_subclass(
     "Quadrupole",
