@@ -97,10 +97,9 @@ class Parametrization(metaclass=ParametrizationType):
 
         return matrix_row
 
-    def compute_eigenvectors(self, matrix_row: _pd.Series, lambda1_0) -> _pd.Series:
+    def compute_eigenvectors(self, matrix_row: _pd.Series) -> _pd.Series:
         # Eigenvalues and eigenvectors of the one period transfer matrix
-        eigvals, eigvec = _np.linalg.eig(matrix_row["m"])
-        v1, v1_, v2, v2_ = self.compute_orderded_turned_normalized_eigenvectors(eigvec, lambda1_0, eigvals)
+        v1, v1_, v2, v2_ = self.compute_orderded_turned_normalized_eigenvectors()
         matrix_row["v1"] = v1
         matrix_row["v2"] = v2
         matrix_row["v1_"] = v1_
@@ -108,7 +107,7 @@ class Parametrization(metaclass=ParametrizationType):
 
         return matrix_row
 
-    def compute_orderded_turned_normalized_eigenvectors(self, eigvec, lambda1_0, eigvals):
+    def compute_orderded_turned_normalized_eigenvectors(self):
         # Fonction redéfinie dans les classes-filles !
         v1, v1_, v2, v2_ = _np.identidy(4)
         return v1, v1_, v2, v2_
@@ -608,9 +607,9 @@ class Parzen(Parametrization):
 
     def compute_orderded_turned_normalized_eigenvectors(
         self,
-        eigvec: _np.ndarray,
-        lambda1_0: float,
-        eigvals: _np.ndarray,
+        eigvec: _np.ndarray = None,
+        lambda1_0: float = None,
+        eigvals: _np.ndarray = None,
     ):
         lambda1 = eigvals[0]
         phi_1, phi_2, phi_3, phi_4 = (
@@ -1054,9 +1053,9 @@ class LebedevTwiss(Parametrization):
 
     def compute_orderded_turned_normalized_eigenvectors(
         self,
-        eigvec: _np.ndarray,
-        lambda1_0: float,
-        eigvals: _np.ndarray,
+        eigvec: _np.ndarray = None,
+        lambda1_0: float = None,
+        eigvals: _np.ndarray = None,
     ):
         [v1, v1_, v2, v2_] = eigvec.T
         lambda1 = eigvals[0]
