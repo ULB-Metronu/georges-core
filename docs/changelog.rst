@@ -2,7 +2,18 @@
 Changelog
 *********
 
-* 2023-xx
+.. todolist::
+
+* 2023-3
+
+    * Update librairies
+
+* 2023-2
+
+    * Fix security issues
+
+
+* 2023-1
 
     * Write the documentation for Twiss module
     * Adapt the Twiss module for 13 particles
@@ -12,8 +23,6 @@ Changelog
     * Fix small issues in sequences/BDSIMSequence
     * Update pybdsim in pyproject.toml
     * Fix in the documentation
-
-.. todolist::
 
 
 * 2022-1

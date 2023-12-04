@@ -1,4 +1,4 @@
-__version__ = "2023.2"
+__version__ = "2023.3"
 
 from .distribution import Distribution, DistributionException
 from .units import Q_, ureg

@@ -13,7 +13,7 @@ For development purposes you can copy the source code on your computer. Georges-
 You can  stay on the bleeding-edge master branch or you can checkout
 a release tag::
 
-    git checkout tags/2023.1
+    git checkout tags/2023.3
 
 The installation process to get George’s core running is relatively simple: the whole library is ready to
 be installed with `Poetry <https://python-poetry.org/>`_. However, depending your configuration,
@@ -37,7 +37,7 @@ these commands::
 
 .. note::
 
-    George’s-core uses python version >=3.8.1 and < 3.11
+    George’s-core uses python version >=3.9 and < 3.11
 
 Georges-core can be subsequently updated by running the following::
 
@@ -49,12 +49,12 @@ Georges-core can be subsequently updated by running the following::
     You can install a independent python environment with :code:`pyenv` (https://github.com/pyenv/pyenv) and
     :code:`pyenv-virtualenv` (https://github.com/pyenv/pyenv-virtualenv) ::
 
-        pyenv install 3.8-dev
-        pyenv virtualenv 3.8-dev py38
+        pyenv install 3.9-dev
+        pyenv virtualenv 3.9-dev py39
 
     Then, activate your Python environment and install :code:`georges-core` with Poetry ::
 
-        pyenv local py38
+        pyenv local py39
         poetry install --without dev,docs
 
 Conda environment
